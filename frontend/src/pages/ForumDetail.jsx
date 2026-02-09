@@ -5,6 +5,7 @@ import CommentItem from '../components/Forum/CommentItem';
 import { formatTime } from '../data/mockForum';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
+import { addForumBrowseHistory } from '../utils/forumHistory';
 
 const ForumDetail = () => {
   const { id } = useParams();
@@ -38,6 +39,9 @@ const ForumDetail = () => {
         setComments(data.comments || []);
         setIsLiked(data.topic?.isLiked || false);
         setLikeCount(data.topic?.likes || 0);
+        if (data.topic?.id != null && data.topic?.title) {
+          addForumBrowseHistory({ id: data.topic.id, title: data.topic.title });
+        }
       } catch (error) {
         console.error('Error fetching topic:', error);
       } finally {
@@ -182,6 +186,27 @@ const ForumDetail = () => {
     setReplyingComment(null);
   };
 
+  const isOwnTopic = user?.id && topic?.author?.id && topic.author.id === user.id;
+
+  const handleDeleteTopic = async () => {
+    if (!isOwnTopic || !user?.id) return;
+    if (!window.confirm('确定要删除这条帖子吗？删除后无法恢复。')) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/forum/${id}?userId=${encodeURIComponent(user.id)}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        navigate('/forum');
+      } else {
+        const data = await response.json();
+        alert(data.error || '删除失败');
+      }
+    } catch (err) {
+      console.error('Error deleting topic:', err);
+      alert('网络错误，请重试');
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-[430px] mx-auto min-h-screen flex flex-col items-center justify-center bg-background-light dark:bg-background-dark">
@@ -218,9 +243,19 @@ const ForumDetail = () => {
             <span className="material-symbols-outlined text-lg">arrow_back</span>
           </button>
           <div className="flex-1"></div>
-          <button className="size-9 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-[#1b120e] dark:text-white">
-            <span className="material-symbols-outlined text-lg">more_vert</span>
-          </button>
+          {isOwnTopic ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDeleteTopic(); }}
+              className="size-9 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-red-500 dark:text-red-400"
+              title="删除帖子"
+            >
+              <span className="material-symbols-outlined text-lg">delete</span>
+            </button>
+          ) : (
+            <button className="size-9 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-[#1b120e] dark:text-white">
+              <span className="material-symbols-outlined text-lg">more_vert</span>
+            </button>
+          )}
         </div>
       </header>
 

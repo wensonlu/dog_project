@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BottomNav from '../components/BottomNav';
 import { API_BASE_URL } from '../config/api';
 
 const Messages = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(true);
    
@@ -87,6 +89,10 @@ const Messages = () => {
                     messages.map((msg) => (
                         <div
                             key={msg.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => navigate(`/messages/${msg.id}`, { state: { message: msg } })}
+                            onKeyDown={(e) => e.key === 'Enter' && navigate(`/messages/${msg.id}`, { state: { message: msg } })}
                             className={`flex items-start gap-4 p-4 rounded-xl shadow-sm border border-transparent hover:border-primary/20 transition-all cursor-pointer ${msg.is_unread ? 'bg-white dark:bg-zinc-800' : 'bg-card-light/50 dark:bg-zinc-800/40'
                                 }`}
                         >

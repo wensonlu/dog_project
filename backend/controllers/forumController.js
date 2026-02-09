@@ -631,6 +631,49 @@ async function toggleReplyLike(req, res) {
   }
 }
 
+/**
+ * Delete a topic (only by author)
+ */
+async function deleteTopic(req, res) {
+  const client = getSupabaseClient(req);
+  const { id } = req.params;
+  const { userId } = req.query;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'User ID is required' });
+  }
+
+  try {
+    const { data: topic, error: fetchError } = await client
+      .from('forum_topics')
+      .select('id, user_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !topic) {
+      return res.status(404).json({ error: 'Topic not found' });
+    }
+
+    if (topic.user_id !== userId) {
+      return res.status(403).json({ error: 'Only the author can delete this topic' });
+    }
+
+    const { error: deleteError } = await client
+      .from('forum_topics')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      return res.status(500).json({ error: deleteError.message });
+    }
+
+    res.json({ message: 'Topic deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting topic:', error);
+    res.status(500).json({ error: 'Failed to delete topic' });
+  }
+}
+
 module.exports = {
   getAllTopics,
   getTopicById,
@@ -638,5 +681,6 @@ module.exports = {
   toggleTopicLike,
   createComment,
   toggleCommentLike,
-  toggleReplyLike
+  toggleReplyLike,
+  deleteTopic
 };

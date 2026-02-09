@@ -63,12 +63,21 @@ const Forum = () => {
       <header className="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 pt-12 pb-3">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-2xl font-bold tracking-tight text-[#1b120e] dark:text-white">发现</h1>
-          <button
-            onClick={() => navigate('/forum/create')}
-            className="size-9 rounded-full bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/30"
-          >
-            <span className="material-symbols-outlined text-lg">edit</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/forum/history')}
+              className="size-9 rounded-full bg-white dark:bg-zinc-800 shadow-sm flex items-center justify-center text-[#1b120e] dark:text-white"
+              title="浏览记录"
+            >
+              <span className="material-symbols-outlined text-lg">history</span>
+            </button>
+            <button
+              onClick={() => navigate('/forum/create')}
+              className="size-9 rounded-full bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/30"
+            >
+              <span className="material-symbols-outlined text-lg">edit</span>
+            </button>
+          </div>
         </div>
 
         {/* 搜索栏 - 更紧凑 */}

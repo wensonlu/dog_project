@@ -7,7 +7,8 @@ const {
   toggleTopicLike,
   createComment,
   toggleCommentLike,
-  toggleReplyLike
+  toggleReplyLike,
+  deleteTopic
 } = require('../controllers/forumController');
 const checkSupabase = require('../middleware/supabaseCheck');
 
@@ -22,6 +23,9 @@ router.post('/', checkSupabase, createTopic);
 
 // Toggle like on a topic
 router.post('/:id/like', checkSupabase, toggleTopicLike);
+
+// Delete own topic (query: userId)
+router.delete('/:id', checkSupabase, deleteTopic);
 
 // Create a comment (or reply if replyToCommentId is provided)
 router.post('/:topicId/comments', checkSupabase, createComment);
