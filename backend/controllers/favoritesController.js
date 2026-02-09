@@ -6,7 +6,10 @@ const { getSupabaseClient } = require('../utils/supabaseClient');
 async function getUserFavorites(req, res) {
     const { userId } = req.params;
     const client = getSupabaseClient(req);
-    
+    if (!client) {
+        return res.status(500).json({ error: 'Supabase client not initialized. Please check backend environment variables (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY).' });
+    }
+
     const { data, error } = await client
         .from('favorites')
         .select('dog_id, dogs(*)')
@@ -22,6 +25,9 @@ async function getUserFavorites(req, res) {
 async function toggleFavorite(req, res) {
     const { userId, dogId } = req.body;
     const client = getSupabaseClient(req);
+    if (!client) {
+        return res.status(500).json({ error: 'Supabase client not initialized. Please check backend environment variables (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY).' });
+    }
 
     const { data: existing } = await client
         .from('favorites')

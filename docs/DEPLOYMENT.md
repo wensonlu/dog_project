@@ -142,13 +142,53 @@ Vercel 会自动识别 `api/` 目录下的文件作为 serverless functions。
 
 ### 3. 环境变量缺失错误
 
-**症状**：日志显示 `ERROR: SUPABASE_URL missing`
+**症状**：日志显示 `ERROR: SUPABASE_URL missing` 或 `Supabase client not initialized`
+
+**原因分析**：
+- Vercel serverless 环境中，`.env` 文件不会被自动加载
+- 环境变量必须通过 Vercel Dashboard 手动配置
+- `dotenv` 包在 serverless 环境中不会自动工作
 
 **解决方案**：
-1. 检查 Vercel Dashboard 中的环境变量是否已配置
-2. 确认环境变量名称拼写正确（区分大小写）
-3. 确认环境变量已应用到正确的环境（Production/Preview/Development）
-4. 重新部署项目
+
+1. **检查环境变量配置**：
+   - 进入 Vercel Dashboard → 项目 → **Settings** → **Environment Variables**
+   - 确认以下变量已配置：
+     - `SUPABASE_URL` ✓
+     - `SUPABASE_SERVICE_ROLE_KEY` ✓（推荐）
+     - 或 `SUPABASE_ANON_KEY`（备选）
+
+2. **验证环境变量**：
+   - 访问健康检查端点：`GET /api/health`
+   - 查看响应中的 `env` 字段，确认环境变量状态：
+     ```json
+     {
+       "status": "ok",
+       "supabase": "initialized",
+       "env": {
+         "hasSupabaseUrl": true,
+         "hasServiceRoleKey": true,
+         "hasAnonKey": false,
+         "nodeEnv": "production",
+         "vercel": "1"
+       }
+     }
+     ```
+
+3. **调试模式**（临时）：
+   - 在 Vercel 环境变量中添加 `DEBUG=true`
+   - 重新部署后，查看日志会显示详细的环境变量检查信息
+   - 调试完成后记得删除此变量
+
+4. **常见错误**：
+   - ❌ 只在本地 `.env` 文件中配置，忘记在 Vercel 中配置
+   - ❌ 环境变量名称拼写错误（区分大小写）
+   - ❌ 环境变量未应用到正确的环境（Production/Preview/Development）
+   - ❌ 配置后未重新部署
+
+5. **重新部署**：
+   - 配置或修改环境变量后，**必须重新部署**才能生效
+   - 进入 **Deployments** → 点击最新部署的 **⋯** → **Redeploy**
 
 ### 4. Supabase 连接失败
 
@@ -207,13 +247,23 @@ Vercel 会自动识别 `api/` 目录下的文件作为 serverless functions。
 GET https://your-domain.vercel.app/api/health
 ```
 
-预期响应：
+预期响应（正常）：
 ```json
 {
   "status": "ok",
-  "message": "Server is running"
+  "message": "Server is running",
+  "supabase": "initialized",
+  "env": {
+    "hasSupabaseUrl": true,
+    "hasServiceRoleKey": true,
+    "hasAnonKey": false,
+    "nodeEnv": "production",
+    "vercel": "1"
+  }
 }
 ```
+
+如果 `supabase` 为 `"not initialized"`，说明环境变量未正确配置，请参考"环境变量缺失错误"部分。
 
 ### 2. API 测试
 

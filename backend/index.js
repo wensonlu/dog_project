@@ -28,9 +28,19 @@ app.use('/api/dog-submissions', dogSubmissionsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/forum', forumRoutes);
 
-// Health check endpoint
+// Health check endpoint（含 Supabase 状态，便于排查 500）
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok', message: 'Server is running' });
+    const { supabase } = require('./config/supabase');
+    res.json({
+        status: 'ok',
+        message: 'Server is running',
+        supabase: supabase ? 'initialized' : 'not initialized',
+        env: {
+            hasSupabaseUrl: !!process.env.SUPABASE_URL,
+            hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+            hasAnonKey: !!(process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY),
+        },
+    });
 });
 
 // Vercel serverless 环境：只导出 app，不调用 app.listen()

@@ -75,7 +75,19 @@ app.use('/forum', forumRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok', message: 'Server is running' });
+    const { supabase } = require('../config/supabase');
+    res.json({ 
+        status: 'ok', 
+        message: 'Server is running',
+        supabase: supabase ? 'initialized' : 'not initialized',
+        env: {
+            hasSupabaseUrl: !!process.env.SUPABASE_URL,
+            hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+            hasAnonKey: !!(process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY),
+            nodeEnv: process.env.NODE_ENV,
+            vercel: process.env.VERCEL || 'not set'
+        }
+    });
 });
 
 // 调试：捕获所有未匹配的路由
