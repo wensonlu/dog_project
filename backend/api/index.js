@@ -101,5 +101,38 @@ app.use((req, res, next) => {
     });
 });
 
-// 导出为 Vercel serverless function handler
-module.exports = app;
+// 判断 origin 是否允许（与 corsOptions.origin 逻辑一致）
+function isOriginAllowed(origin) {
+    if (!origin) return true;
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return true;
+    if (origin.includes('wensons-projects-bb20578e.vercel.app') || origin.includes('vercel.app')) return true;
+    const allowed = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [];
+    return allowed.includes(origin);
+}
+
+// Vercel Serverless：先加 CORS 头并处理 OPTIONS，再交给 Express，避免预检/错误响应无 CORS 头
+function handler(req, res) {
+    const origin = req.headers.origin;
+    if (isOriginAllowed(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    } else {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+    }
+
+    // 部分环境下请求路径带 /api 前缀，交给 Express 前去掉以匹配 /auth、/dogs 等路由
+    if (typeof req.url === 'string' && req.url.startsWith('/api')) {
+        req.url = req.url.slice(4) || '/';
+    }
+
+    return app(req, res);
+}
+
+module.exports = handler;
