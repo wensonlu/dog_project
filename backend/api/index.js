@@ -127,9 +127,18 @@ function handler(req, res) {
         return res.status(204).end();
     }
 
-    // 部分环境下请求路径带 /api 前缀，交给 Express 前去掉以匹配 /auth、/dogs 等路由
-    if (typeof req.url === 'string' && req.url.startsWith('/api')) {
-        req.url = req.url.slice(4) || '/';
+    // 规范化路径：Vercel 可能传完整 URL 或带 /api 的 path，统一成 /auth/login 等形式以匹配 Express 路由
+    if (typeof req.url === 'string') {
+        let pathname = req.url;
+        try {
+            if (pathname.startsWith('http')) {
+                pathname = new URL(pathname).pathname;
+            }
+        } catch (_) {}
+        if (pathname.startsWith('/api')) {
+            pathname = pathname.slice(4) || '/';
+        }
+        req.url = pathname;
     }
 
     return app(req, res);

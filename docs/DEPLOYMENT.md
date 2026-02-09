@@ -140,7 +140,23 @@ Vercel 会自动识别 `api/` 目录下的文件作为 serverless functions。
 4. 查看部署日志，确认文件是否正确上传
 5. 测试健康检查端点：`GET /api/health`
 
-### 3. 环境变量缺失错误
+### 3. 跨域：OPTIONS 预检返回 401（部署保护拦截）
+
+**症状**：前端报错 `Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header`，Vercel 日志里 **OPTIONS /api/...** 请求状态为 **401 Unauthorized**。
+
+**原因**：开启了 **Deployment Protection**（Vercel 认证 / 密码保护 / Trusted IPs）时，OPTIONS 预检请求会在到达你的 Serverless 函数前被拦截并返回 401，因此代码里设置的 CORS 头从未被返回。
+
+**解决方案**：为 API 路径配置 **OPTIONS Allowlist**，让预检请求绕过部署保护：
+
+1. 打开 Vercel Dashboard，进入**后端项目**（如 `dog-project-backend`）
+2. 进入 **Settings** → **Deployment Protection**
+3. 找到 **OPTIONS Allowlist**，打开开关
+4. 在路径列表中添加 **`/api`**（表示所有以 `/api` 开头的 OPTIONS 请求放行）
+5. 保存后无需重新部署，立即生效
+
+完成后，OPTIONS 会到达你的函数并返回 204 + CORS 头，跨域即可恢复正常。
+
+### 4. 环境变量缺失错误
 
 **症状**：日志显示 `ERROR: SUPABASE_URL missing` 或 `Supabase client not initialized`
 
@@ -190,7 +206,7 @@ Vercel 会自动识别 `api/` 目录下的文件作为 serverless functions。
    - 配置或修改环境变量后，**必须重新部署**才能生效
    - 进入 **Deployments** → 点击最新部署的 **⋯** → **Redeploy**
 
-### 4. Supabase 连接失败
+### 5. Supabase 连接失败
 
 **症状**：API 返回数据库相关错误
 
@@ -204,7 +220,7 @@ Vercel 会自动识别 `api/` 目录下的文件作为 serverless functions。
 2. 推荐使用 `SUPABASE_SERVICE_ROLE_KEY`（绕过 RLS）
 3. 检查 Supabase Dashboard 中的 RLS 策略
 
-### 5. CORS 跨域错误
+### 6. CORS 跨域错误
 
 **症状**：浏览器控制台显示 `Access-Control-Allow-Origin` 错误，请求被阻止
 
@@ -225,7 +241,7 @@ Vercel 会自动识别 `api/` 目录下的文件作为 serverless functions。
    ```
 4. 重新部署后端项目
 
-### 6. 本地开发正常，部署后失败
+### 7. 本地开发正常，部署后失败
 
 **可能原因**：
 - 环境变量未在 Vercel 中配置
