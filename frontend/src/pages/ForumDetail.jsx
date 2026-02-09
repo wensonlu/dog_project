@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 import CommentItem from '../components/Forum/CommentItem';
+import ConfirmModal from '../components/ConfirmModal';
 import { formatTime } from '../data/mockForum';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
@@ -20,6 +21,10 @@ const ForumDetail = () => {
   const [replyingComment, setReplyingComment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [tipOpen, setTipOpen] = useState(false);
+  const [tipMessage, setTipMessage] = useState('');
 
   // 获取话题详情
   useEffect(() => {
@@ -56,7 +61,8 @@ const ForumDetail = () => {
 
   const handleLike = async () => {
     if (!user?.id) {
-      alert('请先登录');
+      setTipMessage('请先登录');
+      setTipOpen(true);
       return;
     }
 
@@ -136,7 +142,8 @@ const ForumDetail = () => {
   const handleSubmitComment = async () => {
     if (!commentText.trim()) return;
     if (!user?.id) {
-      alert('请先登录');
+      setTipMessage('请先登录');
+      setTipOpen(true);
       return;
     }
 
@@ -171,11 +178,13 @@ const ForumDetail = () => {
         setReplyingComment(null);
       } else {
         const error = await response.json();
-        alert(error.error || '提交失败，请重试');
+        setTipMessage(error.error || '提交失败，请重试');
+        setTipOpen(true);
       }
     } catch (error) {
       console.error('Error submitting comment:', error);
-      alert('网络错误，请重试');
+      setTipMessage('网络错误，请重试');
+      setTipOpen(true);
     } finally {
       setSubmitting(false);
     }
@@ -190,20 +199,27 @@ const ForumDetail = () => {
 
   const handleDeleteTopic = async () => {
     if (!isOwnTopic || !user?.id) return;
-    if (!window.confirm('确定要删除这条帖子吗？删除后无法恢复。')) return;
+    setDeleteLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/forum/${id}?userId=${encodeURIComponent(user.id)}`, {
         method: 'DELETE'
       });
       if (response.ok) {
+        setDeleteConfirmOpen(false);
         navigate('/forum');
       } else {
         const data = await response.json();
-        alert(data.error || '删除失败');
+        setDeleteConfirmOpen(false);
+        setTipMessage(data.error || '删除失败');
+        setTipOpen(true);
       }
     } catch (err) {
       console.error('Error deleting topic:', err);
-      alert('网络错误，请重试');
+      setDeleteConfirmOpen(false);
+      setTipMessage('网络错误，请重试');
+      setTipOpen(true);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -245,7 +261,7 @@ const ForumDetail = () => {
           <div className="flex-1"></div>
           {isOwnTopic ? (
             <button
-              onClick={(e) => { e.stopPropagation(); handleDeleteTopic(); }}
+              onClick={(e) => { e.stopPropagation(); setDeleteConfirmOpen(true); }}
               className="size-9 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-red-500 dark:text-red-400"
               title="删除帖子"
             >
@@ -451,6 +467,28 @@ const ForumDetail = () => {
       </main>
 
       <BottomNav />
+
+      {/* 删除确认弹窗（H5 友好，替代 confirm） */}
+      <ConfirmModal
+        open={deleteConfirmOpen}
+        title="删除帖子"
+        message="确定要删除这条帖子吗？删除后无法恢复。"
+        confirmText="确定删除"
+        cancelText="取消"
+        confirmVariant="danger"
+        confirmLoading={deleteLoading}
+        onConfirm={handleDeleteTopic}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
+
+      {/* 通用提示弹窗（替代 alert，H5/PC 通用） */}
+      <ConfirmModal
+        open={tipOpen}
+        title="提示"
+        message={tipMessage}
+        confirmText="确定"
+        onConfirm={() => setTipOpen(false)}
+      />
     </div>
   );
 };
