@@ -9,6 +9,7 @@ async function getAllDogs(req, res) {
     res.json(data);
 }
 
+
 /**
  * Get specific dog details
  */
