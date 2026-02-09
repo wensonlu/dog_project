@@ -1,0 +1,5 @@
+/** 全局样式（web-view 页面会铺满，此处仅作兜底） */
+page {
+  height: 100%;
+  background: #f5f5f5;
+}

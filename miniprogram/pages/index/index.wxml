@@ -1,0 +1,8 @@
+<!-- 全屏 web-view：小程序打开即展示 H5 -->
+<web-view
+  wx:if="{{h5Url}}"
+  src="{{h5Url}}"
+  bindload="onWebViewLoad"
+  binderror="onWebViewError"
+  bindmessage="onWebViewMessage"
+/>
