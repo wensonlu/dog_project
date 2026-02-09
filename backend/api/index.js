@@ -127,19 +127,22 @@ function handler(req, res) {
         return res.status(204).end();
     }
 
-    // 规范化路径：Vercel 可能传完整 URL 或带 /api 的 path，统一成 /auth/login 等形式以匹配 Express 路由
-    if (typeof req.url === 'string') {
-        let pathname = req.url;
+    // 规范化路径：Vercel rewrite 可能把 path 放在 ?path=xxx，或 req.url 为完整 URL/带 /api
+    let pathname = typeof req.url === 'string' ? req.url : '/';
+    const pathMatch = pathname.match(/\?path=(.+)$/);
+    if (pathMatch) {
+        pathname = '/api/' + decodeURIComponent(pathMatch[1].replace(/&.*$/, ''));
+    } else {
         try {
             if (pathname.startsWith('http')) {
                 pathname = new URL(pathname).pathname;
             }
         } catch (_) {}
-        if (pathname.startsWith('/api')) {
-            pathname = pathname.slice(4) || '/';
-        }
-        req.url = pathname;
     }
+    if (pathname.startsWith('/api')) {
+        pathname = pathname.slice(4) || '/';
+    }
+    req.url = pathname;
 
     return app(req, res);
 }

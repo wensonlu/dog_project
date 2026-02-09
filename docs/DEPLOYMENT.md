@@ -92,15 +92,31 @@ backend/
 
 ### vercel.json 配置
 
-最简单的配置（推荐）：
+后端项目需同时配置 **rewrites**（让 `/api/*` 都进入 `api/index.js`）和 **headers**（CORS）：
 
 ```json
 {
-  "version": 2
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api?path=:path*" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "你的前端域名" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS, PATCH" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Requested-With" },
+        { "key": "Access-Control-Allow-Credentials", "value": "true" },
+        { "key": "Access-Control-Max-Age", "value": "86400" }
+      ]
+    }
+  ]
 }
 ```
 
-Vercel 会自动识别 `api/` 目录下的文件作为 serverless functions。
+- **rewrites**：Vercel 默认只有 `/api` 会进 `api/index.js`，`/api/auth/login` 会 404；通过 rewrite 把 `/api/:path*` 转到 `/api?path=:path*`，由同一函数处理并还原路径。
+- **headers**：为所有 `/api` 响应加上 CORS 头；若开启 OPTIONS Allowlist，边缘返回的 204 也会带上这些头。
 
 ## 常见问题排查
 
