@@ -110,7 +110,7 @@ const PetDetails = () => {
                         <span className="text-[10px] font-black mt-0.5">咨询</span>
                     </button>
                     <button
-                        onClick={() => navigate('/apply/1')}
+                        onClick={() => navigate(`/application/${id}`)}
                         className="flex-1 h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl font-black text-lg flex items-center justify-center shadow-lg shadow-primary/25 transition-transform active:scale-95"
                     >
                         领养我
