@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Heart, Users, Dog } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Heart, Users, Sparkles } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://dog-project-backend.vercel.app';
 
-const StatsBar = () => {
+const StatsBar = ({ isVisible }) => {
   const [stats, setStats] = useState({
     availableDogs: 128,
     adoptedDogs: 56,
@@ -30,57 +30,79 @@ const StatsBar = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="mx-4 mb-2 py-2 px-3 bg-white/80 dark:bg-zinc-800/80 backdrop-blur rounded-full shadow-sm">
-        <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
-          <span>加载中...</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="mx-4 mb-2 py-2 px-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur rounded-full shadow-sm border border-gray-100 dark:border-zinc-700"
-    >
-      <div className="flex items-center justify-around">
-        {/* 待领养 */}
-        <div className="flex items-center gap-1.5">
-          <Dog size={14} className="text-orange-500" />
-          <span className="text-sm font-bold text-gray-800 dark:text-white">
-            {stats.availableDogs}
-          </span>
-          <span className="text-xs text-gray-500">待领养</span>
-        </div>
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div
+          initial={{ opacity: 0, y: -20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -20, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          className="mx-4 mb-3"
+        >
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-50 via-cream-50 to-teal-50 dark:from-zinc-800 dark:via-zinc-800 dark:to-zinc-800 p-4 shadow-sm border border-rose-100/50 dark:border-zinc-700">
+            {/* 装饰背景 */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-rose-200/20 to-transparent rounded-full blur-2xl" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-teal-200/20 to-transparent rounded-full blur-xl" />
+            
+            {/* 标题 */}
+            <div className="relative flex items-center gap-2 mb-3">
+              <Sparkles size={16} className="text-rose-400" />
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">温暖数据</span>
+              <div className="flex-1 h-px bg-gradient-to-r from-rose-200/50 to-transparent" />
+            </div>
 
-        {/* 分隔线 */}
-        <div className="w-px h-4 bg-gray-200 dark:bg-zinc-600" />
+            {/* 统计数据 */}
+            <div className="relative flex items-center justify-around">
+              {/* 待领养 */}
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="p-1.5 bg-rose-100 dark:bg-rose-900/30 rounded-lg">
+                    <span className="text-lg">🐕</span>
+                  </div>
+                  <span className="text-2xl font-bold text-gray-800 dark:text-white">
+                    {loading ? '-' : stats.availableDogs}
+                  </span>
+                </div>
+                <span className="text-xs text-gray-500 dark:text-gray-400">等待家的毛孩子</span>
+              </div>
 
-        {/* 已领养 */}
-        <div className="flex items-center gap-1.5">
-          <Heart size={14} className="text-pink-500 fill-pink-500" />
-          <span className="text-sm font-bold text-gray-800 dark:text-white">
-            {stats.adoptedDogs}
-          </span>
-          <span className="text-xs text-gray-500">已领养</span>
-        </div>
+              {/* 分隔装饰 */}
+              <div className="h-10 w-px bg-gradient-to-b from-transparent via-rose-200 to-transparent" />
 
-        {/* 分隔线 */}
-        <div className="w-px h-4 bg-gray-200 dark:bg-zinc-600" />
+              {/* 已领养 */}
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="p-1.5 bg-pink-100 dark:bg-pink-900/30 rounded-lg">
+                    <Heart size={18} className="text-pink-500 fill-pink-500" />
+                  </div>
+                  <span className="text-2xl font-bold text-gray-800 dark:text-white">
+                    {loading ? '-' : stats.adoptedDogs}
+                  </span>
+                </div>
+                <span className="text-xs text-gray-500 dark:text-gray-400">找到幸福家庭</span>
+              </div>
 
-        {/* 爱心用户 */}
-        <div className="flex items-center gap-1.5">
-          <Users size={14} className="text-blue-500" />
-          <span className="text-sm font-bold text-gray-800 dark:text-white">
-            {stats.totalUsers > 1000 ? `${(stats.totalUsers/1000).toFixed(1)}k` : stats.totalUsers}
-          </span>
-          <span className="text-xs text-gray-500">用户</span>
-        </div>
-      </div>
-    </motion.div>
+              {/* 分隔装饰 */}
+              <div className="h-10 w-px bg-gradient-to-b from-transparent via-teal-200 to-transparent" />
+
+              {/* 爱心用户 */}
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="p-1.5 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
+                    <Users size={18} className="text-teal-500" />
+                  </div>
+                  <span className="text-2xl font-bold text-gray-800 dark:text-white">
+                    {loading ? '-' : stats.totalUsers > 1000 ? `${(stats.totalUsers/1000).toFixed(1)}k` : stats.totalUsers}
+                  </span>
+                </div>
+                <span className="text-xs text-gray-500 dark:text-gray-400">爱心伙伴</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

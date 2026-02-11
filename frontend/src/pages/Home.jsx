@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDogs } from '../context/DogContext';
 import BottomNav from '../components/BottomNav';
@@ -8,22 +8,55 @@ import { motion, AnimatePresence } from 'framer-motion';
 const Home = () => {
     const navigate = useNavigate();
     const { DOGS, favoriteIds, toggleFavorite, loading } = useDogs();
-    const [currentIndex, setCurrentIndex] = React.useState(0);
-    const [direction, setDirection] = React.useState(null);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [direction, setDirection] = useState(null);
+    const [showStats, setShowStats] = useState(true);
+    const [lastScrollY, setLastScrollY] = useState(0);
+
+    // 智能显示/隐藏统计条
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            
+            // 向下滚动超过50px时隐藏，向上滚动时显示
+            if (currentScrollY > lastScrollY && currentScrollY > 50) {
+                setShowStats(false);
+            } else {
+                setShowStats(true);
+            }
+            
+            setLastScrollY(currentScrollY);
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [lastScrollY]);
 
     if (loading) {
         return (
-            <div className="mx-auto max-w-[430px] h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            <div className="mx-auto max-w-[430px] h-screen flex items-center justify-center bg-gradient-to-b from-rose-50 to-cream-50 dark:from-zinc-900 dark:to-zinc-900">
+                <motion.div 
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                    className="text-4xl"
+                >
+                    🐕
+                </motion.div>
             </div>
         );
     }
 
     if (!DOGS || DOGS.length === 0) {
         return (
-            <div className="mx-auto max-w-[430px] h-screen flex flex-col items-center justify-center bg-background-light dark:bg-background-dark p-10 text-center">
-                <span className="material-symbols-outlined text-6xl text-zinc-300 mb-4">sentiment_dissatisfied</span>
-                <p className="text-zinc-500">无法加载小狗信息，请检查后端服务是否启动。</p>
+            <div className="mx-auto max-w-[430px] h-screen flex flex-col items-center justify-center bg-gradient-to-b from-rose-50 to-cream-50 dark:from-zinc-900 dark:to-zinc-900 p-10 text-center">
+                <motion.span 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="text-6xl mb-4"
+                >
+                    🐾
+                </motion.span>
+                <p className="text-zinc-500 dark:text-zinc-400">暂无待领养的小可爱，稍后再来看看吧~</p>
             </div>
         )
     }
@@ -34,7 +67,6 @@ const Home = () => {
     const handleNext = (isFavorite = false) => {
         setDirection(isFavorite ? 'right' : 'left');
 
-        // Short delay to allow animation to start before switching state
         setTimeout(() => {
             if (isFavorite && !favoriteIds.includes(currentDog.id)) {
                 toggleFavorite(currentDog.id);
@@ -45,110 +77,142 @@ const Home = () => {
     };
 
     return (
-        <div className="relative mx-auto max-w-[430px] h-screen flex flex-col shadow-2xl bg-background-light dark:bg-background-dark overflow-hidden pb-20">
-            <header className="z-30 px-5 pt-6 pb-4">
-                <div className="flex items-center justify-between">
+        <div className="relative mx-auto max-w-[430px] min-h-screen flex flex-col bg-gradient-to-b from-rose-50/50 via-cream-50 to-teal-50/30 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900 overflow-hidden pb-20">
+            {/* 背景装饰 */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute -top-20 -right-20 w-64 h-64 bg-rose-200/30 rounded-full blur-3xl" />
+                <div className="absolute top-1/3 -left-20 w-48 h-48 bg-teal-200/20 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-0 w-56 h-56 bg-pink-200/20 rounded-full blur-3xl" />
+            </div>
+
+            {/* Header */}
+            <header className="relative z-30 px-5 pt-6 pb-2">
+                <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-between"
+                >
                     <div className="flex items-center gap-3">
-                        <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border-2 border-primary/10">
-                            <div
-                                className="w-full h-full bg-cover bg-center"
-                                style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB6ZfAu74fVn19xwt_mCCWmnG0o7CZVapQ8kcQLS4X-Bq4t9inNQHpNA2CtIDIILlKL7BEwdeDFD1ir1ExQXcadXX1G0ZeCruY06uZCg-nslkcMsFEssRFlRG9WUkpJ1A6HzO8kRmhQdRu6pihqtzjdpfK-FD-VL3z-S_AoQG8KrdjqvQ3CSQdDha2DtsEiRkV3RGcfoZHR12Ii9gsm_0C6CJ79z0Hu7LkUOIdgB5G5XcVAN8qPe5tGxLh1fauXT7-L58wrQ_eXFM0")' }}
-                            />
+                        <div className="size-12 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center shadow-lg shadow-rose-200/50">
+                            <span className="text-2xl">🏠</span>
                         </div>
                         <div>
-                            <p className="text-[10px] text-warm-beige font-bold uppercase tracking-[0.2em]">发现伙伴</p>
-                            <h1 className="text-lg font-bold tracking-tight text-[#1b120e] dark:text-white">为你推荐</h1>
+                            <p className="text-xs text-rose-500 font-medium">发现小伙伴</p>
+                            <h1 className="text-xl font-bold text-gray-800 dark:text-white">汪星球</h1>
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <button className="size-10 rounded-full bg-white dark:bg-zinc-800 shadow-sm flex items-center justify-center text-zinc-600 dark:text-zinc-300">
-                            <span className="material-symbols-outlined text-[20px]">tune</span>
-                        </button>
-                        <button className="size-10 rounded-full bg-white dark:bg-zinc-800 shadow-sm flex items-center justify-center text-zinc-600 dark:text-zinc-300">
+                        <button className="size-10 rounded-xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur shadow-sm flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:scale-105 transition-transform">
                             <span className="material-symbols-outlined text-[20px]">notifications</span>
                         </button>
                     </div>
-                </div>
+                </motion.div>
             </header>
 
-            <StatsBar />
+            {/* 智能统计条 */}
+            <div className="relative z-20">
+                <StatsBar isVisible={showStats} />
+            </div>
 
-            <main className="flex-1 relative mx-4 mb-3">
-                {/* Secondary Card (Visual cue for stack) */}
+            {/* 主内容区 */}
+            <main className="flex-1 relative mx-4 mb-3 z-10">
+                {/* 下一张卡片预览 */}
                 <div
                     key={`next-${nextDog.id}`}
-                    className="absolute inset-0 z-0 scale-[0.94] translate-y-4 opacity-40 bg-zinc-300 dark:bg-zinc-700 rounded-[2rem] overflow-hidden"
+                    className="absolute inset-0 z-0 scale-[0.92] translate-y-3 opacity-30 bg-zinc-200 dark:bg-zinc-700 rounded-[2rem] overflow-hidden"
                 >
                     <div
                         className="absolute inset-0 bg-cover bg-center"
                         style={{ backgroundImage: `url(${nextDog.image})` }}
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </div>
 
-                {/* Main Swipe Card with Animation */}
+                {/* 当前卡片 */}
                 <AnimatePresence mode="popLayout">
                     <motion.div
                         key={currentDog.id}
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
+                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{
-                            x: direction === 'right' ? 500 : direction === 'left' ? -500 : 0,
-                            rotate: direction === 'right' ? 20 : direction === 'left' ? -20 : 0,
-                            opacity: 0
+                            x: direction === 'right' ? 300 : direction === 'left' ? -300 : 0,
+                            rotate: direction === 'right' ? 15 : direction === 'left' ? -15 : 0,
+                            opacity: 0,
+                            scale: 0.9
                         }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="absolute inset-0 z-10 bg-zinc-200 dark:bg-zinc-800 rounded-[2rem] overflow-hidden shadow-2xl origin-bottom"
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                        className="absolute inset-0 z-10 bg-white dark:bg-zinc-800 rounded-[2rem] overflow-hidden shadow-2xl shadow-rose-200/20 dark:shadow-none origin-bottom"
                     >
                         <div
                             onClick={() => navigate(`/pet/${currentDog.id}`)}
-                            className="absolute inset-0 bg-cover bg-center transition-transform duration-500 cursor-pointer"
+                            className="absolute inset-0 bg-cover bg-center transition-transform duration-500 cursor-pointer hover:scale-105"
                             style={{ backgroundImage: `url(${currentDog.image})` }}
                         />
 
-                        {/* Status Overlay for Animation */}
+                        {/* 滑动状态标签 */}
                         {direction === 'right' && (
-                            <div className="absolute top-10 left-10 z-20 border-4 border-primary text-primary font-black text-4xl px-4 py-2 rounded-xl rotate-[-20deg] uppercase">喜欢</div>
+                            <motion.div 
+                                initial={{ scale: 0, rotate: -10 }}
+                                animate={{ scale: 1, rotate: -12 }}
+                                className="absolute top-8 left-8 z-20 border-4 border-rose-400 text-rose-400 font-black text-3xl px-4 py-2 rounded-2xl bg-white/90 backdrop-blur"
+                            >
+                                喜欢 💕
+                            </motion.div>
                         )}
                         {direction === 'left' && (
-                            <div className="absolute top-10 right-10 z-20 border-4 border-red-500 text-red-500 font-black text-4xl px-4 py-2 rounded-xl rotate-[20deg] uppercase">忽略</div>
+                            <motion.div 
+                                initial={{ scale: 0, rotate: 10 }}
+                                animate={{ scale: 1, rotate: 12 }}
+                                className="absolute top-8 right-8 z-20 border-4 border-gray-400 text-gray-400 font-black text-3xl px-4 py-2 rounded-2xl bg-white/90 backdrop-blur"
+                            >
+                                下次见 👋
+                            </motion.div>
                         )}
 
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                        {/* 渐变遮罩 */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
-                        <div className="absolute bottom-28 left-6 right-6 text-white">
+                        {/* 宠物信息 */}
+                        <div className="absolute bottom-24 left-6 right-6 text-white">
                             <div className="flex items-baseline gap-2 mb-1">
                                 <h2 className="text-4xl font-bold">{currentDog.name}</h2>
-                                <span className="text-2xl font-light opacity-90">{currentDog.age}</span>
+                                <span className="text-xl font-light opacity-90">{currentDog.age}</span>
                             </div>
-                            <p className="text-lg font-medium opacity-80 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-sm">pets</span>
+                            <p className="text-lg font-medium opacity-90 flex items-center gap-2">
+                                <span>🐕</span>
                                 {currentDog.breed}
                             </p>
-                            <div className="flex items-center gap-1 mt-2 text-primary">
-                                <span className="material-symbols-outlined text-[16px]">location_on</span>
-                                <span className="text-sm font-semibold">{currentDog.location}</span>
+                            <div className="flex items-center gap-1 mt-2 text-rose-300">
+                                <span>📍</span>
+                                <span className="text-sm font-medium">{currentDog.location}</span>
                             </div>
                         </div>
 
+                        {/* 操作按钮 */}
                         <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-6">
-                            <button
+                            <motion.button
+                                whileTap={{ scale: 0.9 }}
                                 onClick={() => handleNext(false)}
-                                className="size-16 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white transition-transform active:scale-90"
+                                className="size-14 rounded-full bg-white/20 backdrop-blur-xl border-2 border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
                             >
-                                <span className="material-symbols-outlined text-3xl font-light">close</span>
-                            </button>
-                            <button
+                                <span className="text-2xl">✕</span>
+                            </motion.button>
+                            
+                            <motion.button
+                                whileTap={{ scale: 0.9 }}
                                 onClick={() => handleNext(true)}
-                                className="size-20 rounded-full bg-primary flex items-center justify-center text-white shadow-xl shadow-primary/30 transition-transform active:scale-95"
+                                className="size-16 rounded-full bg-gradient-to-r from-rose-400 to-pink-500 flex items-center justify-center text-white shadow-xl shadow-rose-500/30"
                             >
-                                <span className={`material-symbols-outlined text-4xl ${favoriteIds.includes(currentDog.id) ? 'fill-white' : ''}`}>favorite</span>
-                            </button>
-                            <button
+                                <span className="text-3xl">{favoriteIds.includes(currentDog.id) ? '❤️' : '🤍'}</span>
+                            </motion.button>
+                            
+                            <motion.button
+                                whileTap={{ scale: 0.9 }}
                                 onClick={() => navigate(`/pet/${currentDog.id}`)}
-                                className="size-16 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white transition-transform active:scale-90"
+                                className="size-14 rounded-full bg-white/20 backdrop-blur-xl border-2 border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
                             >
-                                <span className="material-symbols-outlined text-3xl font-light">info</span>
-                            </button>
+                                <span className="text-2xl">ℹ️</span>
+                            </motion.button>
                         </div>
                     </motion.div>
                 </AnimatePresence>
