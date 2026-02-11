@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import TopicCard from '../components/Forum/TopicCard';
 import CategoryFilter from '../components/Forum/CategoryFilter';
@@ -18,7 +19,6 @@ const Forum = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 获取话题列表
   useEffect(() => {
     const fetchTopics = async () => {
       setLoading(true);
@@ -47,7 +47,6 @@ const Forum = () => {
       } catch (err) {
         console.error('Error fetching topics:', err);
         setError(err.message);
-        // 如果 API 失败，使用空数组而不是 mock 数据
         setTopics([]);
       } finally {
         setLoading(false);
@@ -58,51 +57,71 @@ const Forum = () => {
   }, [selectedCategory, selectedSort, searchQuery, user?.id]);
 
   return (
-    <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-background-light dark:bg-background-dark pb-24">
-      {/* 头部 - 小红书风格，更简洁 */}
-      <header className="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 pt-12 pb-3">
+    <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-gradient-to-b from-teal-50/50 via-cream-50 to-rose-50/30 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900 pb-24 relative overflow-hidden">
+      {/* 背景装饰 */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-20 -left-20 w-64 h-64 bg-teal-200/30 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 -right-20 w-48 h-48 bg-rose-200/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 left-0 w-56 h-56 bg-pink-200/20 rounded-full blur-3xl" />
+      </div>
+
+      {/* Header */}
+      <motion.header 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl px-4 pt-12 pb-3 border-b border-rose-100/50 dark:border-zinc-800"
+      >
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-2xl font-bold tracking-tight text-[#1b120e] dark:text-white">发现</h1>
+          <div className="flex items-center gap-3">
+            <div className="size-11 rounded-2xl bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center shadow-lg shadow-teal-200/50">
+              <span className="text-2xl">💬</span>
+            </div>
+            <div>
+              <p className="text-xs text-teal-500 font-medium">温暖交流</p>
+              <h1 className="text-xl font-bold text-gray-800 dark:text-white">汪友社区</h1>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.9 }}
               onClick={() => navigate('/forum/history')}
-              className="size-9 rounded-full bg-white dark:bg-zinc-800 shadow-sm flex items-center justify-center text-[#1b120e] dark:text-white"
-              title="浏览记录"
+              className="size-10 rounded-xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-500"
             >
-              <span className="material-symbols-outlined text-lg">history</span>
-            </button>
-            <button
+              <span className="material-symbols-outlined">history</span>
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
               onClick={() => navigate('/forum/create')}
-              className="size-9 rounded-full bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/30"
+              className="size-10 rounded-xl bg-gradient-to-r from-rose-400 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-rose-200/50"
             >
-              <span className="material-symbols-outlined text-lg">edit</span>
-            </button>
+              <span className="material-symbols-outlined">edit</span>
+            </motion.button>
           </div>
         </div>
 
-        {/* 搜索栏 - 更紧凑 */}
+        {/* 搜索栏 */}
         <div className="relative mb-3">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="搜索话题..."
-            className="w-full h-10 px-4 pl-10 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-[#1b120e] dark:text-white placeholder-warm-beige focus:outline-none focus:ring-2 focus:ring-primary/20"
+            placeholder="搜索暖心话题..."
+            className="w-full h-11 px-4 pl-11 rounded-2xl border border-rose-100 dark:border-zinc-700 bg-white/90 dark:bg-zinc-800/90 text-sm text-gray-800 dark:text-white placeholder-rose-300/70 focus:outline-none focus:ring-2 focus:ring-rose-200/50"
           />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-warm-beige text-lg">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-rose-300 text-lg">
             search
           </span>
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 size-5 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center"
+              className="absolute right-3 top-1/2 -translate-y-1/2 size-6 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center"
             >
-              <span className="material-symbols-outlined text-xs text-warm-beige">close</span>
+              <span className="material-symbols-outlined text-xs text-rose-500">close</span>
             </button>
           )}
         </div>
 
-        {/* 分类和排序 - 更紧凑 */}
+        {/* 分类和排序 */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 overflow-hidden">
             <CategoryFilter
@@ -117,34 +136,47 @@ const Forum = () => {
             onSelect={setSelectedSort}
           />
         </div>
-      </header>
+      </motion.header>
 
-      {/* 话题列表 - 小红书瀑布流布局 */}
-      <main className="flex-1 px-2 pt-4 overflow-y-auto">
+      {/* 话题列表 */}
+      <main className="flex-1 px-2 pt-4 overflow-y-auto relative z-10">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-            <p className="mt-4 text-warm-beige">加载中...</p>
+            <motion.div 
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+              className="text-4xl"
+            >
+              🐾
+            </motion.div>
+            <p className="mt-4 text-rose-400 text-sm">加载温暖话题中...</p>
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center justify-center py-20 opacity-40">
-            <span className="material-symbols-outlined text-6xl mb-4">error</span>
-            <p className="text-lg font-medium text-warm-beige">加载失败：{error}</p>
-            <button
+          <div className="flex flex-col items-center justify-center py-20">
+            <span className="text-5xl mb-4">😔</span>
+            <p className="text-gray-500 dark:text-gray-400">加载失败，请稍后再试</p>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               onClick={() => window.location.reload()}
-              className="mt-4 text-primary font-bold"
+              className="mt-4 px-6 py-2 bg-rose-100 dark:bg-rose-900/30 text-rose-500 rounded-full text-sm font-medium"
             >
               重试
-            </button>
+            </motion.button>
           </div>
         ) : topics.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 opacity-40">
-            <span className="material-symbols-outlined text-6xl mb-4">forum</span>
-            <p className="text-lg font-medium text-warm-beige">暂无话题</p>
+          <div className="flex flex-col items-center justify-center py-20">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="text-6xl mb-4"
+            >
+              🌸
+            </motion.div>
+            <p className="text-gray-500 dark:text-gray-400">暂无话题，来做第一个分享的人吧~</p>
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="mt-4 text-primary font-bold"
+                className="mt-4 text-rose-500 font-medium text-sm"
               >
                 清除搜索
               </button>
@@ -152,16 +184,21 @@ const Forum = () => {
           </div>
         ) : (
           <div className="columns-2 gap-2 space-y-2">
-            {topics.map(topic => (
-              <div key={topic.id} className="break-inside-avoid mb-2">
+            {topics.map((topic, index) => (
+              <motion.div 
+                key={topic.id} 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="break-inside-avoid mb-2"
+              >
                 <TopicCard topic={topic} />
-              </div>
+              </motion.div>
             ))}
           </div>
         )}
       </main>
 
-      {/* 底部导航 */}
       <BottomNav />
     </div>
   );
