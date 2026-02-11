@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDogs } from '../context/DogContext';
 import BottomNav from '../components/BottomNav';
-import StatsCard from '../components/StatsCard';
+import StatsBar from '../components/StatsBar';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Home = () => {
@@ -71,7 +71,7 @@ const Home = () => {
                 </div>
             </header>
 
-            <StatsCard />
+            <StatsBar />
 
             <main className="flex-1 relative mx-4 mb-3">
                 {/* Secondary Card (Visual cue for stack) */}
