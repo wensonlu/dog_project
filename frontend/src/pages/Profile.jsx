@@ -143,12 +143,12 @@ const Profile = () => {
             </div>
 
             {/* Header */}
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-rose-100/50 dark:border-zinc-800"
             >
-                <div className="flex items-center p-4 pb-3 justify-between">
+                <div className="flex items-center p-4 pt-6 pb-3 justify-between">
                     <motion.button 
                         whileTap={{ scale: 0.9 }}
                         className="flex size-11 rounded-xl bg-rose-100 dark:bg-rose-900/30 items-center justify-center text-rose-500"

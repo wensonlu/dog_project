@@ -75,10 +75,10 @@ const Messages = () => {
             </div>
 
             {/* Header */}
-            <motion.header 
+            <motion.header
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl px-4 pt-12 pb-3 border-b border-blue-100/50 dark:border-zinc-800"
+                className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl px-4 pt-6 pb-3 border-b border-blue-100/50 dark:border-zinc-800"
             >
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
