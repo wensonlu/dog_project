@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDogs } from '../context/DogContext';
+import { useAuth } from '../context/AuthContext';
 import BottomNav from '../components/BottomNav';
 import StatsBar from '../components/StatsBar';
+import { API_BASE_URL } from '../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Home = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const { DOGS, favoriteIds, toggleFavorite, loading } = useDogs();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [direction, setDirection] = useState(null);
     const [showStats, setShowStats] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     // 智能显示/隐藏统计条
     useEffect(() => {
@@ -31,6 +35,29 @@ const Home = () => {
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, [lastScrollY]);
+
+    // 获取未读消息数
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            if (!user?.id) return;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/messages/unread/${user.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setUnreadCount(data.count || 0);
+                }
+            } catch (error) {
+                console.error('获取未读消息失败:', error);
+            }
+        };
+
+        fetchUnreadCount();
+        
+        // 每30秒刷新一次
+        const interval = setInterval(fetchUnreadCount, 30000);
+        return () => clearInterval(interval);
+    }, [user?.id]);
 
     if (loading) {
         return (
@@ -87,7 +114,7 @@ const Home = () => {
 
             {/* Header */}
             <header className="relative z-30 px-5 pt-6 pb-2">
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="flex items-center justify-between"
@@ -102,8 +129,22 @@ const Home = () => {
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        {/* 通知按钮 */}
                         <button className="size-10 rounded-xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur shadow-sm flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:scale-105 transition-transform">
                             <span className="material-symbols-outlined text-[20px]">notifications</span>
+                        </button>
+                        
+                        {/* 消息入口 - 新增 */}
+                        <button 
+                            onClick={() => navigate('/messages')}
+                            className="relative size-10 rounded-xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur shadow-sm flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:scale-105 transition-transform"
+                        >
+                            <span className="material-symbols-outlined text-[20px]">chat_bubble</span>
+                            {unreadCount > 0 && (
+                                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                </span>
+                            )}
                         </button>
                     </div>
                 </motion.div>
@@ -189,29 +230,42 @@ const Home = () => {
                         </div>
 
                         {/* 操作按钮 */}
-                        <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-6">
+                        <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-4">
                             <motion.button
                                 whileTap={{ scale: 0.9 }}
                                 onClick={() => handleNext(false)}
-                                className="size-14 rounded-full bg-white/20 backdrop-blur-xl border-2 border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                                className="size-12 rounded-full bg-white/20 backdrop-blur-xl border-2 border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                                title="跳过"
                             >
-                                <span className="text-2xl">✕</span>
+                                <span className="text-xl">✕</span>
                             </motion.button>
                             
                             <motion.button
                                 whileTap={{ scale: 0.9 }}
                                 onClick={() => handleNext(true)}
-                                className="size-16 rounded-full bg-gradient-to-r from-rose-400 to-pink-500 flex items-center justify-center text-white shadow-xl shadow-rose-500/30"
+                                className="size-14 rounded-full bg-gradient-to-r from-rose-400 to-pink-500 flex items-center justify-center text-white shadow-xl shadow-rose-500/30"
+                                title="收藏"
                             >
-                                <span className="text-3xl">{favoriteIds.includes(currentDog.id) ? '❤️' : '🤍'}</span>
+                                <span className="text-2xl">{favoriteIds.includes(currentDog.id) ? '❤️' : '🤍'}</span>
                             </motion.button>
                             
                             <motion.button
                                 whileTap={{ scale: 0.9 }}
                                 onClick={() => navigate(`/pet/${currentDog.id}`)}
-                                className="size-14 rounded-full bg-white/20 backdrop-blur-xl border-2 border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                                className="size-12 rounded-full bg-white/20 backdrop-blur-xl border-2 border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                                title="查看详情"
                             >
-                                <span className="text-2xl">ℹ️</span>
+                                <span className="text-xl">ℹ️</span>
+                            </motion.button>
+                            
+                            {/* 新增：快速申请按钮 */}
+                            <motion.button
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => navigate(`/application/${currentDog.id}`)}
+                                className="size-12 rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 flex items-center justify-center text-white shadow-xl shadow-emerald-500/30"
+                                title="快速申请领养"
+                            >
+                                <span className="text-xl">📝</span>
                             </motion.button>
                         </div>
                     </motion.div>

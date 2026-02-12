@@ -1,14 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDogs } from '../context/DogContext';
+import { motion } from 'framer-motion';
+import { API_BASE_URL } from '../config/api';
 
 const PetDetails = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const { DOGS } = useDogs();
+    const [relatedTopics, setRelatedTopics] = useState([]);
+    const [loadingTopics, setLoadingTopics] = useState(true);
 
     // Find the dog by id, or default to the first one for demo
     const dog = DOGS.find(d => d.id === parseInt(id)) || DOGS[0];
+
+    // 获取相关讨论
+    useEffect(() => {
+        const fetchRelatedTopics = async () => {
+            if (!dog?.id) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/forum/related/${dog.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setRelatedTopics(data || []);
+                }
+            } catch (error) {
+                console.error('获取相关讨论失败:', error);
+            } finally {
+                setLoadingTopics(false);
+            }
+        };
+
+        fetchRelatedTopics();
+    }, [dog?.id]);
 
     return (
         <div className="mx-auto max-w-[430px] min-h-screen bg-background-light dark:bg-background-dark text-[#1b120e] dark:text-[#f3ebe7] font-sans pb-32 relative">
@@ -77,11 +102,81 @@ const PetDetails = () => {
                     </h2>
                     <div className="bg-surface-light dark:bg-white/5 p-5 rounded-2xl border border-[#e5ded9] dark:border-white/10">
                         <p className="text-[#5c4033] dark:text-[#d1c2ba] leading-relaxed text-base font-medium">
-                            Buddy 是“好狗狗”的代名词。他性格温柔，最喜欢在公园里悠闲散步，也特别享受被摸肚子的时光。他与孩子和其他狗狗都能和谐相处，是陪伴家庭成长的完美伙伴。
+                            {dog.name || '这只小狗'}性格温柔，最喜欢在公园里悠闲散步，也特别享受被摸肚子的时光。他与孩子和其他狗狗都能和谐相处，是陪伴家庭成长的完美伙伴。
                             <br /><br />
-                            他已经掌握了“坐下”和“待命”的指令，不过一旦看到网球，他可能会偶尔“失忆”！Buddy 正在寻找一个永远的家，希望成为你最忠诚的伴侣。
+                            他已经掌握了一些基本指令，不过偶尔会有点小调皮！{dog.name || '他'}正在寻找一个永远的家，希望成为你最忠诚的伴侣。
                         </p>
                     </div>
+                </div>
+
+                {/* 相关讨论板块 - 新增 */}
+                <div className="mb-8">
+                    <h2 className="text-xl font-black mb-3 text-[#1b120e] dark:text-white flex items-center gap-2">
+                        <span className="material-symbols-outlined text-teal-500">forum</span>
+                        💬 相关讨论
+                        {!loadingTopics && relatedTopics.length > 0 && (
+                            <span className="text-sm font-normal text-gray-500">
+                                ({relatedTopics.length})
+                            </span>
+                        )}
+                    </h2>
+                    
+                    {loadingTopics ? (
+                        <div className="bg-surface-light dark:bg-white/5 p-5 rounded-2xl border border-[#e5ded9] dark:border-white/10 text-center">
+                            <div className="animate-spin h-6 w-6 border-2 border-teal-500 border-t-transparent rounded-full mx-auto"></div>
+                            <p className="text-sm text-gray-500 mt-2">加载中...</p>
+                        </div>
+                    ) : relatedTopics.length === 0 ? (
+                        <div className="bg-surface-light dark:bg-white/5 p-5 rounded-2xl border border-[#e5ded9] dark:border-white/10 text-center">
+                            <p className="text-gray-500 dark:text-gray-400 mb-3">暂无相关讨论</p>
+                            <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => navigate('/forum/create', { state: { dogId: id, dogName: dog.name } })}
+                                className="px-4 py-2 bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-300 rounded-full text-sm font-medium"
+                            >
+                                发起讨论 →
+                            </motion.button>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {relatedTopics.slice(0, 3).map((topic, index) => (
+                                <motion.div
+                                    key={topic.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    onClick={() => navigate(`/forum/${topic.id}`)}
+                                    className="bg-surface-light dark:bg-white/5 p-4 rounded-2xl border border-[#e5ded9] dark:border-white/10 cursor-pointer active:scale-[0.98] transition-transform"
+                                >
+                                    <h3 className="font-bold text-[#1b120e] dark:text-white line-clamp-1">
+                                        {topic.title}
+                                    </h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                        {topic.content?.substring(0, 50)}...
+                                    </p>
+                                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                                        <span className="flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-[14px]">person</span>
+                                            {topic.author_name || '匿名用户'}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-[14px]">chat</span>
+                                            {topic.comment_count || 0}
+                                        </span>
+                                    </div>
+                                </motion.div>
+                            ))}
+                            
+                            {relatedTopics.length > 3 && (
+                                <button
+                                    onClick={() => navigate('/forum', { state: { dogId: id, dogName: dog.name } })}
+                                    className="w-full py-3 text-teal-600 dark:text-teal-400 font-medium text-sm text-center"
+                                >
+                                    查看全部 {relatedTopics.length} 个讨论 →
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 <div className="mb-8">

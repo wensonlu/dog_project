@@ -15,7 +15,6 @@ import ForumHistory from './pages/ForumHistory';
 import CreateTopic from './pages/CreateTopic';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import SelectDog from './pages/SelectDog';
 import Admin from './pages/Admin';
 import AdminSubmissions from './pages/AdminSubmissions';
 import SubmitDog from './pages/SubmitDog';
@@ -43,7 +42,6 @@ function AppContent() {
         <Route path="/forum/:id" element={<PrivateRoute><ForumDetail /></PrivateRoute>} />
         <Route path="/forum/history" element={<PrivateRoute><ForumHistory /></PrivateRoute>} />
         <Route path="/forum/create" element={<PrivateRoute><CreateTopic /></PrivateRoute>} />
-        <Route path="/add" element={<PrivateRoute><SelectDog /></PrivateRoute>} />
         <Route path="/admin" element={<PrivateRoute><Admin /></PrivateRoute>} />
         <Route path="/admin-submissions" element={<PrivateRoute><AdminSubmissions /></PrivateRoute>} />
         <Route path="/submit-dog" element={<PrivateRoute><SubmitDog /></PrivateRoute>} />
