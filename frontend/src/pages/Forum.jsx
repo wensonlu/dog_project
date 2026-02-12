@@ -74,7 +74,7 @@ const Forum = () => {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <div className="size-11 rounded-2xl bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center shadow-lg shadow-teal-200/50">
-              <span className="text-2xl">💬</span>
+              <span className="text-2xl"><span className="material-symbols-outlined">forum</span></span>
             </div>
             <div>
               <p className="text-xs text-teal-500 font-medium">温暖交流</p>
@@ -147,7 +147,7 @@ const Forum = () => {
               transition={{ repeat: Infinity, duration: 1.5 }}
               className="text-4xl"
             >
-              🐾
+              <span className="material-symbols-outlined text-4xl">pets</span>
             </motion.div>
             <p className="mt-4 text-rose-400 text-sm">加载温暖话题中...</p>
           </div>

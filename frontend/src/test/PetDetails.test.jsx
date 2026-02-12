@@ -60,7 +60,7 @@ describe('PetDetails - Related Topics Section', () => {
     });
 
     // Check if section title is rendered
-    expect(screen.getByText('💬 相关讨论')).toBeInTheDocument();
+    expect(screen.getByText('相关讨论')).toBeInTheDocument();
   });
 
   it('shows loading state initially', async () => {

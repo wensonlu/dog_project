@@ -65,9 +65,9 @@ const Home = () => {
                 <motion.div 
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ repeat: Infinity, duration: 1.5 }}
-                    className="text-4xl"
+                    className="text-4xl flex items-center justify-center"
                 >
-                    🐕
+                    <span className="material-symbols-outlined text-4xl text-rose-400">pets</span>
                 </motion.div>
             </div>
         );
@@ -79,9 +79,9 @@ const Home = () => {
                 <motion.span 
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="text-6xl mb-4"
+                    className="text-6xl mb-4 flex items-center justify-center"
                 >
-                    🐾
+                    <span className="material-symbols-outlined text-6xl text-rose-400">pets</span>
                 </motion.span>
                 <p className="text-zinc-500 dark:text-zinc-400">暂无待领养的小可爱，稍后再来看看吧~</p>
             </div>
@@ -121,7 +121,7 @@ const Home = () => {
                 >
                     <div className="flex items-center gap-3">
                         <div className="size-12 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center shadow-lg shadow-rose-200/50">
-                            <span className="text-2xl">🏠</span>
+                            <span className="material-symbols-outlined text-2xl text-white">home</span>
                         </div>
                         <div>
                             <p className="text-xs text-rose-500 font-medium">发现小伙伴</p>
@@ -220,11 +220,11 @@ const Home = () => {
                                 <span className="text-xl font-light opacity-90">{currentDog.age}</span>
                             </div>
                             <p className="text-lg font-medium opacity-90 flex items-center gap-2">
-                                <span>🐕</span>
+                                <span className="material-symbols-outlined">pets</span>
                                 {currentDog.breed}
                             </p>
                             <div className="flex items-center gap-1 mt-2 text-rose-300">
-                                <span>📍</span>
+                                <span className="material-symbols-outlined text-sm">location_on</span>
                                 <span className="text-sm font-medium">{currentDog.location}</span>
                             </div>
                         </div>
@@ -237,7 +237,7 @@ const Home = () => {
                                 className="size-12 rounded-full bg-white/20 backdrop-blur-xl border-2 border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
                                 title="跳过"
                             >
-                                <span className="text-xl">✕</span>
+                                <span className="material-symbols-outlined text-xl">close</span>
                             </motion.button>
                             
                             <motion.button
@@ -246,7 +246,7 @@ const Home = () => {
                                 className="size-14 rounded-full bg-gradient-to-r from-rose-400 to-pink-500 flex items-center justify-center text-white shadow-xl shadow-rose-500/30"
                                 title="收藏"
                             >
-                                <span className="text-2xl">{favoriteIds.includes(currentDog.id) ? '❤️' : '🤍'}</span>
+                                <span className="material-symbols-outlined text-2xl">{favoriteIds.includes(currentDog.id) ? 'favorite' : 'favorite_border'}</span>
                             </motion.button>
                             
                             <motion.button
@@ -255,7 +255,7 @@ const Home = () => {
                                 className="size-12 rounded-full bg-white/20 backdrop-blur-xl border-2 border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
                                 title="查看详情"
                             >
-                                <span className="text-xl">ℹ️</span>
+                                <span className="material-symbols-outlined text-xl">info</span>
                             </motion.button>
                             
                             {/* 新增：快速申请按钮 */}
@@ -265,7 +265,7 @@ const Home = () => {
                                 className="size-12 rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 flex items-center justify-center text-white shadow-xl shadow-emerald-500/30"
                                 title="快速申请领养"
                             >
-                                <span className="text-xl">📝</span>
+                                <span className="material-symbols-outlined text-xl">edit_document</span>
                             </motion.button>
                         </div>
                     </motion.div>

@@ -92,7 +92,6 @@ const Profile = () => {
         { 
             icon: 'pending_actions', 
             label: '领养进度', 
-            emoji: '📋',
             sub: pendingCount > 0 ? `${pendingCount} 个新动态` : null, 
             highlight: true,
             action: () => setShowApplications(true)
@@ -100,36 +99,30 @@ const Profile = () => {
         { 
             icon: 'forum', 
             label: '我的帖子',
-            emoji: '💬',
             action: () => navigate('/forum')
         },
         { 
             icon: 'assignment', 
             label: '领养管理', 
-            emoji: '📊',
             action: () => navigate('/admin')
         },
         { 
             icon: 'publish', 
             label: '发布管理', 
-            emoji: '📝',
             action: () => navigate('/admin-submissions')
         },
         { 
             icon: 'pets', 
             label: '送养小狗', 
-            emoji: '🐕',
             action: () => navigate('/submit-dog') 
         },
         { 
             icon: 'help_center', 
             label: '帮助中心',
-            emoji: '❓',
         },
         { 
             icon: 'settings', 
             label: '设置',
-            emoji: '⚙️',
         },
     ];
 
@@ -273,7 +266,7 @@ const Profile = () => {
                         className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-2xl shadow-sm border border-rose-100/30 dark:border-zinc-700 cursor-pointer"
                     >
                         <div className={`size-11 rounded-xl flex items-center justify-center text-xl ${item.highlight ? 'bg-rose-100 dark:bg-rose-900/30' : 'bg-gray-100 dark:bg-zinc-700'}`}>
-                            {item.emoji}
+                            <span className="material-symbols-outlined">{item.icon}</span>
                         </div>
                         <div className="flex-1">
                             <p className="font-bold text-gray-800 dark:text-white">{item.label}</p>
@@ -295,7 +288,7 @@ const Profile = () => {
                         className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-2xl shadow-sm border border-rose-100/30 dark:border-zinc-700 cursor-pointer"
                     >
                         <div className="size-11 rounded-xl bg-gray-100 dark:bg-zinc-700 flex items-center justify-center text-xl">
-                            {item.emoji}
+                            <span className="material-symbols-outlined">{item.icon}</span>
                         </div>
                         <div className="flex-1">
                             <p className="font-bold text-gray-800 dark:text-white">{item.label}</p>
@@ -344,7 +337,7 @@ const Profile = () => {
                         <div className="px-4 py-4 max-h-[calc(100vh-80px)] overflow-y-auto pb-24">
                             {applications.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-20">
-                                    <div className="text-6xl mb-4">🐾</div>
+                                    <div className="text-6xl mb-4"><span className="material-symbols-outlined text-6xl">pets</span></div>
                                     <p className="text-gray-500 dark:text-gray-400">暂无申请记录</p>
                                     <motion.button
                                         whileTap={{ scale: 0.95 }}

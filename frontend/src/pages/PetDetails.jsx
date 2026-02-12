@@ -113,7 +113,7 @@ const PetDetails = () => {
                 <div className="mb-8">
                     <h2 className="text-xl font-black mb-3 text-[#1b120e] dark:text-white flex items-center gap-2">
                         <span className="material-symbols-outlined text-teal-500">forum</span>
-                        💬 相关讨论
+                        <span className="material-symbols-outlined text-sm">forum</span> 相关讨论
                         {!loadingTopics && relatedTopics.length > 0 && (
                             <span className="text-sm font-normal text-gray-500">
                                 ({relatedTopics.length})

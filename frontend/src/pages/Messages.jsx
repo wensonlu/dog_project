@@ -83,7 +83,7 @@ const Messages = () => {
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                         <div className="size-11 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-200/50">
-                            <span className="text-2xl">💬</span>
+                            <span className="text-2xl"><span className="material-symbols-outlined">chat</span></span>
                         </div>
                         <div>
                             <p className="text-xs text-blue-500 font-medium">温馨对话</p>
@@ -161,7 +161,7 @@ const Messages = () => {
                             >
                                 <div className="relative">
                                     <div className="flex items-center justify-center aspect-square rounded-2xl size-14 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30">
-                                        <span className="text-2xl">🐕</span>
+                                        <span className="text-2xl"><span className="material-symbols-outlined">pets</span></span>
                                     </div>
                                     {msg.is_unread && (
                                         <div className="absolute -top-1 -right-1 size-4 rounded-full bg-rose-500 border-2 border-white dark:border-zinc-800 flex items-center justify-center">

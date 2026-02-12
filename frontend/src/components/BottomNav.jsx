@@ -110,7 +110,7 @@ const BottomNav = () => {
                                         className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
                                     >
                                         <div className="size-12 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-rose-200/50">
-                                            <span className="text-2xl">🐕</span>
+                                            <span className="material-symbols-outlined text-2xl">pets</span>
                                         </div>
                                         <div className="text-left">
                                             <p className="font-bold text-gray-800 dark:text-white">发布送养</p>
@@ -125,7 +125,7 @@ const BottomNav = () => {
                                         className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors"
                                     >
                                         <div className="size-12 rounded-2xl bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-teal-200/50">
-                                            <span className="text-2xl">💬</span>
+                                            <span className="material-symbols-outlined text-2xl">forum</span>
                                         </div>
                                         <div className="text-left">
                                             <p className="font-bold text-gray-800 dark:text-white">发布帖子</p>

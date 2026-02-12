@@ -58,7 +58,7 @@ const StatsBar = ({ isVisible }) => {
               <div className="flex flex-col items-center">
                 <div className="flex items-center gap-1.5 mb-1">
                   <div className="p-1.5 bg-rose-100 dark:bg-rose-900/30 rounded-lg">
-                    <span className="text-lg">🐕</span>
+                    <span className="material-symbols-outlined text-lg text-rose-500">pets</span>
                   </div>
                   <span className="text-2xl font-bold text-gray-800 dark:text-white">
                     {loading ? '-' : stats.availableDogs}
