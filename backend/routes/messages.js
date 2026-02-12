@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getUserMessages, getMessageById, markMessageAsRead } = require('../controllers/messagesController');
 const checkSupabase = require('../middleware/supabaseCheck');
-const supabase = require('../config/supabase');
+const { supabase } = require('../config/supabase');
 
 // Get unread message count
 router.get('/unread/:userId', checkSupabase, async (req, res) => {
@@ -12,8 +12,8 @@ router.get('/unread/:userId', checkSupabase, async (req, res) => {
         const { count, error } = await supabase
             .from('messages')
             .select('*', { count: 'exact', head: true })
-            .eq('receiver_id', userId)
-            .eq('is_read', false);
+            .eq('user_id', userId)
+            .eq('is_unread', true);
             
         if (error) throw error;
         
