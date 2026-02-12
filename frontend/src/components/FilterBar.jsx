@@ -23,19 +23,19 @@ const FilterBar = ({ filters, onFilterChange, breeds }) => {
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
         {/* 品种筛选 */}
         <select
-          value={filters.breed}
+          value={filters.breed || ''}
           onChange={(e) => onFilterChange({ ...filters, breed: e.target.value })}
           className="px-3 py-1.5 bg-white/80 dark:bg-zinc-800/80 backdrop-blur rounded-lg border border-zinc-200 dark:border-zinc-700 text-xs focus:outline-none focus:ring-2 focus:ring-rose-400/50 whitespace-nowrap"
         >
           <option value="">全部品种</option>
-          {breeds.map((breed) => (
+          {breeds?.map((breed) => (
             <option key={breed} value={breed}>{breed}</option>
           ))}
         </select>
 
         {/* 年龄筛选 */}
         <select
-          value={filters.age}
+          value={filters.age || ''}
           onChange={(e) => onFilterChange({ ...filters, age: e.target.value })}
           className="px-3 py-1.5 bg-white/80 dark:bg-zinc-800/80 backdrop-blur rounded-lg border border-zinc-200 dark:border-zinc-700 text-xs focus:outline-none focus:ring-2 focus:ring-rose-400/50 whitespace-nowrap"
         >
@@ -46,7 +46,7 @@ const FilterBar = ({ filters, onFilterChange, breeds }) => {
 
         {/* 性别筛选 */}
         <select
-          value={filters.gender}
+          value={filters.gender || ''}
           onChange={(e) => onFilterChange({ ...filters, gender: e.target.value })}
           className="px-3 py-1.5 bg-white/80 dark:bg-zinc-800/80 backdrop-blur rounded-lg border border-zinc-200 dark:border-zinc-700 text-xs focus:outline-none focus:ring-2 focus:ring-rose-400/50 whitespace-nowrap"
         >
