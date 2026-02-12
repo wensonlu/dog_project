@@ -184,7 +184,10 @@ const Home = () => {
     
     // 当过滤条件变化时重置索引
     useEffect(() => {
-        setCurrentIndex(0);
+        // 只在客户端执行，避免 hydration 不匹配
+        if (typeof window !== 'undefined') {
+            setCurrentIndex(0);
+        }
     }, [searchQuery, filters.breed, filters.age, filters.gender]);
 
     const handleNext = (isFavorite = false) => {
