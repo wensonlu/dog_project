@@ -102,6 +102,14 @@ const Home = () => {
         return () => clearInterval(interval);
     }, [user?.id]);
 
+    // 当过滤条件变化时重置索引
+    useEffect(() => {
+        // 只在客户端执行，避免 hydration 不匹配
+        if (typeof window !== 'undefined') {
+            setCurrentIndex(0);
+        }
+    }, [searchQuery, filters.breed, filters.age, filters.gender]);
+
     if (loading) {
         return (
             <div className="mx-auto max-w-[430px] h-screen flex items-center justify-center bg-gradient-to-b from-rose-50 to-cream-50 dark:from-zinc-900 dark:to-zinc-900">
@@ -181,14 +189,6 @@ const Home = () => {
 
     const currentDog = filteredDogs[currentIndex % filteredDogs.length];
     const nextDog = filteredDogs[(currentIndex + 1) % filteredDogs.length];
-    
-    // 当过滤条件变化时重置索引
-    useEffect(() => {
-        // 只在客户端执行，避免 hydration 不匹配
-        if (typeof window !== 'undefined') {
-            setCurrentIndex(0);
-        }
-    }, [searchQuery, filters.breed, filters.age, filters.gender]);
 
     const handleNext = (isFavorite = false) => {
         setDirection(isFavorite ? 'right' : 'left');
