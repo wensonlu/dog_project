@@ -6,6 +6,8 @@ import BottomNav from '../components/BottomNav';
 import StatsBar from '../components/StatsBar';
 import SearchBox from '../components/SearchBox';
 import FilterBar from '../components/FilterBar';
+import RecommendationQuestionnaire from '../components/RecommendationQuestionnaire';
+import RecommendedDogsSection from '../components/RecommendedDogsSection';
 import { API_BASE_URL } from '../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -22,7 +24,11 @@ const Home = () => {
     // 搜索和筛选状态
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState({ breed: '', age: '', gender: '' });
-    
+
+    // 推荐功能状态
+    const [recommendations, setRecommendations] = useState([]);
+    const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+
     // 获取所有品种列表
     const breeds = useMemo(() => {
         if (!DOGS) return [];
@@ -101,6 +107,14 @@ const Home = () => {
         const interval = setInterval(fetchUnreadCount, 30000);
         return () => clearInterval(interval);
     }, [user?.id]);
+
+    // 当过滤条件变化时重置索引
+    useEffect(() => {
+        // 只在客户端执行，避免 hydration 不匹配
+        if (typeof window !== 'undefined') {
+            setCurrentIndex(0);
+        }
+    }, [searchQuery, filters.breed, filters.age, filters.gender]);
 
     if (loading) {
         return (
@@ -181,14 +195,6 @@ const Home = () => {
 
     const currentDog = filteredDogs[currentIndex % filteredDogs.length];
     const nextDog = filteredDogs[(currentIndex + 1) % filteredDogs.length];
-    
-    // 当过滤条件变化时重置索引
-    useEffect(() => {
-        // 只在客户端执行，避免 hydration 不匹配
-        if (typeof window !== 'undefined') {
-            setCurrentIndex(0);
-        }
-    }, [searchQuery, filters.breed, filters.age, filters.gender]);
 
     const handleNext = (isFavorite = false) => {
         setDirection(isFavorite ? 'right' : 'left');
@@ -200,6 +206,33 @@ const Home = () => {
             setCurrentIndex(prev => prev + 1);
             setDirection(null);
         }, 200);
+    };
+
+    // 处理推荐问卷提交
+    const handleRecommendationSubmit = async (preferences) => {
+        setIsLoadingRecommendations(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/recommendations/calculate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ preferences })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setRecommendations(data.recommendations || []);
+            } else {
+                console.error('获取推荐失败');
+                setRecommendations([]);
+            }
+        } catch (error) {
+            console.error('推荐请求错误:', error);
+            setRecommendations([]);
+        } finally {
+            setIsLoadingRecommendations(false);
+        }
     };
 
     return (
@@ -258,10 +291,20 @@ const Home = () => {
             <div className="relative z-20 px-4 mb-3 space-y-2">
                 <SearchBox onSearch={setSearchQuery} value={searchQuery} />
                 <FilterBar filters={filters} onFilterChange={setFilters} breeds={breeds} />
-                
-                {/* 结果统计 */}
+            </div>
+
+            {/* 智能推荐区块 */}
+            <div className="relative z-20 px-4 mb-3">
+                <RecommendationQuestionnaire onSubmit={handleRecommendationSubmit} />
+                {recommendations.length > 0 && (
+                    <RecommendedDogsSection recommendations={recommendations} />
+                )}
+            </div>
+
+            {/* 筛选结果统计 */}
+            <div className="relative z-20 px-4 mb-3">
                 {(searchQuery || filters.breed || filters.age || filters.gender) && (
-                    <motion.p 
+                    <motion.p
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         className="text-xs text-zinc-500 dark:text-zinc-400"

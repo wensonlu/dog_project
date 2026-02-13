@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐕 宠物领养平台 - 配色方案探索器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #0f0f0f;
+            color: #e8e8e8;
+            min-height: 100vh;
+            display: flex;
+            gap: 0;
+        }
+
+        /* 左侧控制面板 */
+        .controls {
+            width: 380px;
+            background: #1a1a1a;
+            padding: 24px;
+            overflow-y: auto;
+            border-right: 1px solid #2a2a2a;
+        }
+
+        .controls h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .controls p {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 24px;
+        }
+
+        .control-group {
+            margin-bottom: 28px;
+        }
+
+        .control-group h2 {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #999;
+            margin-bottom: 12px;
+        }
+
+        .control {
+            margin-bottom: 16px;
+        }
+
+        .control label {
+            display: block;
+            font-size: 13px;
+            margin-bottom: 6px;
+            color: #ccc;
+        }
+
+        .control input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: #2a2a2a;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .control input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .control input[type="color"] {
+            width: 100%;
+            height: 40px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .presets {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .preset-btn {
+            padding: 10px;
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            color: #ccc;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .preset-btn:hover {
+            background: #333;
+            border-color: #4a4a4a;
+        }
+
+        /* 右侧预览区 */
+        .preview-area {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .preview-container {
+            max-width: 430px;
+            margin: 0 auto;
+        }
+
+        .preview-header {
+            margin-bottom: 32px;
+        }
+
+        .preview-header h2 {
+            font-size: 16px;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        /* 预览组件 */
+        .pet-card {
+            background: white;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            margin-bottom: 24px;
+            transition: transform 0.3s;
+        }
+
+        .pet-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .pet-image {
+            width: 100%;
+            height: 280px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+        }
+
+        .pet-info {
+            padding: 20px;
+        }
+
+        .pet-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+        }
+
+        .pet-breed {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .pet-tags {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #e8e8e8;
+        }
+
+        /* Prompt 输出区 */
+        .prompt-output {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            left: 380px;
+            background: #1a1a1a;
+            border-top: 1px solid #2a2a2a;
+            padding: 20px 40px;
+        }
+
+        .prompt-text {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #ccc;
+            margin-bottom: 12px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .copy-btn {
+            padding: 8px 16px;
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            color: #ccc;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: #333;
+        }
+
+        .copy-btn.copied {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+
+        .value-display {
+            display: inline-block;
+            font-size: 11px;
+            color: #888;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h1>🎨 配色方案探索器</h1>
+        <p>实时调整配色，预览在实际组件中的效果</p>
+
+        <div class="control-group">
+            <h2>预设方案</h2>
+            <div class="presets">
+                <button class="preset-btn" onclick="applyPreset('warm')">🌸 温暖玫瑰</button>
+                <button class="preset-btn" onclick="applyPreset('fresh')">🌿 清新薄荷</button>
+                <button class="preset-btn" onclick="applyPreset('ocean')">🌊 海洋蓝调</button>
+                <button class="preset-btn" onclick="applyPreset('sunset')">🌅 日落橙红</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h2>主色调</h2>
+            <div class="control">
+                <label>主色色相 <span class="value-display" id="primary-hue-val">340°</span></label>
+                <input type="range" id="primary-hue" min="0" max="360" value="340" oninput="updateColors()">
+            </div>
+            <div class="control">
+                <label>饱和度 <span class="value-display" id="primary-sat-val">65%</span></label>
+                <input type="range" id="primary-sat" min="0" max="100" value="65" oninput="updateColors()">
+            </div>
+            <div class="control">
+                <label>亮度 <span class="value-display" id="primary-light-val">55%</span></label>
+                <input type="range" id="primary-light" min="0" max="100" value="55" oninput="updateColors()">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h2>辅助色</h2>
+            <div class="control">
+                <label>辅助色色相 <span class="value-display" id="secondary-hue-val">160°</span></label>
+                <input type="range" id="secondary-hue" min="0" max="360" value="160" oninput="updateColors()">
+            </div>
+            <div class="control">
+                <label>饱和度 <span class="value-display" id="secondary-sat-val">55%</span></label>
+                <input type="range" id="secondary-sat" min="0" max="100" value="55" oninput="updateColors()">
+            </div>
+            <div class="control">
+                <label>亮度 <span class="value-display" id="secondary-light-val">50%</span></label>
+                <input type="range" id="secondary-light" min="0" max="100" value="50" oninput="updateColors()">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h2>视觉效果</h2>
+            <div class="control">
+                <label>圆角大小 <span class="value-display" id="radius-val">24px</span></label>
+                <input type="range" id="radius" min="8" max="32" value="24" oninput="updateColors()">
+            </div>
+            <div class="control">
+                <label>阴影深度 <span class="value-display" id="shadow-val">8px</span></label>
+                <input type="range" id="shadow" min="0" max="24" value="8" oninput="updateColors()">
+            </div>
+        </div>
+    </div>
+
+    <div class="preview-area">
+        <div class="preview-container">
+            <div class="preview-header">
+                <h2>实时预览</h2>
+            </div>
+
+            <div class="pet-card" id="preview-card">
+                <div class="pet-image" id="preview-image">
+                    🐕
+                </div>
+                <div class="pet-info">
+                    <div class="pet-name">Lucky</div>
+                    <div class="pet-breed">🐾 金毛寻回犬</div>
+                    <div class="pet-tags">
+                        <span class="tag" id="tag1">2岁</span>
+                        <span class="tag" id="tag2">已绝育</span>
+                        <span class="tag" id="tag3">性格温顺</span>
+                    </div>
+                    <div class="buttons">
+                        <button class="btn btn-secondary">下次见</button>
+                        <button class="btn btn-primary" id="btn-primary">喜欢 💕</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="prompt-output">
+            <div class="prompt-text" id="prompt-text">
+                配置加载中...
+            </div>
+            <button class="copy-btn" id="copy-btn" onclick="copyPrompt()">📋 复制配置</button>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            primaryHue: 340,
+            primarySat: 65,
+            primaryLight: 55,
+            secondaryHue: 160,
+            secondarySat: 55,
+            secondaryLight: 50,
+            radius: 24,
+            shadow: 8
+        };
+
+        const presets = {
+            warm: { primaryHue: 340, primarySat: 65, primaryLight: 55, secondaryHue: 320, secondarySat: 60, secondaryLight: 60, radius: 24, shadow: 8 },
+            fresh: { primaryHue: 160, primarySat: 55, primaryLight: 50, secondaryHue: 140, secondarySat: 50, secondaryLight: 55, radius: 20, shadow: 6 },
+            ocean: { primaryHue: 200, primarySat: 60, primaryLight: 50, secondaryHue: 180, secondarySat: 55, secondaryLight: 55, radius: 28, shadow: 12 },
+            sunset: { primaryHue: 20, primarySat: 70, primaryLight: 55, secondaryHue: 40, secondarySat: 65, secondaryLight: 50, radius: 24, shadow: 10 }
+        };
+
+        function applyPreset(name) {
+            const preset = presets[name];
+            state.primaryHue = preset.primaryHue;
+            state.primarySat = preset.primarySat;
+            state.primaryLight = preset.primaryLight;
+            state.secondaryHue = preset.secondaryHue;
+            state.secondarySat = preset.secondarySat;
+            state.secondaryLight = preset.secondaryLight;
+            state.radius = preset.radius;
+            state.shadow = preset.shadow;
+
+            // 更新滑块
+            document.getElementById('primary-hue').value = state.primaryHue;
+            document.getElementById('primary-sat').value = state.primarySat;
+            document.getElementById('primary-light').value = state.primaryLight;
+            document.getElementById('secondary-hue').value = state.secondaryHue;
+            document.getElementById('secondary-sat').value = state.secondarySat;
+            document.getElementById('secondary-light').value = state.secondaryLight;
+            document.getElementById('radius').value = state.radius;
+            document.getElementById('shadow').value = state.shadow;
+
+            updateColors();
+        }
+
+        function updateColors() {
+            // 读取当前值
+            state.primaryHue = parseInt(document.getElementById('primary-hue').value);
+            state.primarySat = parseInt(document.getElementById('primary-sat').value);
+            state.primaryLight = parseInt(document.getElementById('primary-light').value);
+            state.secondaryHue = parseInt(document.getElementById('secondary-hue').value);
+            state.secondarySat = parseInt(document.getElementById('secondary-sat').value);
+            state.secondaryLight = parseInt(document.getElementById('secondary-light').value);
+            state.radius = parseInt(document.getElementById('radius').value);
+            state.shadow = parseInt(document.getElementById('shadow').value);
+
+            // 更新显示值
+            document.getElementById('primary-hue-val').textContent = state.primaryHue + '°';
+            document.getElementById('primary-sat-val').textContent = state.primarySat + '%';
+            document.getElementById('primary-light-val').textContent = state.primaryLight + '%';
+            document.getElementById('secondary-hue-val').textContent = state.secondaryHue + '°';
+            document.getElementById('secondary-sat-val').textContent = state.secondarySat + '%';
+            document.getElementById('secondary-light-val').textContent = state.secondaryLight + '%';
+            document.getElementById('radius-val').textContent = state.radius + 'px';
+            document.getElementById('shadow-val').textContent = state.shadow + 'px';
+
+            // 生成颜色
+            const primary = `hsl(${state.primaryHue}, ${state.primarySat}%, ${state.primaryLight}%)`;
+            const primaryLight = `hsl(${state.primaryHue}, ${state.primarySat}%, ${state.primaryLight + 35}%)`;
+            const secondary = `hsl(${state.secondaryHue}, ${state.secondarySat}%, ${state.secondaryLight}%)`;
+            const secondaryLight = `hsl(${state.secondaryHue}, ${state.secondarySat}%, ${state.secondaryLight + 40}%)`;
+
+            // 应用到预览
+            const card = document.getElementById('preview-card');
+            card.style.borderRadius = state.radius + 'px';
+            card.style.boxShadow = `0 ${state.shadow}px ${state.shadow * 3}px rgba(0,0,0,0.12)`;
+
+            const image = document.getElementById('preview-image');
+            image.style.background = `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`;
+
+            const btnPrimary = document.getElementById('btn-primary');
+            btnPrimary.style.background = primary;
+            btnPrimary.style.borderRadius = (state.radius / 2) + 'px';
+
+            const tag1 = document.getElementById('tag1');
+            tag1.style.background = primaryLight;
+            tag1.style.color = primary;
+
+            const tag2 = document.getElementById('tag2');
+            tag2.style.background = secondaryLight;
+            tag2.style.color = secondary;
+
+            const tag3 = document.getElementById('tag3');
+            tag3.style.background = '#f0f0f0';
+            tag3.style.color = '#666';
+
+            updatePrompt(primary, secondary);
+        }
+
+        function updatePrompt(primary, secondary) {
+            const parts = [];
+
+            parts.push(`主色调使用 ${primary} (色相 ${state.primaryHue}°, 饱和度 ${state.primarySat}%, 亮度 ${state.primaryLight}%)`);
+            parts.push(`辅助色使用 ${secondary} (色相 ${state.secondaryHue}°, 饱和度 ${state.secondarySat}%, 亮度 ${state.secondaryLight}%)`);
+            parts.push(`圆角大小设为 ${state.radius}px，营造${state.radius > 20 ? '柔和友好' : '简洁干练'}的视觉感受`);
+            parts.push(`阴影深度为 ${state.shadow}px，带来${state.shadow > 12 ? '明显的层次感' : state.shadow > 6 ? '适度的立体效果' : '轻微的浮起感'}`);
+
+            // Tailwind 类名建议
+            const tailwindSuggestions = [];
+            if (state.radius >= 24) tailwindSuggestions.push('rounded-3xl');
+            else if (state.radius >= 20) tailwindSuggestions.push('rounded-2xl');
+            else if (state.radius >= 16) tailwindSuggestions.push('rounded-xl');
+            else tailwindSuggestions.push('rounded-lg');
+
+            if (state.shadow >= 16) tailwindSuggestions.push('shadow-2xl');
+            else if (state.shadow >= 12) tailwindSuggestions.push('shadow-xl');
+            else if (state.shadow >= 8) tailwindSuggestions.push('shadow-lg');
+            else if (state.shadow > 0) tailwindSuggestions.push('shadow-md');
+
+            parts.push(`\nTailwind 建议: ${tailwindSuggestions.join(' ')}`);
+
+            document.getElementById('prompt-text').textContent = parts.join('\n');
+        }
+
+        function copyPrompt() {
+            const text = document.getElementById('prompt-text').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById('copy-btn');
+                btn.textContent = '✅ 已复制！';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '📋 复制配置';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // 初始化
+        updateColors();
+    </script>
+</body>
+</html>
