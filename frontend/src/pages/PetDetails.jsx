@@ -1,15 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDogs } from '../context/DogContext';
+import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { API_BASE_URL } from '../config/api';
+import ReviewSection from '../components/ReviewSection';
 
 const PetDetails = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const { DOGS } = useDogs();
+    const { user } = useAuth();
     const [relatedTopics, setRelatedTopics] = useState([]);
     const [loadingTopics, setLoadingTopics] = useState(true);
+    const [reviews, setReviews] = useState([]);
+    const [canReview, setCanReview] = useState(false);
+    const [applicationId, setApplicationId] = useState(null);
+    const [loadingReviews, setLoadingReviews] = useState(true);
 
     // Find the dog by id, or default to the first one for demo
     const dog = DOGS.find(d => d.id === parseInt(id)) || DOGS[0];
@@ -34,6 +41,50 @@ const PetDetails = () => {
 
         fetchRelatedTopics();
     }, [dog?.id]);
+
+    // 获取评价列表和检查用户是否有资格评价
+    useEffect(() => {
+        const fetchReviews = async () => {
+            if (!dog?.id) return;
+
+            try {
+                const token = localStorage.getItem('token');
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+                const response = await fetch(`${API_BASE_URL}/reviews/${dog.id}`, { headers });
+                if (response.ok) {
+                    const data = await response.json();
+                    setReviews(data.reviews || []);
+                }
+            } catch (error) {
+                console.error('获取评价失败:', error);
+            } finally {
+                setLoadingReviews(false);
+            }
+        };
+
+        const checkEligibility = async () => {
+            if (!user || !dog?.id) return;
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE_URL}/reviews/check-eligibility/${dog.id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setCanReview(data.eligible);
+                    setApplicationId(data.applicationId);
+                }
+            } catch (error) {
+                console.error('检查评价资格失败:', error);
+            }
+        };
+
+        fetchReviews();
+        checkEligibility();
+    }, [dog?.id, user]);
 
     return (
         <div className="mx-auto max-w-[430px] min-h-screen bg-background-light dark:bg-background-dark text-[#1b120e] dark:text-[#f3ebe7] font-sans pb-32 relative">
@@ -178,6 +229,18 @@ const PetDetails = () => {
                         </div>
                     )}
                 </div>
+
+                {/* 评价系统板块 - 新增 */}
+                <ReviewSection
+                    dogId={dog.id}
+                    reviews={reviews}
+                    canReview={canReview}
+                    applicationId={applicationId}
+                    onReviewAdded={(newReview) => {
+                        setReviews([newReview, ...reviews]);
+                        setCanReview(false);
+                    }}
+                />
 
                 <div className="mb-8">
                     <h2 className="text-xl font-black mb-3 text-[#1b120e] dark:text-white">所在地</h2>

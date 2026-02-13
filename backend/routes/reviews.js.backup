@@ -1,0 +1,242 @@
+const express = require('express');
+const router = express.Router();
+const db = require('../config/db');
+const authenticateToken = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
+
+// 配置图片上传
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/reviews/');
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'review-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|webp/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+
+        if (mimetype && extname) {
+            return cb(null, true);
+        }
+        cb(new Error('只允许上传图片文件 (jpeg, jpg, png, webp)'));
+    }
+});
+
+// 获取指定宠物的所有评价
+router.get('/:dogId', async (req, res) => {
+    try {
+        const { dogId } = req.params;
+
+        const [reviews] = await db.query(`
+            SELECT
+                r.*,
+                u.username,
+                u.avatar,
+                d.name as dog_name,
+                (SELECT COUNT(*) FROM review_likes WHERE review_id = r.id) as likes_count,
+                ${req.user ? `(SELECT COUNT(*) FROM review_likes WHERE review_id = r.id AND user_id = ?) as user_liked` : '0 as user_liked'}
+            FROM reviews r
+            JOIN users u ON r.user_id = u.id
+            JOIN dogs d ON r.dog_id = d.id
+            WHERE r.dog_id = ?
+            ORDER BY r.created_at DESC
+        `, req.user ? [req.user.id, dogId] : [dogId]);
+
+        // 解析 JSON 字段
+        reviews.forEach(review => {
+            if (review.photos) {
+                review.photos = JSON.parse(review.photos);
+            }
+        });
+
+        res.json({ reviews });
+    } catch (error) {
+        console.error('获取评价失败:', error);
+        res.status(500).json({ message: '获取评价失败' });
+    }
+});
+
+// 创建评价
+router.post('/', authenticateToken, upload.array('photos', 3), async (req, res) => {
+    try {
+        const { applicationId, dogId, rating, content } = req.body;
+        const userId = req.user.id;
+
+        // 验证必填字段
+        if (!applicationId || !dogId || !rating || !content) {
+            return res.status(400).json({ message: '请填写完整的评价信息' });
+        }
+
+        // 验证评分范围
+        if (rating < 1 || rating > 5) {
+            return res.status(400).json({ message: '评分必须在 1-5 之间' });
+        }
+
+        // 验证内容长度
+        if (content.length < 10 || content.length > 500) {
+            return res.status(400).json({ message: '评价内容需在 10-500 字之间' });
+        }
+
+        // 验证用户是否有该领养申请
+        const [applications] = await db.query(
+            'SELECT * FROM applications WHERE id = ? AND user_id = ? AND dog_id = ?',
+            [applicationId, userId, dogId]
+        );
+
+        if (applications.length === 0) {
+            return res.status(403).json({ message: '您没有权限评价该宠物' });
+        }
+
+        const application = applications[0];
+
+        // 验证申请状态是否为已批准
+        if (application.status !== 'approved') {
+            return res.status(403).json({ message: '只有成功领养的用户才能评价' });
+        }
+
+        // 检查是否已经评价过
+        const [existingReviews] = await db.query(
+            'SELECT * FROM reviews WHERE application_id = ?',
+            [applicationId]
+        );
+
+        if (existingReviews.length > 0) {
+            return res.status(400).json({ message: '您已经评价过该领养申请了' });
+        }
+
+        // 处理上传的照片
+        const photos = req.files ? req.files.map(file => `/uploads/reviews/${file.filename}`) : null;
+
+        // 插入评价
+        const [result] = await db.query(
+            `INSERT INTO reviews (application_id, user_id, dog_id, rating, content, photos)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [applicationId, userId, dogId, rating, content, JSON.stringify(photos)]
+        );
+
+        // 获取新创建的评价
+        const [newReview] = await db.query(
+            `SELECT
+                r.*,
+                u.username,
+                u.avatar,
+                d.name as dog_name
+            FROM reviews r
+            JOIN users u ON r.user_id = u.id
+            JOIN dogs d ON r.dog_id = d.id
+            WHERE r.id = ?`,
+            [result.insertId]
+        );
+
+        if (newReview[0].photos) {
+            newReview[0].photos = JSON.parse(newReview[0].photos);
+        }
+
+        res.status(201).json({
+            message: '评价发布成功',
+            review: newReview[0]
+        });
+    } catch (error) {
+        console.error('创建评价失败:', error);
+        res.status(500).json({ message: '创建评价失败' });
+    }
+});
+
+// 点赞/取消点赞评价
+router.post('/:reviewId/like', authenticateToken, async (req, res) => {
+    try {
+        const { reviewId } = req.params;
+        const userId = req.user.id;
+
+        // 检查评价是否存在
+        const [reviews] = await db.query('SELECT * FROM reviews WHERE id = ?', [reviewId]);
+
+        if (reviews.length === 0) {
+            return res.status(404).json({ message: '评价不存在' });
+        }
+
+        // 检查是否已点赞
+        const [existingLikes] = await db.query(
+            'SELECT * FROM review_likes WHERE review_id = ? AND user_id = ?',
+            [reviewId, userId]
+        );
+
+        if (existingLikes.length > 0) {
+            // 取消点赞
+            await db.query(
+                'DELETE FROM review_likes WHERE review_id = ? AND user_id = ?',
+                [reviewId, userId]
+            );
+
+            res.json({ message: '已取消点赞', liked: false });
+        } else {
+            // 添加点赞
+            await db.query(
+                'INSERT INTO review_likes (review_id, user_id) VALUES (?, ?)',
+                [reviewId, userId]
+            );
+
+            res.json({ message: '点赞成功', liked: true });
+        }
+    } catch (error) {
+        console.error('点赞操作失败:', error);
+        res.status(500).json({ message: '点赞操作失败' });
+    }
+});
+
+// 检查用户是否有资格评价某个宠物
+router.get('/check-eligibility/:dogId', authenticateToken, async (req, res) => {
+    try {
+        const { dogId } = req.params;
+        const userId = req.user.id;
+
+        // 查找用户对该宠物的已批准申请
+        const [applications] = await db.query(
+            `SELECT a.*,
+                    (SELECT COUNT(*) FROM reviews WHERE application_id = a.id) as has_reviewed
+             FROM applications a
+             WHERE a.dog_id = ? AND a.user_id = ? AND a.status = 'approved'
+             ORDER BY a.created_at DESC
+             LIMIT 1`,
+            [dogId, userId]
+        );
+
+        if (applications.length === 0) {
+            return res.json({
+                eligible: false,
+                reason: 'no_approved_application',
+                message: '您还没有成功领养该宠物'
+            });
+        }
+
+        const application = applications[0];
+
+        if (application.has_reviewed > 0) {
+            return res.json({
+                eligible: false,
+                reason: 'already_reviewed',
+                message: '您已经评价过了'
+            });
+        }
+
+        res.json({
+            eligible: true,
+            applicationId: application.id,
+            message: '您可以评价该宠物'
+        });
+    } catch (error) {
+        console.error('检查评价资格失败:', error);
+        res.status(500).json({ message: '检查评价资格失败' });
+    }
+});
+
+module.exports = router;
