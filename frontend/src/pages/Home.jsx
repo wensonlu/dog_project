@@ -6,6 +6,8 @@ import BottomNav from '../components/BottomNav';
 import StatsBar from '../components/StatsBar';
 import SearchBox from '../components/SearchBox';
 import FilterBar from '../components/FilterBar';
+import RecommendationQuestionnaire from '../components/RecommendationQuestionnaire';
+import RecommendedDogsSection from '../components/RecommendedDogsSection';
 import { API_BASE_URL } from '../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -22,7 +24,11 @@ const Home = () => {
     // 搜索和筛选状态
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState({ breed: '', age: '', gender: '' });
-    
+
+    // 推荐功能状态
+    const [recommendations, setRecommendations] = useState([]);
+    const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+
     // 获取所有品种列表
     const breeds = useMemo(() => {
         if (!DOGS) return [];
@@ -202,6 +208,33 @@ const Home = () => {
         }, 200);
     };
 
+    // 处理推荐问卷提交
+    const handleRecommendationSubmit = async (preferences) => {
+        setIsLoadingRecommendations(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/recommendations/calculate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ preferences })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setRecommendations(data.recommendations || []);
+            } else {
+                console.error('获取推荐失败');
+                setRecommendations([]);
+            }
+        } catch (error) {
+            console.error('推荐请求错误:', error);
+            setRecommendations([]);
+        } finally {
+            setIsLoadingRecommendations(false);
+        }
+    };
+
     return (
         <div className="relative mx-auto max-w-[430px] min-h-screen flex flex-col bg-gradient-to-b from-rose-50/50 via-cream-50 to-teal-50/30 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900 overflow-hidden pb-20">
             {/* 背景装饰 */}
@@ -258,10 +291,20 @@ const Home = () => {
             <div className="relative z-20 px-4 mb-3 space-y-2">
                 <SearchBox onSearch={setSearchQuery} value={searchQuery} />
                 <FilterBar filters={filters} onFilterChange={setFilters} breeds={breeds} />
-                
-                {/* 结果统计 */}
+            </div>
+
+            {/* 智能推荐区块 */}
+            <div className="relative z-20 px-4 mb-3">
+                <RecommendationQuestionnaire onSubmit={handleRecommendationSubmit} />
+                {recommendations.length > 0 && (
+                    <RecommendedDogsSection recommendations={recommendations} />
+                )}
+            </div>
+
+            {/* 筛选结果统计 */}
+            <div className="relative z-20 px-4 mb-3">
                 {(searchQuery || filters.breed || filters.age || filters.gender) && (
-                    <motion.p 
+                    <motion.p
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         className="text-xs text-zinc-500 dark:text-zinc-400"

@@ -12,6 +12,7 @@ const uploadRoutes = require('./routes/upload');
 const forumRoutes = require('./routes/forum');
 const statsRoutes = require('./routes/stats');
 const reviewsRoutes = require('./routes/reviews');
+const recommendationsRoutes = require('./routes/recommendations');
 
 const app = express();
 const port = process.env.PORT || 5001;
@@ -31,6 +32,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/forum', forumRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/reviews', reviewsRoutes);
+app.use('/api/recommendations', recommendationsRoutes);
 
 // Health check endpoint（含 Supabase 状态，便于排查 500）
 app.get('/health', (req, res) => {
