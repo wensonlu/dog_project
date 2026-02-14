@@ -28,6 +28,9 @@ const Home = () => {
     // 推荐功能状态
     const [recommendations, setRecommendations] = useState([]);
     const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+    
+    // 手势滑动状态
+    const [dragX, setDragX] = useState(0);
 
     // 获取所有品种列表
     const breeds = useMemo(() => {
@@ -333,15 +336,39 @@ const Home = () => {
                     <motion.div
                         key={currentDog.id}
                         initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        animate={{ 
+                            scale: 1, 
+                            opacity: 1, 
+                            y: 0,
+                            x: 0,
+                            rotate: 0
+                        }}
                         exit={{
                             x: direction === 'right' ? 300 : direction === 'left' ? -300 : 0,
                             rotate: direction === 'right' ? 15 : direction === 'left' ? -15 : 0,
                             opacity: 0,
                             scale: 0.9
                         }}
+                        drag="x"
+                        dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={0.9}
+                        onDrag={(e, info) => setDragX(info.offset.x)}
+                        onDragEnd={(e, info) => {
+                            const threshold = 100;
+                            const velocity = info.velocity.x;
+                            
+                            if (info.offset.x > threshold || velocity > 500) {
+                                // 向右滑动 - 喜欢
+                                handleNext(true);
+                            } else if (info.offset.x < -threshold || velocity < -500) {
+                                // 向左滑动 - 跳过
+                                handleNext(false);
+                            }
+                            setDragX(0);
+                        }}
+                        whileDrag={{ cursor: 'grabbing' }}
                         transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                        className="absolute inset-0 z-10 bg-white dark:bg-zinc-800 rounded-[2rem] overflow-hidden shadow-2xl shadow-rose-200/20 dark:shadow-none origin-bottom"
+                        className="absolute inset-0 z-10 bg-white dark:bg-zinc-800 rounded-[2rem] overflow-hidden shadow-2xl shadow-rose-200/20 dark:shadow-none origin-bottom cursor-grab active:cursor-grabbing"
                     >
                         <div
                             onClick={() => navigate(`/pet/${currentDog.id}`)}
@@ -349,25 +376,29 @@ const Home = () => {
                             style={{ backgroundImage: `url(${currentDog.image})` }}
                         />
 
-                        {/* 滑动状态标签 */}
-                        {direction === 'right' && (
-                            <motion.div 
-                                initial={{ scale: 0, rotate: -10 }}
-                                animate={{ scale: 1, rotate: -12 }}
-                                className="absolute top-8 left-8 z-20 border-4 border-rose-400 text-rose-400 font-black text-3xl px-4 py-2 rounded-2xl bg-white/90 backdrop-blur"
-                            >
-                                喜欢 💕
-                            </motion.div>
-                        )}
-                        {direction === 'left' && (
-                            <motion.div 
-                                initial={{ scale: 0, rotate: 10 }}
-                                animate={{ scale: 1, rotate: 12 }}
-                                className="absolute top-8 right-8 z-20 border-4 border-gray-400 text-gray-400 font-black text-3xl px-4 py-2 rounded-2xl bg-white/90 backdrop-blur"
-                            >
-                                下次见 👋
-                            </motion.div>
-                        )}
+                        {/* 滑动状态标签 - 手势滑动实时反馈 */}
+                        <motion.div 
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ 
+                                scale: dragX > 50 ? 1 : 0,
+                                opacity: dragX > 50 ? Math.min(dragX / 150, 1) : 0,
+                                rotate: -12
+                            }}
+                            className="absolute top-8 left-8 z-20 border-4 border-rose-400 text-rose-400 font-black text-3xl px-4 py-2 rounded-2xl bg-white/90 backdrop-blur pointer-events-none"
+                        >
+                            喜欢 💕
+                        </motion.div>
+                        <motion.div 
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ 
+                                scale: dragX < -50 ? 1 : 0,
+                                opacity: dragX < -50 ? Math.min(Math.abs(dragX) / 150, 1) : 0,
+                                rotate: 12
+                            }}
+                            className="absolute top-8 right-8 z-20 border-4 border-gray-400 text-gray-400 font-black text-3xl px-4 py-2 rounded-2xl bg-white/90 backdrop-blur pointer-events-none"
+                        >
+                            下次见 👋
+                        </motion.div>
 
                         {/* 渐变遮罩 */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
