@@ -1,0 +1,39 @@
+{
+  "url": "http://localhost:5173",
+  "loadTime": 797,
+  "performanceMetrics": {
+    "domContentLoaded": 0.19999998807907104,
+    "domInteractive": 37.799999952316284,
+    "loadComplete": -0.800000011920929,
+    "ttfb": 28.80000001192093
+  },
+  "consoleLogs": [
+    {
+      "type": "debug",
+      "text": "[vite] connecting...",
+      "timestamp": "2026-02-20T01:51:39.088Z"
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected.",
+      "timestamp": "2026-02-20T01:51:39.112Z"
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "timestamp": "2026-02-20T01:51:39.141Z"
+    },
+    {
+      "type": "verbose",
+      "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"current-password\"): (More info: https://goo.gl/9p2vKq) %o",
+      "timestamp": "2026-02-20T01:51:39.396Z"
+    }
+  ],
+  "errors": [],
+  "networkSummary": {
+    "totalRequests": 56,
+    "failedRequests": 0,
+    "apiRequests": 0
+  },
+  "timestamp": "2026-02-20T01:51:40.637Z"
+}
