@@ -31,8 +31,8 @@ function AppContent() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
-        <Route path="/pet/:id" element={<PrivateRoute><PetDetails /></PrivateRoute>} />
+        <Route path="/" element={<Home />} />
+        <Route path="/pet/:id" element={<PetDetails />} />
         <Route path="/messages" element={<PrivateRoute><Messages /></PrivateRoute>} />
         <Route path="/messages/:id" element={<PrivateRoute><MessageDetail /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />

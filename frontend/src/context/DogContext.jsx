@@ -1,53 +1,64 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { API_BASE_URL } from '../config/api';
+import { useNavigate } from 'react-router-dom';
 
 const DogContext = createContext();
 
 export const DogProvider = ({ children }) => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [dogs, setDogs] = useState([]);
     const [favoriteIds, setFavoriteIds] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const userId = user?.id || 'guest';
 
-    // Fetch all dogs and user's favorites on mount or user change
+    // Fetch all dogs on mount
     useEffect(() => {
-        const fetchData = async () => {
-            if (!user || !user.id) {
-                setLoading(false);
-                return;
-            }
-
-            setLoading(true);
+        const fetchDogs = async () => {
             try {
-                const responses = await Promise.all([
-                    fetch(`${API_BASE_URL}/dogs`).catch(err => ({ ok: false, error: err })),
-                    fetch(`${API_BASE_URL}/favorites/${user.id}`).catch(err => ({ ok: false, error: err }))
-                ]);
-
-                const dogsRes = responses[0];
-                const favsRes = responses[1];
-
-                if (dogsRes.ok && favsRes.ok) {
-                    const dogsData = await dogsRes.json();
-                    const favsData = await favsRes.json();
-                    setDogs(dogsData);
-                    setFavoriteIds(favsData.map(f => f.dog_id));
-                } else {
-                    console.error("Fetch failed:", dogsRes.error || favsRes.error);
+                const res = await fetch(`${API_BASE_URL}/dogs`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setDogs(data);
                 }
             } catch (error) {
-                console.error("Error in fetchData:", error);
+                console.error("Error fetching dogs:", error);
             } finally {
                 setLoading(false);
             }
         };
-        fetchData();
-    }, [user?.id]); // 只依赖 user.id，避免重复触发
+        fetchDogs();
+    }, []);
+
+    // Fetch user's favorites when logged in
+    useEffect(() => {
+        const fetchFavorites = async () => {
+            if (!user?.id) {
+                setFavoriteIds([]);
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/favorites/${user.id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setFavoriteIds(data.map(f => f.dog_id));
+                }
+            } catch (error) {
+                console.error("Error fetching favorites:", error);
+            }
+        };
+        fetchFavorites();
+    }, [user?.id]);
 
     const toggleFavorite = async (dogId) => {
+        if (!user) {
+            navigate('/login');
+            return;
+        }
+
         try {
             const res = await fetch(`${API_BASE_URL}/favorites`, {
                 method: 'POST',

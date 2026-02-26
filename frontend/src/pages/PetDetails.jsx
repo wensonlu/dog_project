@@ -86,8 +86,15 @@ const PetDetails = () => {
         checkEligibility();
     }, [dog?.id, user]);
 
+    const handleFavorite = () => {
+        if (!user) {
+            navigate('/login');
+            return;
+        }
+        // Toggle favorite logic here
+    };
+
     return (
-        <div className="mx-auto max-w-[430px] min-h-screen bg-background-light dark:bg-background-dark text-[#1b120e] dark:text-[#f3ebe7] font-sans pb-32 relative">
             <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-gradient-to-b from-black/30 to-transparent pointer-events-none">
                 <button
                     onClick={() => navigate(-1)}
@@ -95,7 +102,10 @@ const PetDetails = () => {
                 >
                     <span className="material-symbols-outlined">arrow_back_ios_new</span>
                 </button>
-                <button className="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white border border-white/20">
+                <button 
+                    onClick={handleFavorite}
+                    className="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white border border-white/20"
+                >
                     <span className="material-symbols-outlined">favorite</span>
                 </button>
             </div>
