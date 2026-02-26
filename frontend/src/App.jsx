@@ -27,7 +27,7 @@ const PrivateRoute = ({ children }) => {
 
 function AppContent() {
   return (
-    <Router>
+    <DogProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -46,16 +46,16 @@ function AppContent() {
         <Route path="/admin-submissions" element={<PrivateRoute><AdminSubmissions /></PrivateRoute>} />
         <Route path="/submit-dog" element={<PrivateRoute><SubmitDog /></PrivateRoute>} />
       </Routes>
-    </Router>
+    </DogProvider>
   );
 }
 
 function App() {
   return (
     <AuthProvider>
-      <DogProvider>
+      <Router>
         <AppContent />
-      </DogProvider>
+      </Router>
     </AuthProvider>
   );
 }
