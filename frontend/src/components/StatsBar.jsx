@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Users, Sparkles } from 'lucide-react';
+import { Heart, Users, Sparkles, PawPrint } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://dog-project-backend.vercel.app';
 
@@ -58,7 +58,7 @@ const StatsBar = ({ isVisible }) => {
               <div className="flex flex-col items-center">
                 <div className="flex items-center gap-1.5 mb-1">
                   <div className="p-1.5 bg-rose-100 dark:bg-rose-900/30 rounded-lg">
-                    <span className="material-symbols-outlined text-lg text-rose-500">pets</span>
+                    <PawPrint size={18} className="text-rose-500" />
                   </div>
                   <span className="text-2xl font-bold text-gray-800 dark:text-white">
                     {loading ? '-' : stats.availableDogs}

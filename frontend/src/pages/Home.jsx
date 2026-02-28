@@ -4,8 +4,6 @@ import { useDogs } from '../context/DogContext';
 import { useAuth } from '../context/AuthContext';
 import BottomNav from '../components/BottomNav';
 import StatsBar from '../components/StatsBar';
-import SearchBox from '../components/SearchBox';
-import FilterBar from '../components/FilterBar';
 import RecommendationQuestionnaire from '../components/RecommendationQuestionnaire';
 import RecommendedDogsSection from '../components/RecommendedDogsSection';
 import { API_BASE_URL } from '../config/api';
@@ -21,53 +19,13 @@ const Home = () => {
     const [lastScrollY, setLastScrollY] = useState(0);
     const [unreadCount, setUnreadCount] = useState(0);
     
-    // 搜索和筛选状态
-    const [searchQuery, setSearchQuery] = useState('');
-    const [filters, setFilters] = useState({ breed: '', age: '', gender: '' });
-
     // 推荐功能状态
+    const [showRecommendations, setShowRecommendations] = useState(false);
     const [recommendations, setRecommendations] = useState([]);
     const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
-    
+
     // 手势滑动状态
     const [dragX, setDragX] = useState(0);
-
-    // 获取所有品种列表
-    const breeds = useMemo(() => {
-        if (!DOGS) return [];
-        return [...new Set(DOGS.map(dog => dog.breed))].sort();
-    }, [DOGS]);
-    
-    // 过滤后的宠物列表
-    const filteredDogs = useMemo(() => {
-        if (!DOGS) return [];
-        return DOGS.filter(dog => {
-            // 搜索过滤
-            if (searchQuery) {
-                const query = searchQuery.toLowerCase();
-                const matchName = dog.name?.toLowerCase().includes(query);
-                const matchBreed = dog.breed?.toLowerCase().includes(query);
-                if (!matchName && !matchBreed) return false;
-            }
-            
-            // 品种过滤
-            if (filters.breed && dog.breed !== filters.breed) return false;
-            
-            // 性别过滤
-            if (filters.gender && dog.gender !== filters.gender) return false;
-            
-            // 年龄过滤
-            if (filters.age) {
-                const ageText = dog.age || '';
-                const ageNum = parseInt(ageText);
-                if (filters.age === 'puppy' && ageNum > 1) return false;
-                if (filters.age === 'adult' && (ageNum <= 1 || ageNum > 7)) return false;
-                if (filters.age === 'senior' && ageNum <= 7) return false;
-            }
-            
-            return true;
-        });
-    }, [DOGS, searchQuery, filters]);
 
     // 智能显示/隐藏统计条
     useEffect(() => {
@@ -111,14 +69,6 @@ const Home = () => {
         return () => clearInterval(interval);
     }, [user?.id]);
 
-    // 当过滤条件变化时重置索引
-    useEffect(() => {
-        // 只在客户端执行，避免 hydration 不匹配
-        if (typeof window !== 'undefined') {
-            setCurrentIndex(0);
-        }
-    }, [searchQuery, filters.breed, filters.age, filters.gender]);
-
     if (loading) {
         return (
             <div className="mx-auto max-w-[430px] h-screen flex items-center justify-center bg-gradient-to-b from-rose-50 to-cream-50 dark:from-zinc-900 dark:to-zinc-900">
@@ -133,7 +83,7 @@ const Home = () => {
         );
     }
 
-    if (!filteredDogs || filteredDogs.length === 0) {
+    if (!DOGS || DOGS.length === 0) {
         return (
             <div className="relative mx-auto max-w-[430px] min-h-screen flex flex-col bg-gradient-to-b from-rose-50/50 via-cream-50 to-teal-50/30 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900 overflow-hidden pb-20">
                 {/* Header */}
@@ -154,50 +104,28 @@ const Home = () => {
                         </div>
                     </motion.div>
                 </header>
-                
-                {/* 搜索和筛选 */}
-                <div className="relative z-20 px-4 mb-3 space-y-2">
-                    <SearchBox onSearch={setSearchQuery} value={searchQuery} />
-                    <FilterBar filters={filters} onFilterChange={setFilters} breeds={breeds} />
-                </div>
-                
+
                 {/* 空状态 */}
                 <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
-                    <motion.span 
+                    <motion.span
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         className="text-6xl mb-4 flex items-center justify-center"
                     >
-                        <span className="material-symbols-outlined text-6xl text-rose-400">search_off</span>
+                        <span className="material-symbols-outlined text-6xl text-rose-400">pets</span>
                     </motion.span>
                     <p className="text-zinc-500 dark:text-zinc-400">
-                        {(searchQuery || filters.breed || filters.age || filters.gender) 
-                            ? '没有找到符合条件的小伙伴，试试其他筛选条件吧~'
-                            : '暂无待领养的小可爱，稍后再来看看吧~'
-                        }
+                        暂无待领养的小可爱，稍后再来看看吧~
                     </p>
-                    {(searchQuery || filters.breed || filters.age || filters.gender) && (
-                        <motion.button
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            onClick={() => {
-                                setSearchQuery('');
-                                setFilters({ breed: '', age: '', gender: '' });
-                            }}
-                            className="mt-4 px-4 py-2 bg-rose-500 text-white rounded-lg text-sm font-medium"
-                        >
-                            清除筛选
-                        </motion.button>
-                    )}
                 </div>
-                
+
                 <BottomNav />
             </div>
         )
     }
 
-    const currentDog = filteredDogs[currentIndex % filteredDogs.length];
-    const nextDog = filteredDogs[(currentIndex + 1) % filteredDogs.length];
+    const currentDog = DOGS[currentIndex % DOGS.length];
+    const nextDog = DOGS[(currentIndex + 1) % DOGS.length];
 
     const handleNext = (isFavorite = false) => {
         setDirection(isFavorite ? 'right' : 'left');
@@ -264,13 +192,21 @@ const Home = () => {
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        {/* 智能推荐按钮 */}
+                        <button
+                            onClick={() => setShowRecommendations(true)}
+                            className="size-10 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 shadow-sm flex items-center justify-center text-white hover:scale-105 transition-transform"
+                        >
+                            <span className="material-symbols-outlined text-[20px]">psychology</span>
+                        </button>
+
                         {/* 通知按钮 */}
                         <button className="size-10 rounded-xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur shadow-sm flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:scale-105 transition-transform">
                             <span className="material-symbols-outlined text-[20px]">notifications</span>
                         </button>
-                        
-                        {/* 消息入口 - 新增 */}
-                        <button 
+
+                        {/* 消息入口 */}
+                        <button
                             onClick={() => navigate('/messages')}
                             className="relative size-10 rounded-xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur shadow-sm flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:scale-105 transition-transform"
                         >
@@ -289,36 +225,10 @@ const Home = () => {
             <div className="relative z-20">
                 <StatsBar isVisible={showStats} />
             </div>
-            
-            {/* 搜索和筛选 */}
-            <div className="relative z-20 px-4 mb-3 space-y-2">
-                <SearchBox onSearch={setSearchQuery} value={searchQuery} />
-                <FilterBar filters={filters} onFilterChange={setFilters} breeds={breeds} />
-            </div>
 
-            {/* 智能推荐区块 */}
-            <div className="relative z-20 px-4 mb-3">
-                <RecommendationQuestionnaire onSubmit={handleRecommendationSubmit} />
-                {recommendations.length > 0 && (
-                    <RecommendedDogsSection recommendations={recommendations} />
-                )}
-            </div>
-
-            {/* 筛选结果统计 */}
-            <div className="relative z-20 px-4 mb-3">
-                {(searchQuery || filters.breed || filters.age || filters.gender) && (
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-xs text-zinc-500 dark:text-zinc-400"
-                    >
-                        找到 <span className="font-medium text-rose-500">{filteredDogs.length}</span> 个小伙伴
-                    </motion.p>
-                )}
-            </div>
-
-            {/* 主内容区 */}
-            <main className="flex-1 relative mx-4 mb-3 z-10">
+            {/* 主内容区 - 增大屏占比 */}
+            <main className="flex-1 relative mx-4 mt-2 mb-3 z-10"
+>
                 {/* 下一张卡片预览 */}
                 <div
                     key={`next-${nextDog.id}`}
@@ -461,6 +371,44 @@ const Home = () => {
                     </motion.div>
                 </AnimatePresence>
             </main>
+
+            {/* 智能推荐弹出层 */}
+            <AnimatePresence>
+                {showRecommendations && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 z-[60] flex items-end justify-center"
+                        onClick={() => setShowRecommendations(false)}
+                    >
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full max-w-[430px] max-h-[80vh] bg-white dark:bg-zinc-800 rounded-t-[2rem] overflow-hidden pb-safe"
+                        >
+                            <div className="p-6 flex justify-between items-center border-b border-zinc-200 dark:border-zinc-700">
+                                <h3 className="text-xl font-bold text-zinc-800 dark:text-white">智能推荐</h3>
+                                <button
+                                    onClick={() => setShowRecommendations(false)}
+                                    className="size-8 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">close</span>
+                                </button>
+                            </div>
+                            <div className="overflow-y-auto max-h-[calc(80vh-80px)] p-4 pb-24">
+                                <RecommendationQuestionnaire onSubmit={handleRecommendationSubmit} />
+                                {recommendations.length > 0 && (
+                                    <RecommendedDogsSection recommendations={recommendations} />
+                                )}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <BottomNav />
         </div>
