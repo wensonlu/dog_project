@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import BottomNav from '../components/BottomNav';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -51,7 +52,7 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark text-[#1b120e] dark:text-[#fcf9f8] overflow-hidden relative">
+        <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark text-[#1b120e] dark:text-[#fcf9f8] overflow-hidden relative pb-20">
             {/* 背景装饰：柔和渐变与色块 */}
             <div
                 className="absolute inset-0 pointer-events-none"
@@ -176,6 +177,8 @@ const Login = () => {
                     </Link>
                 </motion.p>
             </motion.div>
+
+            <BottomNav />
         </div>
     );
 };

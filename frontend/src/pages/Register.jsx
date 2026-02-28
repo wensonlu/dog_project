@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import BottomNav from '../components/BottomNav';
 
 const Register = () => {
     const [email, setEmail] = useState('');
@@ -37,7 +38,7 @@ const Register = () => {
     };
 
     return (
-        <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-background-light dark:bg-background-dark text-[#1b120e] dark:text-[#fcf9f8] p-6">
+        <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-background-light dark:bg-background-dark text-[#1b120e] dark:text-[#fcf9f8] p-6 pb-24">
             <header className="py-12 text-center">
                 <div className="size-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6 -rotate-6">
                     <span className="material-symbols-outlined text-4xl text-primary rotate-6">person_add</span>
@@ -112,6 +113,8 @@ const Register = () => {
                 已有账号？
                 <Link to="/login" className="text-primary font-bold ml-1">直接登录</Link>
             </p>
+
+            <BottomNav />
         </div>
     );
 };
