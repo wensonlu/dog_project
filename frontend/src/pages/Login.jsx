@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import BottomNav from '../components/BottomNav';
+import PageHeader from '../components/PageHeader';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -52,7 +53,7 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark text-[#1b120e] dark:text-[#fcf9f8] overflow-hidden relative pb-20">
+        <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark text-[#1b120e] dark:text-[#fcf9f8] overflow-hidden relative pb-20 max-w-[430px] mx-auto">
             {/* 背景装饰：柔和渐变与色块 */}
             <div
                 className="absolute inset-0 pointer-events-none"
@@ -63,23 +64,24 @@ const Login = () => {
                 <div className="absolute top-1/4 left-0 w-40 h-40 rounded-full bg-muted-sage/10 dark:bg-muted-sage/5 blur-2xl -translate-x-1/2" />
             </div>
 
+            {/* 公共 Header */}
+            <PageHeader
+                icon="pets"
+                title="PawMate"
+                subtitle="宠物领养平台"
+                gradient="from-rose-400 to-pink-500"
+            />
+
             <motion.div
-                className="relative max-w-[430px] mx-auto w-full flex flex-col flex-1 px-6 pt-14 pb-10"
+                className="relative w-full flex flex-col flex-1 px-6 pt-8 pb-10"
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
             >
-                <motion.header className="text-center mb-8" variants={itemVariants}>
-                    <motion.div
-                        className="size-24 mx-auto mb-5 rounded-2xl bg-card-light dark:bg-zinc-800/80 border border-[#e7d7d0]/60 dark:border-zinc-700/60 shadow-lg shadow-primary/10 flex items-center justify-center"
-                        whileHover={{ scale: 1.02 }}
-                        transition={{ type: 'spring', stiffness: 300 }}
-                    >
-                        <span className="material-symbols-outlined text-5xl text-primary">pets</span>
-                    </motion.div>
-                    <h1 className="text-2xl font-bold tracking-tight">欢迎回来</h1>
+                <motion.div className="text-center mb-8" variants={itemVariants}>
+                    <h2 className="text-2xl font-bold tracking-tight">欢迎回来</h2>
                     <p className="text-warm-beige dark:text-warm-beige/80 text-sm mt-1.5">登录您的 PawMate 账号</p>
-                </motion.header>
+                </motion.div>
 
                 <motion.div
                     className="flex-1 rounded-2xl bg-card-light/90 dark:bg-zinc-800/60 border border-[#e7d7d0]/80 dark:border-zinc-700/80 shadow-xl shadow-black/5 dark:shadow-black/20 p-6 backdrop-blur-sm"
