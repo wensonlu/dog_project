@@ -84,14 +84,26 @@ const Forum = () => {
           <div className="flex items-center gap-2">
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => navigate('/forum/history')}
+              onClick={() => {
+                if (!user) {
+                  navigate('/login');
+                  return;
+                }
+                navigate('/forum/history');
+              }}
               className="size-10 rounded-xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-500"
             >
               <span className="material-symbols-outlined">history</span>
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => navigate('/forum/create')}
+              onClick={() => {
+                if (!user) {
+                  navigate('/login');
+                  return;
+                }
+                navigate('/forum/create');
+              }}
               className="size-10 rounded-xl bg-gradient-to-r from-rose-400 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-rose-200/50"
             >
               <span className="material-symbols-outlined">edit</span>

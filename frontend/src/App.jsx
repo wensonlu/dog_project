@@ -35,11 +35,11 @@ function AppContent() {
         <Route path="/pet/:id" element={<PetDetails />} />
         <Route path="/messages" element={<PrivateRoute><Messages /></PrivateRoute>} />
         <Route path="/messages/:id" element={<PrivateRoute><MessageDetail /></PrivateRoute>} />
-        <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/application/:id" element={<PrivateRoute><Application /></PrivateRoute>} />
         <Route path="/favorites" element={<PrivateRoute><Favorites /></PrivateRoute>} />
-        <Route path="/forum" element={<PrivateRoute><Forum /></PrivateRoute>} />
-        <Route path="/forum/:id" element={<PrivateRoute><ForumDetail /></PrivateRoute>} />
+        <Route path="/forum" element={<Forum />} />
+        <Route path="/forum/:id" element={<ForumDetail />} />
         <Route path="/forum/history" element={<PrivateRoute><ForumHistory /></PrivateRoute>} />
         <Route path="/forum/create" element={<PrivateRoute><CreateTopic /></PrivateRoute>} />
         <Route path="/admin" element={<PrivateRoute><Admin /></PrivateRoute>} />

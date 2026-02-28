@@ -84,7 +84,11 @@ const ForumDetail = () => {
   };
 
   const handleCommentLike = async (commentId, newLiked) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setTipMessage('请先登录');
+      setTipOpen(true);
+      return;
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/forum/comments/${commentId}/like`, {
@@ -108,7 +112,11 @@ const ForumDetail = () => {
   };
 
   const handleReplyLike = async (replyId, newLiked) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setTipMessage('请先登录');
+      setTipOpen(true);
+      return;
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/forum/replies/${replyId}/like`, {
@@ -135,6 +143,11 @@ const ForumDetail = () => {
   };
 
   const handleReply = (target) => {
+    if (!user?.id) {
+      setTipMessage('请先登录');
+      setTipOpen(true);
+      return;
+    }
     setReplyingTo(target);
     setReplyingComment(target);
   };

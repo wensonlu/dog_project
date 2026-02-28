@@ -64,6 +64,114 @@ const Profile = () => {
 
     const pendingCount = applications.filter(app => app.status === 'pending').length;
 
+    // 未登录状态显示登录引导
+    if (!user) {
+        return (
+            <div className="mx-auto max-w-[430px] min-h-screen bg-gradient-to-b from-rose-50/50 via-cream-50 to-teal-50/30 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900 text-gray-800 dark:text-white font-sans relative pb-32 overflow-hidden">
+                {/* 背景装饰 */}
+                <div className="fixed inset-0 pointer-events-none overflow-hidden">
+                    <div className="absolute -top-20 -right-20 w-64 h-64 bg-rose-200/30 rounded-full blur-3xl" />
+                    <div className="absolute top-1/3 -left-20 w-48 h-48 bg-pink-200/20 rounded-full blur-3xl" />
+                    <div className="absolute bottom-1/4 right-0 w-56 h-56 bg-teal-200/20 rounded-full blur-3xl" />
+                </div>
+
+                {/* Header */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-rose-100/50 dark:border-zinc-800"
+                >
+                    <div className="flex items-center p-4 pt-6 pb-3 justify-center">
+                        <h2 className="text-lg font-bold text-gray-800 dark:text-white">我的</h2>
+                    </div>
+                </motion.div>
+
+                {/* 登录引导内容 */}
+                <div className="flex flex-col items-center justify-center px-6 pt-20">
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 200 }}
+                        className="size-32 rounded-full bg-gradient-to-br from-rose-300 via-pink-300 to-teal-300 p-1 mb-6"
+                    >
+                        <div className="w-full h-full rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center">
+                            <span className="text-6xl">🐕</span>
+                        </div>
+                    </motion.div>
+
+                    <motion.h3
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="text-2xl font-bold text-gray-800 dark:text-white mb-2"
+                    >
+                        登录解锁更多功能
+                    </motion.h3>
+
+                    <motion.p
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-gray-500 dark:text-gray-400 text-center mb-8"
+                    >
+                        登录后可查看收藏、领养进度<br />发布送养信息等更多功能
+                    </motion.p>
+
+                    <motion.button
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => navigate('/login')}
+                        className="w-full max-w-sm h-14 bg-gradient-to-r from-rose-400 to-pink-500 text-white font-bold rounded-xl shadow-lg shadow-rose-300/50 mb-4"
+                    >
+                        立即登录
+                    </motion.button>
+
+                    <motion.button
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.4 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => navigate('/register')}
+                        className="w-full max-w-sm h-14 bg-white dark:bg-zinc-800 text-gray-800 dark:text-white font-bold rounded-xl border-2 border-gray-200 dark:border-zinc-700"
+                    >
+                        创建账号
+                    </motion.button>
+
+                    {/* 功能预览 */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 }}
+                        className="w-full max-w-sm mt-12 space-y-3"
+                    >
+                        <p className="text-xs text-gray-500 font-medium px-2 mb-3">登录后可使用</p>
+                        {[
+                            { icon: 'favorite', label: '收藏喜欢的狗狗', color: 'text-rose-500' },
+                            { icon: 'pending_actions', label: '跟踪领养进度', color: 'text-emerald-500' },
+                            { icon: 'forum', label: '发布和浏览帖子', color: 'text-blue-500' },
+                            { icon: 'pets', label: '发布送养信息', color: 'text-purple-500' },
+                        ].map((item, index) => (
+                            <motion.div
+                                key={item.label}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.6 + index * 0.1 }}
+                                className="flex items-center gap-3 p-3 bg-white/50 dark:bg-zinc-800/50 rounded-xl"
+                            >
+                                <span className={`material-symbols-outlined ${item.color}`}>{item.icon}</span>
+                                <span className="text-sm text-gray-700 dark:text-gray-300">{item.label}</span>
+                            </motion.div>
+                        ))}
+                    </motion.div>
+                </div>
+
+                <BottomNav />
+            </div>
+        );
+    }
+
     const getStatusBadge = (status) => {
         const styles = {
             pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
