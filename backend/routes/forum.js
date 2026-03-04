@@ -8,6 +8,8 @@ const {
   createComment,
   toggleCommentLike,
   toggleReplyLike,
+  deleteComment,
+  deleteReply,
   deleteTopic
 } = require('../controllers/forumController');
 const checkSupabase = require('../middleware/supabaseCheck');
@@ -78,5 +80,11 @@ router.post('/comments/:id/like', checkSupabase, toggleCommentLike);
 
 // Toggle like on a reply
 router.post('/replies/:id/like', checkSupabase, toggleReplyLike);
+
+// Delete own comment
+router.delete('/comments/:id', checkSupabase, deleteComment);
+
+// Delete own reply
+router.delete('/replies/:id', checkSupabase, deleteReply);
 
 module.exports = router;

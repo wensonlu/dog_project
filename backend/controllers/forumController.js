@@ -277,6 +277,7 @@ async function getTopicById(req, res) {
             id: reply.id,
             commentId: reply.comment_id,
             content: reply.content,
+            replyToUserName: reply.reply_to_user_name ?? null,
             likes: reply.likes_count || 0,
             createdAt: reply.created_at,
             locationCity: reply.location_city ?? null,
@@ -425,7 +426,7 @@ async function toggleTopicLike(req, res) {
 async function createComment(req, res) {
   const client = getSupabaseClient(req);
   const { topicId } = req.params;
-  const { content, replyToCommentId, userId, locationCity } = req.body;
+  const { content, replyToCommentId, userId, locationCity, replyToUserName } = req.body;
 
   if (!content || !content.trim()) {
     return res.status(400).json({ error: 'Comment content is required' });
@@ -444,7 +445,8 @@ async function createComment(req, res) {
           comment_id: replyToCommentId,
           user_id: userId,
           content: content.trim(),
-          location_city: locationCity || null
+          location_city: locationCity || null,
+          reply_to_user_name: replyToUserName || null
         })
         .select()
         .single();
@@ -636,6 +638,114 @@ async function toggleReplyLike(req, res) {
 }
 
 /**
+ * Delete a comment (only by author). Cascades to replies.
+ */
+async function deleteComment(req, res) {
+  const client = getSupabaseClient(req);
+  const { id } = req.params;
+  const userId = req.query.userId || req.body?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'User ID is required' });
+  }
+
+  try {
+    const { data: comment, error: fetchError } = await client
+      .from('forum_comments')
+      .select('id, user_id, topic_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !comment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    if (comment.user_id !== userId) {
+      return res.status(403).json({ error: 'Only the author can delete this comment' });
+    }
+
+    const { error: deleteError } = await client
+      .from('forum_comments')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      return res.status(500).json({ error: deleteError.message });
+    }
+
+    const { data: topic } = await client
+      .from('forum_topics')
+      .select('comments_count')
+      .eq('id', comment.topic_id)
+      .single();
+
+    await client
+      .from('forum_topics')
+      .update({ comments_count: Math.max(0, (topic?.comments_count || 0) - 1) })
+      .eq('id', comment.topic_id);
+
+    res.json({ message: 'Comment deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    res.status(500).json({ error: 'Failed to delete comment' });
+  }
+}
+
+/**
+ * Delete a reply (only by author)
+ */
+async function deleteReply(req, res) {
+  const client = getSupabaseClient(req);
+  const { id } = req.params;
+  const userId = req.query.userId || req.body?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'User ID is required' });
+  }
+
+  try {
+    const { data: reply, error: fetchError } = await client
+      .from('forum_replies')
+      .select('id, user_id, comment_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !reply) {
+      return res.status(404).json({ error: 'Reply not found' });
+    }
+
+    if (reply.user_id !== userId) {
+      return res.status(403).json({ error: 'Only the author can delete this reply' });
+    }
+
+    const { error: deleteError } = await client
+      .from('forum_replies')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      return res.status(500).json({ error: deleteError.message });
+    }
+
+    const { data: comment } = await client
+      .from('forum_comments')
+      .select('replies_count')
+      .eq('id', reply.comment_id)
+      .single();
+
+    await client
+      .from('forum_comments')
+      .update({ replies_count: Math.max(0, (comment?.replies_count || 0) - 1) })
+      .eq('id', reply.comment_id);
+
+    res.json({ message: 'Reply deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting reply:', error);
+    res.status(500).json({ error: 'Failed to delete reply' });
+  }
+}
+
+/**
  * Delete a topic (only by author)
  */
 async function deleteTopic(req, res) {
@@ -686,5 +796,7 @@ module.exports = {
   createComment,
   toggleCommentLike,
   toggleReplyLike,
+  deleteComment,
+  deleteReply,
   deleteTopic
 };

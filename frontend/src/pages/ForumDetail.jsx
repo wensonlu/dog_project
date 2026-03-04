@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 import CommentItem from '../components/Forum/CommentItem';
+import CommentActionSheet from '../components/Forum/CommentActionSheet';
 import ConfirmModal from '../components/ConfirmModal';
 import { formatTime } from '../data/mockForum';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +27,10 @@ const ForumDetail = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [tipOpen, setTipOpen] = useState(false);
   const [tipMessage, setTipMessage] = useState('');
+  const [actionSheetOpen, setActionSheetOpen] = useState(false);
+  const [actionTarget, setActionTarget] = useState(null);
+  const [deleteCommentReplyTarget, setDeleteCommentReplyTarget] = useState(null);
+  const [deleteCommentReplyLoading, setDeleteCommentReplyLoading] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
   const imageScrollRef = useRef(null);
   const commentSectionRef = useRef(null);
@@ -181,7 +186,8 @@ const ForumDetail = () => {
           content: commentText.trim(),
           userId: user.id,
           replyToCommentId: replyingTo?.commentId ?? replyingTo?.id ?? null,
-          locationCity: replyCity || undefined
+          locationCity: replyCity || undefined,
+          replyToUserName: replyingTo?.author?.name ?? undefined
         })
       });
 
@@ -219,6 +225,110 @@ const ForumDetail = () => {
   const handleCancelReply = () => {
     setReplyingTo(null);
     setReplyCity(null);
+  };
+
+  const handleOpenCommentReplyAction = (target) => {
+    setActionTarget(target);
+    setActionSheetOpen(true);
+  };
+
+  const handleCloseActionSheet = () => {
+    setActionSheetOpen(false);
+    setActionTarget(null);
+  };
+
+  const getCopyText = () => {
+    if (!actionTarget) return '';
+    if (actionTarget.type === 'comment') return actionTarget.comment.content;
+    const r = actionTarget.reply;
+    return r.replyToUserName ? `回复 ${r.replyToUserName}: ${r.content}` : r.content;
+  };
+
+  const handleActionCollect = () => {
+    if (!actionTarget || !id) return;
+    const key = 'forum_collected';
+    const raw = localStorage.getItem(key);
+    const list = raw ? JSON.parse(raw) : [];
+    const item = actionTarget.type === 'comment'
+      ? {
+          type: 'comment',
+          id: actionTarget.comment.id,
+          topicId: id,
+          content: actionTarget.comment.content,
+          authorName: actionTarget.comment.author?.name
+        }
+      : {
+          type: 'reply',
+          id: actionTarget.reply.id,
+          topicId: id,
+          content: actionTarget.reply.content,
+          authorName: actionTarget.reply.author?.name
+        };
+    if (list.some((x) => x.type === item.type && x.id === item.id)) {
+      setTipMessage('已在收藏中');
+    } else {
+      list.push(item);
+      localStorage.setItem(key, JSON.stringify(list));
+      setTipMessage('已收藏');
+    }
+    setTipOpen(true);
+  };
+
+  const handleActionCopy = async () => {
+    const text = getCopyText();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setTipMessage('已复制到剪贴板');
+    } catch {
+      setTipMessage('复制失败');
+    }
+    setTipOpen(true);
+  };
+
+  const handleActionDelete = () => {
+    if (!actionTarget) return;
+    setDeleteCommentReplyTarget(
+      actionTarget.type === 'comment'
+        ? { type: 'comment', id: actionTarget.comment.id }
+        : { type: 'reply', id: actionTarget.reply.id }
+    );
+    handleCloseActionSheet();
+  };
+
+  const handleConfirmDeleteCommentReply = async () => {
+    if (!deleteCommentReplyTarget || !user?.id) return;
+    setDeleteCommentReplyLoading(true);
+    try {
+      const url = deleteCommentReplyTarget.type === 'comment'
+        ? `${API_BASE_URL}/forum/comments/${deleteCommentReplyTarget.id}?userId=${encodeURIComponent(user.id)}`
+        : `${API_BASE_URL}/forum/replies/${deleteCommentReplyTarget.id}?userId=${encodeURIComponent(user.id)}`;
+      const response = await fetch(url, { method: 'DELETE' });
+      if (response.ok) {
+        setDeleteCommentReplyTarget(null);
+        const params = new URLSearchParams();
+        if (user.id) params.append('userId', user.id);
+        const refreshResponse = await fetch(`${API_BASE_URL}/forum/${id}?${params.toString()}`);
+        if (refreshResponse.ok) {
+          const data = await refreshResponse.json();
+          setTopic(data.topic);
+          setComments(data.comments || []);
+          setLikeCount(data.topic?.likes || 0);
+        }
+        setTipMessage('已删除');
+        setTipOpen(true);
+      } else {
+        const data = await response.json();
+        setTipMessage(data.error || '删除失败');
+        setTipOpen(true);
+      }
+    } catch (err) {
+      console.error('Error deleting comment/reply:', err);
+      setTipMessage('网络错误，请重试');
+      setTipOpen(true);
+    } finally {
+      setDeleteCommentReplyLoading(false);
+    }
   };
 
   const isOwnTopic = user?.id && topic?.author?.id && topic.author.id === user.id;
@@ -494,9 +604,11 @@ const ForumDetail = () => {
                   key={comment.id}
                   comment={comment}
                   replies={comment.replies || []}
+                  currentUserId={user?.id}
                   onLike={handleCommentLike}
                   onReplyLike={handleReplyLike}
                   onReply={handleReply}
+                  onOpenActionMenu={handleOpenCommentReplyAction}
                 />
               ))
             )}
@@ -554,6 +666,28 @@ const ForumDetail = () => {
         confirmLoading={deleteLoading}
         onConfirm={handleDeleteTopic}
         onCancel={() => setDeleteConfirmOpen(false)}
+      />
+
+      {/* 评论/回复操作弹窗：收藏、复制、删除 */}
+      <CommentActionSheet
+        open={actionSheetOpen}
+        onClose={handleCloseActionSheet}
+        onCollect={handleActionCollect}
+        onCopy={handleActionCopy}
+        onDelete={handleActionDelete}
+      />
+
+      {/* 删除评论/回复确认 */}
+      <ConfirmModal
+        open={!!deleteCommentReplyTarget}
+        title={deleteCommentReplyTarget?.type === 'reply' ? '删除回复' : '删除评论'}
+        message={deleteCommentReplyTarget?.type === 'reply' ? '确定要删除这条回复吗？' : '确定要删除这条评论吗？删除后无法恢复。'}
+        confirmText="确定删除"
+        cancelText="取消"
+        confirmVariant="danger"
+        confirmLoading={deleteCommentReplyLoading}
+        onConfirm={handleConfirmDeleteCommentReply}
+        onCancel={() => setDeleteCommentReplyTarget(null)}
       />
 
       {/* 通用提示弹窗（替代 alert，H5/PC 通用） */}
