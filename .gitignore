@@ -69,3 +69,4 @@ venv.bak/
 # Cursor/IDE specific
 .cursor/
 *.plan.md
+.gitnexus
