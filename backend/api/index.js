@@ -17,6 +17,10 @@ const messagesRoutes = require('../routes/messages');
 const dogSubmissionsRoutes = require('../routes/dogSubmissions');
 const uploadRoutes = require('../routes/upload');
 const forumRoutes = require('../routes/forum');
+const statsRoutes = require('../routes/stats');
+const reviewsRoutes = require('../routes/reviews');
+const recommendationsRoutes = require('../routes/recommendations');
+const permissionsRoutes = require('../routes/permissions');
 
 const app = express();
 
@@ -72,6 +76,10 @@ app.use('/messages', messagesRoutes);
 app.use('/dog-submissions', dogSubmissionsRoutes);
 app.use('/upload', uploadRoutes);
 app.use('/forum', forumRoutes);
+app.use('/stats', statsRoutes);
+app.use('/reviews', reviewsRoutes);
+app.use('/recommendations', recommendationsRoutes);
+app.use('/permissions', permissionsRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
