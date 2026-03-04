@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 import CommentItem from '../components/Forum/CommentItem';
@@ -18,13 +18,16 @@ const ForumDetail = () => {
   const [likeCount, setLikeCount] = useState(0);
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
-  const [replyingComment, setReplyingComment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [tipOpen, setTipOpen] = useState(false);
   const [tipMessage, setTipMessage] = useState('');
+  const [imageIndex, setImageIndex] = useState(0);
+  const imageScrollRef = useRef(null);
+  const commentSectionRef = useRef(null);
+  const commentInputRef = useRef(null);
 
   // 获取话题详情
   useEffect(() => {
@@ -83,7 +86,7 @@ const ForumDetail = () => {
     }
   };
 
-  const handleCommentLike = async (commentId, newLiked) => {
+  const handleCommentLike = async (commentId) => {
     if (!user?.id) {
       setTipMessage('请先登录');
       setTipOpen(true);
@@ -111,7 +114,7 @@ const ForumDetail = () => {
     }
   };
 
-  const handleReplyLike = async (replyId, newLiked) => {
+  const handleReplyLike = async (replyId) => {
     if (!user?.id) {
       setTipMessage('请先登录');
       setTipOpen(true);
@@ -149,7 +152,6 @@ const ForumDetail = () => {
       return;
     }
     setReplyingTo(target);
-    setReplyingComment(target);
   };
 
   const handleSubmitComment = async () => {
@@ -188,7 +190,6 @@ const ForumDetail = () => {
         
         setCommentText('');
         setReplyingTo(null);
-        setReplyingComment(null);
       } else {
         const error = await response.json();
         setTipMessage(error.error || '提交失败，请重试');
@@ -205,7 +206,6 @@ const ForumDetail = () => {
 
   const handleCancelReply = () => {
     setReplyingTo(null);
-    setReplyingComment(null);
   };
 
   const isOwnTopic = user?.id && topic?.author?.id && topic.author.id === user.id;
@@ -262,38 +262,66 @@ const ForumDetail = () => {
 
   return (
     <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-background-light dark:bg-background-dark pb-24">
-      {/* 头部 - 固定在顶部，半透明 */}
+      {/* 头部 - 小红书风格：返回 | 作者头像+昵称 | 关注+分享 / 删除 */}
       <header className="fixed top-0 left-0 right-0 max-w-[430px] mx-auto z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 pt-12 pb-3">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/forum')}
-            className="size-9 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-[#1b120e] dark:text-white"
+            onClick={() => navigate(-1)}
+            className="size-9 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-[#1b120e] dark:text-white flex-shrink-0"
           >
             <span className="material-symbols-outlined text-lg">arrow_back</span>
           </button>
-          <div className="flex-1"></div>
-          {isOwnTopic ? (
-            <button
-              onClick={(e) => { e.stopPropagation(); setDeleteConfirmOpen(true); }}
-              className="size-9 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-red-500 dark:text-red-400"
-              title="删除帖子"
-            >
-              <span className="material-symbols-outlined text-lg">delete</span>
-            </button>
-          ) : (
-            <button className="size-9 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-[#1b120e] dark:text-white">
-              <span className="material-symbols-outlined text-lg">more_vert</span>
-            </button>
-          )}
+          <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
+            <div className="size-8 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex-shrink-0">
+              <img
+                src={topic.author.avatar}
+                alt={topic.author.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <span className="text-sm font-bold text-[#1b120e] dark:text-white truncate">
+              {topic.author.name}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {isOwnTopic ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); setDeleteConfirmOpen(true); }}
+                className="size-9 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-red-500 dark:text-red-400"
+                title="删除帖子"
+              >
+                <span className="material-symbols-outlined text-lg">delete</span>
+              </button>
+            ) : (
+              <>
+                <button className="px-3 py-1.5 bg-primary text-white text-sm font-bold rounded-full">
+                  关注
+                </button>
+                <button className="size-9 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-[#1b120e] dark:text-white">
+                  <span className="material-symbols-outlined text-lg">share</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* 话题内容 - 小红书风格 */}
-      <main className="flex-1 overflow-y-auto pt-0">
-        {/* 图片区域 - 全屏展示，可滑动 */}
+      {/* 话题内容 - 小红书风格（底部留白避免被固定操作栏遮挡） */}
+      <main className="flex-1 overflow-y-auto pt-0 pb-28">
+        {/* 图片区域 - 右上角 1/N，底部圆点 */}
         {topic.images && topic.images.length > 0 && (
           <div className="relative w-full bg-black" style={{ aspectRatio: '4/5' }}>
-            <div className="absolute inset-0 overflow-x-auto snap-x snap-mandatory scrollbar-hide flex">
+            <div
+              ref={imageScrollRef}
+              className="absolute inset-0 overflow-x-auto snap-x snap-mandatory scrollbar-hide flex"
+              onScroll={() => {
+                const el = imageScrollRef.current;
+                if (!el || topic.images.length <= 1) return;
+                const w = el.offsetWidth;
+                const index = Math.round(el.scrollLeft / w);
+                setImageIndex(Math.min(index, topic.images.length - 1));
+              }}
+            >
               {topic.images.map((image, index) => (
                 <div
                   key={index}
@@ -307,14 +335,19 @@ const ForumDetail = () => {
                 </div>
               ))}
             </div>
-            {/* 图片指示器 */}
+            {/* 右上角 1/N */}
+            <div className="absolute top-3 right-3 px-2 py-1 bg-black/50 backdrop-blur-sm rounded text-white text-xs z-10">
+              {imageIndex + 1}/{topic.images.length}
+            </div>
+            {/* 底部圆点指示器 */}
             {topic.images.length > 1 && (
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
                 {topic.images.map((_, index) => (
                   <div
                     key={index}
-                    className="h-1 rounded-full bg-white/80 transition-all"
-                    style={{ width: '6px' }}
+                    className={`size-1.5 rounded-full transition-all ${
+                      index === imageIndex ? 'bg-white w-3' : 'bg-white/60'
+                    }`}
                   />
                 ))}
               </div>
@@ -322,30 +355,10 @@ const ForumDetail = () => {
           </div>
         )}
 
-        {/* 内容区域 */}
+        {/* 正文区域 */}
         <div className="px-4 pt-4 pb-6">
-          {/* 作者信息 */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="size-10 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
-              <img
-                src={topic.author.avatar}
-                alt={topic.author.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-[#1b120e] dark:text-white">
-                {topic.author.name}
-              </p>
-              <p className="text-xs text-warm-beige">{formatTime(topic.createdAt)}</p>
-            </div>
-            <button className="px-4 py-1.5 bg-primary text-white text-sm font-bold rounded-full">
-              关注
-            </button>
-          </div>
-
-          {/* 标题和内容 */}
-          <div className="mb-4">
+          {/* 标题和正文 */}
+          <div className="mb-3">
             <h2 className="text-lg font-bold text-[#1b120e] dark:text-white mb-2 leading-tight">
               {topic.title}
             </h2>
@@ -355,8 +368,8 @@ const ForumDetail = () => {
           </div>
 
           {/* 标签 */}
-          {topic.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
+          {topic.tags && topic.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
               {topic.tags.map((tag, index) => (
                 <span
                   key={index}
@@ -368,44 +381,28 @@ const ForumDetail = () => {
             </div>
           )}
 
-          {/* 操作栏 - 固定在底部 */}
-          <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-700">
-            <div className="flex items-center gap-6">
-              <button
-                onClick={handleLike}
-                className="flex items-center gap-2 text-warm-beige transition-colors"
-              >
-                <span className={`material-symbols-outlined text-2xl ${isLiked ? 'fill text-red-500' : ''}`}>
-                  {isLiked ? 'favorite' : 'favorite_border'}
-                </span>
-                <span className="text-sm font-medium">{likeCount}</span>
-              </button>
-              <div className="flex items-center gap-2 text-warm-beige">
-                <span className="material-symbols-outlined text-2xl">comment</span>
-                <span className="text-sm font-medium">{topic.comments}</span>
-              </div>
-              <div className="flex items-center gap-2 text-warm-beige">
-                <span className="material-symbols-outlined text-2xl">share</span>
-              </div>
-            </div>
-            <div className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-bold rounded-lg">
-              {topic.category}
-            </div>
+          {/* 时间与操作行：X天前 | 不喜欢 */}
+          <div className="flex items-center justify-between text-xs text-warm-beige">
+            <span>{formatTime(topic.createdAt)}</span>
+            <button type="button" className="flex items-center gap-1 text-warm-beige">
+              <span className="material-symbols-outlined text-base">thumb_down</span>
+              不喜欢
+            </button>
           </div>
         </div>
 
-        {/* 评论区域 - 小红书风格 */}
+        {/* 评论区域 - 共 N 条评论 */}
         <div className="px-4 pb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold text-[#1b120e] dark:text-white">
-              评论 {comments.length > 0 && `(${comments.length})`}
+              共 {comments.length} 条评论
             </h3>
             {comments.length > 0 && (
-              <button className="text-xs text-primary font-medium">查看全部</button>
+              <button type="button" className="text-xs text-primary font-medium">排序</button>
             )}
           </div>
 
-          {/* 评论列表 */}
+          {/* 评论列表 - 全部展示 */}
           <div className="mb-4 space-y-4">
             {comments.length === 0 ? (
               <div className="text-center py-12 text-warm-beige">
@@ -413,7 +410,7 @@ const ForumDetail = () => {
                 <p className="text-sm">暂无评论，快来抢沙发吧～</p>
               </div>
             ) : (
-              comments.slice(0, 3).map(comment => (
+              comments.map(comment => (
                 <CommentItem
                   key={comment.id}
                   comment={comment}
@@ -425,59 +422,107 @@ const ForumDetail = () => {
               ))
             )}
           </div>
-        </div>
 
-        {/* 评论输入框 - 固定在底部 */}
-        <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto bg-background-light dark:bg-background-dark border-t border-zinc-200 dark:border-zinc-700 px-4 py-3 pb-20">
-          {replyingTo && (
-            <div className="mb-2 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-700/50 rounded-lg flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-warm-beige">回复</span>
-                <span className="text-xs font-medium text-[#1b120e] dark:text-white">
-                  {replyingTo.author.name}
-                </span>
+          {/* 评论输入框 - 在流内，点击「说点什么」滚动到此并 focus */}
+          <div ref={commentSectionRef} className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
+            {replyingTo && (
+              <div className="mb-2 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-700/50 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-warm-beige">回复</span>
+                  <span className="text-xs font-medium text-[#1b120e] dark:text-white">
+                    {replyingTo.author.name}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCancelReply}
+                  className="size-5 rounded-full bg-zinc-200 dark:bg-zinc-600 flex items-center justify-center"
+                >
+                  <span className="material-symbols-outlined text-xs text-warm-beige">close</span>
+                </button>
               </div>
-              <button
-                onClick={handleCancelReply}
-                className="size-5 rounded-full bg-zinc-200 dark:bg-zinc-600 flex items-center justify-center"
-              >
-                <span className="material-symbols-outlined text-xs text-warm-beige">close</span>
-              </button>
-            </div>
-          )}
-          <div className="flex gap-2 items-center">
-            <div className="size-8 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex-shrink-0">
-              <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6ZfAu74fVn19xwt_mCCWmnG0o7CZVapQ8kcQLS4X-Bq4t9inNQHpNA2CtIDIILlKL7BEwdeDFD1ir1ExQXcadXX1G0ZeCruY06uZCg-nslkcMsFEssRFlRG9WUkpJ1A6HzO8kRmhQdRu6pihqtzjdpfK-FD-VL3z-S_AoQG8KrdjqvQ3CSQdDha2DtsEiRkV3RGcfoZHR12Ii9gsm_0C6CJ79z0Hu7LkUOIdgB5G5XcVAN8qPe5tGxLh1fauXT7-L58wrQ_eXFM0"
-                alt="avatar"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <input
-              type="text"
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder={replyingTo ? `回复 ${replyingTo.author.name}...` : '说点什么...'}
-              className="flex-1 h-9 px-4 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-[#1b120e] dark:text-white placeholder-warm-beige focus:outline-none focus:ring-2 focus:ring-primary/20"
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmitComment();
-                }
-              }}
-            />
-            {commentText.trim() && (
-              <button
-                onClick={handleSubmitComment}
-                disabled={submitting}
-                className="text-primary text-sm font-bold px-2 disabled:opacity-50"
-              >
-                {submitting ? '发送中...' : '发送'}
-              </button>
             )}
+            <div className="flex gap-2 items-center">
+              <div className="size-8 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex-shrink-0">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="w-full h-full flex items-center justify-center text-lg text-warm-beige">
+                    <span className="material-symbols-outlined">person</span>
+                  </span>
+                )}
+              </div>
+              <input
+                ref={commentInputRef}
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder={replyingTo ? `回复 ${replyingTo.author.name}...` : '留下你的想法吧'}
+                className="flex-1 h-9 px-4 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-[#1b120e] dark:text-white placeholder-warm-beige focus:outline-none focus:ring-2 focus:ring-primary/20"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmitComment();
+                  }
+                }}
+              />
+              <button type="button" className="size-9 flex items-center justify-center text-warm-beige">
+                <span className="material-symbols-outlined">mic</span>
+              </button>
+              <button type="button" className="size-9 flex items-center justify-center text-warm-beige">
+                <span className="material-symbols-outlined">image</span>
+              </button>
+              {commentText.trim() && (
+                <button
+                  type="button"
+                  onClick={handleSubmitComment}
+                  disabled={submitting}
+                  className="text-primary text-sm font-bold px-2 disabled:opacity-50"
+                >
+                  {submitting ? '发送中...' : '发送'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </main>
+
+      {/* 底部固定操作栏 - 说点什么 + 点赞 + 收藏 + 评论（BottomNav 之上） */}
+      <div className="fixed bottom-20 left-0 right-0 max-w-[430px] mx-auto z-40 bg-background-light dark:bg-background-dark border-t border-zinc-200 dark:border-zinc-700 px-4 py-2">
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              commentSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+              setTimeout(() => commentInputRef.current?.focus(), 300);
+            }}
+            className="flex-1 flex items-center gap-2 text-left text-sm text-warm-beige min-w-0"
+          >
+            <span className="material-symbols-outlined text-xl">edit_note</span>
+            说点什么...
+          </button>
+          <div className="flex items-center gap-4 flex-shrink-0">
+            <button
+              type="button"
+              onClick={handleLike}
+              className="flex items-center gap-1 text-[#1b120e] dark:text-zinc-300"
+            >
+              <span className={`material-symbols-outlined text-2xl ${isLiked ? 'fill text-red-500' : ''}`}>
+                {isLiked ? 'favorite' : 'favorite_border'}
+              </span>
+              <span className="text-sm font-medium">{likeCount}</span>
+            </button>
+            <button type="button" className="flex items-center gap-1 text-[#1b120e] dark:text-zinc-300">
+              <span className="material-symbols-outlined text-2xl">star_border</span>
+              <span className="text-sm font-medium">0</span>
+            </button>
+            <button type="button" className="flex items-center gap-1 text-[#1b120e] dark:text-zinc-300">
+              <span className="material-symbols-outlined text-2xl">chat_bubble_outline</span>
+              <span className="text-sm font-medium">{topic.comments}</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       <BottomNav />
 

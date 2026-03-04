@@ -297,7 +297,7 @@ export const mockReplies = [
 
 // 分类列表
 export const categories = [
-  { id: 'all', name: '全部' },
+  { id: 'all', name: '推荐' },
   { id: 'adoption', name: '领养经验' },
   { id: 'daily', name: '日常分享' },
   { id: 'help', name: '求助问答' }

@@ -42,14 +42,15 @@ const ReplyItem = ({ reply, onLike, onReply }) => {
           </p>
         </div>
 
-        {/* 操作按钮 */}
+        {/* 操作按钮 - 心形点赞 */}
         <div className="flex items-center gap-3 ml-1">
           <button
+            type="button"
             onClick={handleLike}
             className="flex items-center gap-1 text-warm-beige hover:text-primary transition-colors"
           >
-            <span className={`material-symbols-outlined text-sm ${isLiked ? 'fill text-primary' : ''}`}>
-              {isLiked ? 'thumb_up' : 'thumb_up_off_alt'}
+            <span className={`material-symbols-outlined text-sm ${isLiked ? 'fill text-red-500' : ''}`}>
+              {isLiked ? 'favorite' : 'favorite_border'}
             </span>
             <span className="text-xs">{likeCount}</span>
           </button>
