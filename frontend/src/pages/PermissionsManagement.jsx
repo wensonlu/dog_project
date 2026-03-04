@@ -115,13 +115,12 @@ const PermissionsManagement = () => {
                 <div className="flex items-center justify-between px-4 py-4">
                     <button
                         onClick={() => navigate(-1)}
-                        className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+                        className="size-10 rounded-full bg-white dark:bg-zinc-800 shadow-sm flex items-center justify-center text-zinc-600 dark:text-zinc-300 border border-gray-200 dark:border-zinc-700"
                     >
-                        <span className="material-icons">arrow_back</span>
-                        <span className="font-medium">返回</span>
+                        <span className="material-symbols-outlined text-[20px]">arrow_back</span>
                     </button>
                     <h1 className="text-lg font-bold">权限管理</h1>
-                    <div className="w-16" />
+                    <div className="size-10" />
                 </div>
 
                 {/* 搜索框 */}

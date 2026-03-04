@@ -129,7 +129,7 @@ const Admin = () => {
             <div className="sticky top-0 z-20 bg-background-light dark:bg-background-dark border-b border-zinc-200 dark:border-zinc-800 px-5 py-4">
                 <div className="flex items-center justify-between mb-4">
                     <button
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate(-1)}
                         className="size-10 rounded-full bg-white dark:bg-zinc-800 shadow-sm flex items-center justify-center text-zinc-600 dark:text-zinc-300"
                     >
                         <span className="material-symbols-outlined text-[20px]">arrow_back</span>
