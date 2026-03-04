@@ -36,13 +36,33 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // 用 Supabase session 同步到本地并拉取权限（Google OAuth 回调后调用）
+    const syncSessionAndFetchPermissions = async (session, supabaseUser) => {
+        if (!session?.access_token || !supabaseUser) return;
+        const sessionToStore = {
+            access_token: session.access_token,
+            refresh_token: session.refresh_token
+        };
+        localStorage.setItem('pawmate_session', JSON.stringify(sessionToStore));
+        const permissions = await fetchPermissions();
+        const userData = {
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            name: supabaseUser.user_metadata?.name || supabaseUser.email,
+            avatar: supabaseUser.user_metadata?.avatar_url || null,
+            permissions,
+            session: sessionToStore
+        };
+        setUser(userData);
+        localStorage.setItem('pawmate_user', JSON.stringify(userData));
+    };
+
     useEffect(() => {
         // 从 localStorage 恢复用户状态
         const checkSession = async () => {
             console.log('[AuthContext useEffect] 开始恢复用户状态');
             const storedUser = localStorage.getItem('pawmate_user');
             const storedSession = localStorage.getItem('pawmate_session');
-            console.log('[AuthContext useEffect] localStorage 中的用户:', storedUser ? JSON.parse(storedUser) : null);
 
             if (storedUser && storedSession) {
                 const userData = JSON.parse(storedUser);
@@ -61,13 +81,39 @@ export const AuthProvider = ({ children }) => {
                 console.log('[AuthContext useEffect] 恢复用户状态:', userData);
                 setUser(userData);
             } else {
-                console.log('[AuthContext useEffect] localStorage 中没有用户数据');
+                // 可能刚从 Google OAuth 回调回来，Supabase 有 session 但本地还没有
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    console.log('[AuthContext useEffect] 检测到 Supabase session（如 OAuth 回调），同步并拉取权限');
+                    await syncSessionAndFetchPermissions(session, session.user);
+                } else {
+                    console.log('[AuthContext useEffect] localStorage 中没有用户数据');
+                }
             }
             setLoading(false);
             console.log('[AuthContext useEffect] 加载完成，loading = false');
         };
 
         checkSession();
+    }, []);
+
+    // 监听 Supabase 登录状态（Google OAuth 回调后会触发 SIGNED_IN）
+    useEffect(() => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'SIGNED_IN' && session?.user) {
+                const storedSession = localStorage.getItem('pawmate_session');
+                if (!storedSession) {
+                    console.log('[AuthContext] onAuthStateChange SIGNED_IN，同步 session 并调用 permissions/me');
+                    await syncSessionAndFetchPermissions(session, session.user);
+                }
+            }
+            if (event === 'SIGNED_OUT') {
+                setUser(null);
+                localStorage.removeItem('pawmate_user');
+                localStorage.removeItem('pawmate_session');
+            }
+        });
+        return () => subscription.unsubscribe();
     }, []);
 
     const login = async (email, password) => {
