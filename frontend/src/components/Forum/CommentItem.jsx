@@ -33,63 +33,78 @@ const CommentItem = ({ comment, replies = [], onReply, onLike, onReplyLike }) =>
 
         {/* 内容 */}
         <div className="flex-1">
-          <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl p-3 mb-2">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl p-3 mb-1">
+            <div className="mb-1">
               <span className="text-sm font-bold text-[#1b120e] dark:text-white">
                 {comment.author.name}
               </span>
-              <span className="text-xs text-warm-beige">{formatTime(comment.createdAt)}</span>
             </div>
             <p className="text-sm text-[#1b120e] dark:text-zinc-300 leading-relaxed">
               {comment.content}
             </p>
           </div>
 
-          {/* 操作按钮 - 小红书风格：心形点赞 + 回复 */}
-          <div className="flex items-center gap-4 ml-2">
-            <button
-              type="button"
-              onClick={handleLike}
-              className="flex items-center gap-1 text-warm-beige hover:text-primary transition-colors"
-            >
-              <span className={`material-symbols-outlined text-base ${isLiked ? 'fill text-red-500' : ''}`}>
-                {isLiked ? 'favorite' : 'favorite_border'}
-              </span>
-              <span className="text-xs font-medium">{likeCount}</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleReply}
-              className="flex items-center gap-1 text-warm-beige hover:text-primary transition-colors"
-            >
-              <span className="material-symbols-outlined text-base">reply</span>
-              <span className="text-xs font-medium">回复</span>
-            </button>
+          {/* 第二行：左 时间 城市 回复，右 心形+点赞数+不喜欢；小字灰色 */}
+          <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 ml-2">
+            <div className="flex items-center gap-3">
+              <span>{formatTime(comment.createdAt)}{comment.locationCity ? ` ${comment.locationCity}` : ''}</span>
+              <button type="button" onClick={handleReply} className="hover:text-primary transition-colors">
+                回复
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleLike}
+                className="flex items-center gap-0.5 hover:text-primary transition-colors"
+              >
+                <span className={`material-symbols-outlined text-base ${isLiked ? 'fill text-red-500' : ''}`}>
+                  {isLiked ? 'favorite' : 'favorite_border'}
+                </span>
+                <span>{likeCount}</span>
+              </button>
+              <button type="button" className="flex items-center justify-center text-zinc-500 dark:text-zinc-400">
+                <span className="material-symbols-outlined text-base">thumb_down</span>
+              </button>
+            </div>
           </div>
 
-          {/* 回复列表 */}
+          {/* 回复列表 - 默认只展示第一条回复，折叠文案为「展开 xx 条回复」 */}
           {replies.length > 0 && (
             <div className="mt-2">
-              <button
-                onClick={() => setShowReplies(!showReplies)}
-                className="text-xs text-primary font-medium mb-2 flex items-center gap-1"
-              >
-                <span className="material-symbols-outlined text-sm">
-                  {showReplies ? 'expand_less' : 'expand_more'}
-                </span>
-                {replies.length} 条回复
-              </button>
-              {showReplies && (
-                <div className="ml-4 border-l-2 border-zinc-200 dark:border-zinc-700 pl-3 space-y-2">
-                  {replies.map(reply => (
-                    <ReplyItem
-                      key={reply.id}
-                      reply={reply}
-                      onLike={onReplyLike}
-                      onReply={onReply}
-                    />
-                  ))}
-                </div>
+              {/* 第一条回复始终展示 */}
+              <div className="ml-4 border-l-2 border-zinc-200 dark:border-zinc-700 pl-3 space-y-2">
+                <ReplyItem
+                  key={replies[0].id}
+                  reply={replies[0]}
+                  onLike={onReplyLike}
+                  onReply={onReply}
+                />
+              </div>
+              {replies.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setShowReplies(!showReplies)}
+                    className="text-xs text-primary font-medium mt-2 flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-sm">
+                      {showReplies ? 'expand_less' : 'expand_more'}
+                    </span>
+                    {showReplies ? '收起' : `展开${replies.length - 1}条回复`}
+                  </button>
+                  {showReplies && (
+                    <div className="ml-4 border-l-2 border-zinc-200 dark:border-zinc-700 pl-3 space-y-2 mt-2">
+                      {replies.slice(1).map(reply => (
+                        <ReplyItem
+                          key={reply.id}
+                          reply={reply}
+                          onLike={onReplyLike}
+                          onReply={onReply}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

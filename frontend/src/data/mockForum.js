@@ -310,20 +310,37 @@ export const sortOptions = [
   { id: 'comments', name: '最多评论', icon: 'comment' }
 ];
 
-// 工具函数：格式化时间
+// 工具函数：格式化时间（评论/回复用）
+// 24 小时内：xx小时前；昨天：昨天 HH:mm；早于昨天：YYYY-MM-DD
 export const formatTime = (dateString) => {
   const date = new Date(dateString);
   const now = new Date();
-  const diff = now - date;
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
+  const diffMs = now - date;
+  const diffHours = diffMs / (1000 * 60 * 60);
 
-  if (minutes < 1) return '刚刚';
-  if (minutes < 60) return `${minutes}分钟前`;
-  if (hours < 24) return `${hours}小时前`;
-  if (days < 7) return `${days}天前`;
-  return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+  if (diffHours < 24) {
+    const hours = Math.floor(diffHours);
+    if (hours < 1) {
+      const minutes = Math.floor(diffMs / (1000 * 60));
+      return minutes < 1 ? '刚刚' : `${minutes}分钟前`;
+    }
+    return `${hours}小时前`;
+  }
+
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+
+  if (date >= yesterdayStart && date < todayStart) {
+    const h = date.getHours();
+    const m = date.getMinutes();
+    return `昨天 ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  const y = date.getFullYear();
+  const mo = date.getMonth() + 1;
+  const d = date.getDate();
+  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 };
 
 // 工具函数：获取话题的评论

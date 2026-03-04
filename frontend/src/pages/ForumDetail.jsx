@@ -7,6 +7,7 @@ import { formatTime } from '../data/mockForum';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
 import { addForumBrowseHistory } from '../utils/forumHistory';
+import { getCurrentCityName } from '../utils/geolocation';
 
 const ForumDetail = () => {
   const { id } = useParams();
@@ -18,6 +19,7 @@ const ForumDetail = () => {
   const [likeCount, setLikeCount] = useState(0);
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
+  const [replyCity, setReplyCity] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -152,6 +154,14 @@ const ForumDetail = () => {
       return;
     }
     setReplyingTo(target);
+    setReplyCity(null);
+    getCurrentCityName()
+      .then((city) => {
+        setReplyCity(city ?? null);
+      })
+      .catch(() => {
+        setReplyCity(null);
+      });
   };
 
   const handleSubmitComment = async () => {
@@ -170,7 +180,8 @@ const ForumDetail = () => {
         body: JSON.stringify({
           content: commentText.trim(),
           userId: user.id,
-          replyToCommentId: replyingTo?.id || null
+          replyToCommentId: replyingTo?.commentId ?? replyingTo?.id ?? null,
+          locationCity: replyCity || undefined
         })
       });
 
@@ -190,6 +201,7 @@ const ForumDetail = () => {
         
         setCommentText('');
         setReplyingTo(null);
+        setReplyCity(null);
       } else {
         const error = await response.json();
         setTipMessage(error.error || '提交失败，请重试');
@@ -206,6 +218,7 @@ const ForumDetail = () => {
 
   const handleCancelReply = () => {
     setReplyingTo(null);
+    setReplyCity(null);
   };
 
   const isOwnTopic = user?.id && topic?.author?.id && topic.author.id === user.id;
@@ -380,15 +393,15 @@ const ForumDetail = () => {
               ))}
             </div>
           )}
+        </div>
 
-          {/* 时间与操作行：X天前 | 不喜欢 */}
-          <div className="flex items-center justify-between text-xs text-warm-beige">
-            <span>{formatTime(topic.createdAt)}</span>
-            <button type="button" className="flex items-center gap-1 text-warm-beige">
-              <span className="material-symbols-outlined text-base">thumb_down</span>
-              不喜欢
-            </button>
-          </div>
+        {/* 日期和不喜欢 - 正文下、共 N 条评论上 */}
+        <div className="px-4 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 py-2 border-t border-zinc-100 dark:border-zinc-800">
+          <span>{formatTime(topic.createdAt)}</span>
+          <button type="button" className="flex items-center gap-1">
+            <span className="material-symbols-outlined text-base">thumb_down</span>
+            不喜欢
+          </button>
         </div>
 
         {/* 评论区域 - 共 N 条评论 */}
@@ -398,12 +411,78 @@ const ForumDetail = () => {
               共 {comments.length} 条评论
             </h3>
             {comments.length > 0 && (
-              <button type="button" className="text-xs text-primary font-medium">排序</button>
+              <button type="button" className="p-1.5 text-zinc-500 dark:text-zinc-400">
+                <span className="material-symbols-outlined text-xl">menu</span>
+              </button>
             )}
           </div>
 
-          {/* 评论列表 - 全部展示 */}
-          <div className="mb-4 space-y-4">
+          {/* 让大家听到你的声音 - 共 N 条评论下、评论列表上 */}
+          <div ref={commentSectionRef} className="pt-2 border-t border-zinc-100 dark:border-zinc-800 mb-4">
+            {replyingTo && (
+              <div className="mb-2 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-700/50 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-warm-beige">回复</span>
+                  <span className="text-xs font-medium text-[#1b120e] dark:text-white">
+                    {replyingTo.author.name}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCancelReply}
+                  className="size-5 rounded-full bg-zinc-200 dark:bg-zinc-600 flex items-center justify-center"
+                >
+                  <span className="material-symbols-outlined text-xs text-warm-beige">close</span>
+                </button>
+              </div>
+            )}
+            <div className="flex items-center gap-2 rounded-full bg-zinc-100 dark:bg-zinc-800 pl-1 pr-1 py-1">
+              <div className="size-8 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex-shrink-0">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="w-full h-full flex items-center justify-center text-lg text-warm-beige">
+                    <span className="material-symbols-outlined">person</span>
+                  </span>
+                )}
+              </div>
+              <input
+                ref={commentInputRef}
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder={replyingTo ? `回复 ${replyingTo.author.name}...` : '让大家听到你的声音'}
+                className="flex-1 min-w-0 h-8 px-3 bg-transparent text-sm text-[#1b120e] dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmitComment();
+                  }
+                }}
+              />
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                <button type="button" className="size-8 flex items-center justify-center text-zinc-500 dark:text-zinc-400">
+                  <span className="material-symbols-outlined text-xl">mic</span>
+                </button>
+                <button type="button" className="size-8 flex items-center justify-center text-zinc-500 dark:text-zinc-400">
+                  <span className="material-symbols-outlined text-xl">image</span>
+                </button>
+                {commentText.trim() && (
+                  <button
+                    type="button"
+                    onClick={handleSubmitComment}
+                    disabled={submitting}
+                    className="text-primary text-sm font-bold px-2 disabled:opacity-50"
+                  >
+                    {submitting ? '发送中...' : '发送'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 评论列表 - 每条评论内默认只展示第一条回复，由 CommentItem 控制 */}
+          <div className="space-y-4">
             {comments.length === 0 ? (
               <div className="text-center py-12 text-warm-beige">
                 <span className="material-symbols-outlined text-4xl mb-2 opacity-40">comment</span>
@@ -422,72 +501,10 @@ const ForumDetail = () => {
               ))
             )}
           </div>
-
-          {/* 评论输入框 - 在流内，点击「说点什么」滚动到此并 focus */}
-          <div ref={commentSectionRef} className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
-            {replyingTo && (
-              <div className="mb-2 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-700/50 rounded-lg flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-warm-beige">回复</span>
-                  <span className="text-xs font-medium text-[#1b120e] dark:text-white">
-                    {replyingTo.author.name}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCancelReply}
-                  className="size-5 rounded-full bg-zinc-200 dark:bg-zinc-600 flex items-center justify-center"
-                >
-                  <span className="material-symbols-outlined text-xs text-warm-beige">close</span>
-                </button>
-              </div>
-            )}
-            <div className="flex gap-2 items-center">
-              <div className="size-8 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex-shrink-0">
-                {user?.avatar ? (
-                  <img src={user.avatar} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="w-full h-full flex items-center justify-center text-lg text-warm-beige">
-                    <span className="material-symbols-outlined">person</span>
-                  </span>
-                )}
-              </div>
-              <input
-                ref={commentInputRef}
-                type="text"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder={replyingTo ? `回复 ${replyingTo.author.name}...` : '留下你的想法吧'}
-                className="flex-1 h-9 px-4 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-[#1b120e] dark:text-white placeholder-warm-beige focus:outline-none focus:ring-2 focus:ring-primary/20"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmitComment();
-                  }
-                }}
-              />
-              <button type="button" className="size-9 flex items-center justify-center text-warm-beige">
-                <span className="material-symbols-outlined">mic</span>
-              </button>
-              <button type="button" className="size-9 flex items-center justify-center text-warm-beige">
-                <span className="material-symbols-outlined">image</span>
-              </button>
-              {commentText.trim() && (
-                <button
-                  type="button"
-                  onClick={handleSubmitComment}
-                  disabled={submitting}
-                  className="text-primary text-sm font-bold px-2 disabled:opacity-50"
-                >
-                  {submitting ? '发送中...' : '发送'}
-                </button>
-              )}
-            </div>
-          </div>
         </div>
       </main>
 
-      {/* 底部固定操作栏 - 说点什么 + 点赞 + 收藏 + 评论（BottomNav 之上） */}
+      {/* 底部固定操作栏 - 左侧圆角灰条 + 点赞/收藏/评论（BottomNav 之上） */}
       <div className="fixed bottom-20 left-0 right-0 max-w-[430px] mx-auto z-40 bg-background-light dark:bg-background-dark border-t border-zinc-200 dark:border-zinc-700 px-4 py-2">
         <div className="flex items-center justify-between gap-3">
           <button
@@ -496,7 +513,7 @@ const ForumDetail = () => {
               commentSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
               setTimeout(() => commentInputRef.current?.focus(), 300);
             }}
-            className="flex-1 flex items-center gap-2 text-left text-sm text-warm-beige min-w-0"
+            className="flex-1 flex items-center gap-2 text-left text-sm text-zinc-500 dark:text-zinc-400 min-w-0 rounded-full bg-zinc-100 dark:bg-zinc-800 pl-4 pr-4 py-2.5"
           >
             <span className="material-symbols-outlined text-xl">edit_note</span>
             说点什么...

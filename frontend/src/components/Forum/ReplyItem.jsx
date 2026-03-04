@@ -31,34 +31,37 @@ const ReplyItem = ({ reply, onLike, onReply }) => {
       {/* 内容 */}
       <div className="flex-1">
         <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-2.5 mb-1">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="mb-1">
             <span className="text-xs font-bold text-[#1b120e] dark:text-white">
               {reply.author.name}
             </span>
-            <span className="text-xs text-warm-beige">{formatTime(reply.createdAt)}</span>
           </div>
           <p className="text-xs text-[#1b120e] dark:text-zinc-300 leading-relaxed">
             {reply.content}
           </p>
         </div>
 
-        {/* 操作按钮 - 心形点赞 */}
-        <div className="flex items-center gap-3 ml-1">
+        {/* 内容下一行：时间 城市 回复；小字灰色 */}
+        <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 ml-1">
+          <div className="flex items-center gap-3">
+            <span>{formatTime(reply.createdAt)}{reply.locationCity ? ` ${reply.locationCity}` : ''}</span>
+            <button
+              type="button"
+              onClick={handleReply}
+              className="hover:text-primary transition-colors"
+            >
+              回复
+            </button>
+          </div>
           <button
             type="button"
             onClick={handleLike}
-            className="flex items-center gap-1 text-warm-beige hover:text-primary transition-colors"
+            className="flex items-center gap-0.5 hover:text-primary transition-colors"
           >
             <span className={`material-symbols-outlined text-sm ${isLiked ? 'fill text-red-500' : ''}`}>
               {isLiked ? 'favorite' : 'favorite_border'}
             </span>
-            <span className="text-xs">{likeCount}</span>
-          </button>
-          <button
-            onClick={handleReply}
-            className="text-xs text-warm-beige hover:text-primary transition-colors"
-          >
-            回复
+            <span>{likeCount}</span>
           </button>
         </div>
       </div>

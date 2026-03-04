@@ -264,6 +264,7 @@ async function getTopicById(req, res) {
         likes: comment.likes_count || 0,
         replies: comment.replies_count || 0,
         createdAt: comment.created_at,
+        locationCity: comment.location_city ?? null,
         isLiked: likedCommentIds.has(comment.id),
         author: {
           id: commentProfile?.id || comment.user_id,
@@ -278,6 +279,7 @@ async function getTopicById(req, res) {
             content: reply.content,
             likes: reply.likes_count || 0,
             createdAt: reply.created_at,
+            locationCity: reply.location_city ?? null,
             isLiked: likedReplyIds.has(reply.id),
             author: {
               id: replyProfile?.id || reply.user_id,
@@ -423,7 +425,7 @@ async function toggleTopicLike(req, res) {
 async function createComment(req, res) {
   const client = getSupabaseClient(req);
   const { topicId } = req.params;
-  const { content, replyToCommentId, userId } = req.body;
+  const { content, replyToCommentId, userId, locationCity } = req.body;
 
   if (!content || !content.trim()) {
     return res.status(400).json({ error: 'Comment content is required' });
@@ -441,7 +443,8 @@ async function createComment(req, res) {
         .insert({
           comment_id: replyToCommentId,
           user_id: userId,
-          content: content.trim()
+          content: content.trim(),
+          location_city: locationCity || null
         })
         .select()
         .single();
@@ -473,7 +476,8 @@ async function createComment(req, res) {
         .insert({
           topic_id: topicId,
           user_id: userId,
-          content: content.trim()
+          content: content.trim(),
+          location_city: locationCity || null
         })
         .select()
         .single();
