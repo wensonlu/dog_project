@@ -1,28 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars -- used as motion.header, motion.div, etc.
 import BottomNav from '../components/BottomNav';
 import TopicCard from '../components/Forum/TopicCard';
 import CategoryFilter from '../components/Forum/CategoryFilter';
 import SortSelector from '../components/Forum/SortSelector';
 import { categories, sortOptions } from '../data/mockForum';
 import { useAuth } from '../context/AuthContext';
+import { useForumListContext } from '../context/ForumListContext';
 import { API_BASE_URL } from '../config/api';
 
 const Forum = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedSort, setSelectedSort] = useState('latest');
-  const [topics, setTopics] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const ctx = useForumListContext();
+
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const [localSelectedCategory, setLocalSelectedCategory] = useState('all');
+  const [localSelectedSort, setLocalSelectedSort] = useState('latest');
+  const [localTopics, setLocalTopics] = useState([]);
+  const [localLoading, setLocalLoading] = useState(true);
+  const [localError, setLocalError] = useState(null);
+
+  const searchQuery = ctx ? ctx.searchQuery : localSearchQuery;
+  const setSearchQuery = ctx ? ctx.setSearchQuery : setLocalSearchQuery;
+  const selectedCategory = ctx ? ctx.selectedCategory : localSelectedCategory;
+  const setSelectedCategory = ctx ? ctx.setSelectedCategory : setLocalSelectedCategory;
+  const selectedSort = ctx ? ctx.selectedSort : localSelectedSort;
+  const setSelectedSort = ctx ? ctx.setSelectedSort : setLocalSelectedSort;
+  const topics = ctx ? ctx.topics : localTopics;
+  const setTopics = ctx ? ctx.setTopics : setLocalTopics;
+  const loading = ctx ? ctx.loading : localLoading;
+  const setLoading = ctx ? ctx.setLoading : setLocalLoading;
+  const error = ctx ? ctx.error : localError;
+  const setError = ctx ? ctx.setError : setLocalError;
+  const scrollPosition = ctx ? ctx.scrollPosition : null;
+  const setScrollPosition = ctx ? ctx.setScrollPosition : () => {};
+  const listScrollRef = ctx ? ctx.listScrollRef : { current: null };
+  const skipNextFetchRef = ctx ? ctx.skipNextFetchRef : { current: false };
 
   useEffect(() => {
+    if (skipNextFetchRef?.current && topics.length > 0) {
+      skipNextFetchRef.current = false;
+      setLoading(false);
+      return;
+    }
+    if (scrollPosition != null && topics.length > 0) {
+      setLoading(false);
+      return;
+    }
     const fetchTopics = async () => {
       setLoading(true);
       setError(null);
+      setScrollPosition(null);
       try {
         const params = new URLSearchParams();
         if (selectedCategory !== 'all') {
@@ -54,7 +84,20 @@ const Forum = () => {
     };
 
     fetchTopics();
-  }, [selectedCategory, selectedSort, searchQuery, user?.id]);
+    // 返回列表时用缓存不 refetch，故不把 scrollPosition/topics 加入 deps
+  }, [selectedCategory, selectedSort, searchQuery, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (scrollPosition == null) return;
+    const el = listScrollRef?.current;
+    if (!el) return;
+    const id = requestAnimationFrame(() => {
+      el.scrollTop = scrollPosition;
+      setScrollPosition(null);
+    });
+    return () => cancelAnimationFrame(id);
+    // listScrollRef/setScrollPosition 稳定，仅需在 scrollPosition/topics 变化时恢复
+  }, [scrollPosition, topics.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-gradient-to-b from-teal-50/50 via-cream-50 to-rose-50/30 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900 pb-24 relative overflow-hidden">
@@ -150,8 +193,8 @@ const Forum = () => {
         </div>
       </motion.header>
 
-      {/* 话题列表 */}
-      <main className="flex-1 px-2 pt-4 overflow-y-auto relative z-10">
+      {/* 话题列表 - ref 供列表缓存恢复滚动 */}
+      <main ref={listScrollRef} className="flex-1 px-2 pt-4 overflow-y-auto relative z-10">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <motion.div 
@@ -204,7 +247,7 @@ const Forum = () => {
                 transition={{ delay: index * 0.05 }}
                 className="break-inside-avoid mb-2"
               >
-                <TopicCard topic={topic} />
+                <TopicCard topic={topic} onBeforeNavigate={ctx?.saveScrollPosition} />
               </motion.div>
             ))}
           </div>

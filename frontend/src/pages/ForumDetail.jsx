@@ -262,16 +262,16 @@ const ForumDetail = () => {
 
   return (
     <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-background-light dark:bg-background-dark pb-24">
-      {/* 头部 - 小红书风格：返回 | 作者头像+昵称 | 关注+分享 / 删除 */}
+      {/* 头部 - 返回与作者头像+昵称贴近左侧，右侧关注/分享或删除 */}
       <header className="fixed top-0 left-0 right-0 max-w-[430px] mx-auto z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 pt-12 pb-3">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="size-9 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-[#1b120e] dark:text-white flex-shrink-0"
-          >
-            <span className="material-symbols-outlined text-lg">arrow_back</span>
-          </button>
-          <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <button
+              onClick={() => navigate(-1)}
+              className="size-9 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-[#1b120e] dark:text-white flex-shrink-0"
+            >
+              <span className="material-symbols-outlined text-lg">arrow_back</span>
+            </button>
             <div className="size-8 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex-shrink-0">
               <img
                 src={topic.author.avatar}

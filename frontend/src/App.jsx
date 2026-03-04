@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { DogProvider } from './context/DogContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ForumListProvider } from './context/ForumListContext';
 import PermissionRoute from './components/PermissionRoute';
 import { PERMISSIONS } from './constants/permissions';
 import Home from './pages/Home';
@@ -31,7 +32,8 @@ const PrivateRoute = ({ children }) => {
 function AppContent() {
   return (
     <DogProvider>
-      <Routes>
+      <ForumListProvider>
+        <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/" element={<Home />} />
@@ -49,7 +51,8 @@ function AppContent() {
         <Route path="/admin-submissions" element={<PermissionRoute requiredPermission={PERMISSIONS.MANAGE_SUBMISSIONS}><AdminSubmissions /></PermissionRoute>} />
         <Route path="/submit-dog" element={<PrivateRoute><SubmitDog /></PrivateRoute>} />
         <Route path="/permissions-management" element={<PermissionRoute requiredPermission={PERMISSIONS.SUPER_ADMIN}><PermissionsManagement /></PermissionRoute>} />
-      </Routes>
+        </Routes>
+      </ForumListProvider>
     </DogProvider>
   );
 }

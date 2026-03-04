@@ -1,8 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const TopicCard = ({ topic }) => {
+const TopicCard = ({ topic, onBeforeNavigate }) => {
   const navigate = useNavigate();
+
+  const handleClick = () => {
+    onBeforeNavigate?.();
+    navigate(`/forum/${topic.id}`);
+  };
 
   const aspectRatios = [
     'aspect-[2/3]',
@@ -15,7 +20,7 @@ const TopicCard = ({ topic }) => {
 
   return (
     <div
-      onClick={() => navigate(`/forum/${topic.id}`)}
+      onClick={handleClick}
       className="bg-white dark:bg-zinc-800 rounded-2xl overflow-hidden shadow-md hover:shadow-lg cursor-pointer transition-all duration-300 active:scale-[0.98] w-full"
     >
       {topic.images && topic.images.length > 0 ? (
