@@ -36,6 +36,26 @@ async function submitDogSubmission(req, res) {
 }
 
 /**
+ * Get current user's dog submissions
+ * Requires authenticateUser() middleware to set req.user
+ */
+async function getMySubmissions(req, res) {
+    const userId = req.user.userId;
+
+    const { data, error } = await supabase
+        .from('dog_submissions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        return res.status(500).json({ error: error.message });
+    }
+
+    res.json(data || []);
+}
+
+/**
  * Get all dog submissions (for admin)
  */
 async function getAllSubmissions(req, res) {
@@ -187,6 +207,7 @@ async function rejectSubmission(req, res) {
 
 module.exports = {
     submitDogSubmission,
+    getMySubmissions,
     getAllSubmissions,
     approveSubmission,
     rejectSubmission

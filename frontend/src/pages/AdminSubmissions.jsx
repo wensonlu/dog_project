@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
+import { supabase } from '../config/supabase';
 
 const AdminSubmissions = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
     const [submissions, setSubmissions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all'); // all, pending, approved, rejected
@@ -16,7 +15,18 @@ const AdminSubmissions = () => {
 
     const fetchSubmissions = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/dog-submissions`);
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                navigate('/login');
+                return;
+            }
+
+            const token = session.access_token;
+            const response = await fetch(`${API_BASE_URL}/dog-submissions`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             const data = await response.json();
             setSubmissions(data);
         } catch (error) {
@@ -28,9 +38,19 @@ const AdminSubmissions = () => {
 
     const handleApprove = async (submissionId) => {
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                navigate('/login');
+                return;
+            }
+
+            const token = session.access_token;
             const response = await fetch(`${API_BASE_URL}/dog-submissions/${submissionId}/approve`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
             });
 
             const data = await response.json();
@@ -49,11 +69,21 @@ const AdminSubmissions = () => {
 
     const handleReject = async (submissionId) => {
         const reason = prompt('请输入拒绝原因（可选）：');
-        
+
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                navigate('/login');
+                return;
+            }
+
+            const token = session.access_token;
             const response = await fetch(`${API_BASE_URL}/dog-submissions/${submissionId}/reject`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({ reason: reason || null })
             });
 

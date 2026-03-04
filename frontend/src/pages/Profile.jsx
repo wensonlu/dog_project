@@ -4,9 +4,11 @@ import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
+import { PERMISSIONS } from '../constants/permissions';
+import { supabase } from '../config/supabase';
 
 const Profile = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, hasPermission } = useAuth();
     const navigate = useNavigate();
     const [favoritesCount, setFavoritesCount] = useState(0);
     const [applicationsCount, setApplicationsCount] = useState(0);
@@ -28,10 +30,17 @@ const Profile = () => {
             }
 
             try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+
                 const [favoritesRes, applicationsRes, submissionsRes] = await Promise.all([
                     fetch(`${API_BASE_URL}/favorites/${user.id}`).catch(err => ({ ok: false, error: err })),
                     fetch(`${API_BASE_URL}/applications/${user.id}`).catch(err => ({ ok: false, error: err })),
-                    fetch(`${API_BASE_URL}/dog-submissions`).catch(err => ({ ok: false, error: err }))
+                    token
+                        ? fetch(`${API_BASE_URL}/dog-submissions/me`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        }).catch(err => ({ ok: false, error: err }))
+                        : Promise.resolve({ ok: false })
                 ]);
 
                 if (favoritesRes.ok) {
@@ -49,8 +58,7 @@ const Profile = () => {
                 if (submissionsRes.ok) {
                     const submissionsData = await submissionsRes.json();
                     const submissionsArray = Array.isArray(submissionsData) ? submissionsData : [];
-                    const userSubmissions = submissionsArray.filter(sub => sub.user_id === user.id);
-                    setSubmissionsCount(userSubmissions.length);
+                    setSubmissionsCount(submissionsArray.length);
                 }
             } catch (error) {
                 console.error('Error fetching profile data:', error);
@@ -197,42 +205,56 @@ const Profile = () => {
     };
 
     const menuItems = [
-        { 
-            icon: 'pending_actions', 
-            label: '领养进度', 
-            sub: pendingCount > 0 ? `${pendingCount} 个新动态` : null, 
+        {
+            icon: 'pending_actions',
+            label: '领养进度',
+            sub: pendingCount > 0 ? `${pendingCount} 个新动态` : null,
             highlight: true,
             action: () => setShowApplications(true)
         },
-        { 
-            icon: 'forum', 
+        {
+            icon: 'forum',
             label: '我的帖子',
             action: () => navigate('/forum')
         },
-        { 
-            icon: 'assignment', 
-            label: '领养管理', 
-            action: () => navigate('/admin')
+        {
+            icon: 'assignment',
+            label: '领养管理',
+            action: () => navigate('/admin'),
+            requiresPermission: PERMISSIONS.MANAGE_ADOPTIONS
         },
-        { 
-            icon: 'publish', 
-            label: '发布管理', 
-            action: () => navigate('/admin-submissions')
+        {
+            icon: 'publish',
+            label: '发布管理',
+            action: () => navigate('/admin-submissions'),
+            requiresPermission: PERMISSIONS.MANAGE_SUBMISSIONS
         },
-        { 
-            icon: 'pets', 
-            label: '送养小狗', 
-            action: () => navigate('/submit-dog') 
+        {
+            icon: 'admin_panel_settings',
+            label: '权限管理',
+            action: () => navigate('/permissions-management'),
+            requiresPermission: PERMISSIONS.SUPER_ADMIN
         },
-        { 
-            icon: 'help_center', 
+        {
+            icon: 'pets',
+            label: '送养小狗',
+            action: () => navigate('/submit-dog')
+        },
+        {
+            icon: 'help_center',
             label: '帮助中心',
         },
-        { 
-            icon: 'settings', 
+        {
+            icon: 'settings',
             label: '设置',
         },
-    ];
+    ].filter(item => {
+        // 如果菜单项需要权限且用户未登录或无权限，则过滤掉
+        if (item.requiresPermission && (!user || !hasPermission(item.requiresPermission))) {
+            return false;
+        }
+        return true;
+    });
 
     return (
         <div className="mx-auto max-w-[430px] min-h-screen bg-gradient-to-b from-rose-50/50 via-cream-50 to-teal-50/30 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900 text-gray-800 dark:text-white font-sans relative pb-32 overflow-hidden">

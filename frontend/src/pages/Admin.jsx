@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
+import { supabase } from '../config/supabase';
 
 const Admin = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all'); // all, pending, approved, rejected
@@ -16,7 +15,18 @@ const Admin = () => {
 
     const fetchApplications = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/applications`);
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                navigate('/login');
+                return;
+            }
+
+            const token = session.access_token;
+            const response = await fetch(`${API_BASE_URL}/applications`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             const data = await response.json();
             setApplications(data);
         } catch (error) {
@@ -28,9 +38,19 @@ const Admin = () => {
 
     const handleApprove = async (applicationId, userId, dogName) => {
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                navigate('/login');
+                return;
+            }
+
+            const token = session.access_token;
             const response = await fetch(`${API_BASE_URL}/applications/${applicationId}/approve`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({ userId, dogName })
             });
 
@@ -46,9 +66,19 @@ const Admin = () => {
 
     const handleReject = async (applicationId, userId, dogName) => {
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                navigate('/login');
+                return;
+            }
+
+            const token = session.access_token;
             const response = await fetch(`${API_BASE_URL}/applications/${applicationId}/reject`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({ userId, dogName })
             });
 

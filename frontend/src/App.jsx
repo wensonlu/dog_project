@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { DogProvider } from './context/DogContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import PermissionRoute from './components/PermissionRoute';
+import { PERMISSIONS } from './constants/permissions';
 import Home from './pages/Home';
 import PetDetails from './pages/PetDetails';
 import Messages from './pages/Messages';
@@ -18,6 +20,7 @@ import Register from './pages/Register';
 import Admin from './pages/Admin';
 import AdminSubmissions from './pages/AdminSubmissions';
 import SubmitDog from './pages/SubmitDog';
+import PermissionsManagement from './pages/PermissionsManagement';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -42,9 +45,10 @@ function AppContent() {
         <Route path="/forum/:id" element={<ForumDetail />} />
         <Route path="/forum/history" element={<PrivateRoute><ForumHistory /></PrivateRoute>} />
         <Route path="/forum/create" element={<PrivateRoute><CreateTopic /></PrivateRoute>} />
-        <Route path="/admin" element={<PrivateRoute><Admin /></PrivateRoute>} />
-        <Route path="/admin-submissions" element={<PrivateRoute><AdminSubmissions /></PrivateRoute>} />
+        <Route path="/admin" element={<PermissionRoute requiredPermission={PERMISSIONS.MANAGE_ADOPTIONS}><Admin /></PermissionRoute>} />
+        <Route path="/admin-submissions" element={<PermissionRoute requiredPermission={PERMISSIONS.MANAGE_SUBMISSIONS}><AdminSubmissions /></PermissionRoute>} />
         <Route path="/submit-dog" element={<PrivateRoute><SubmitDog /></PrivateRoute>} />
+        <Route path="/permissions-management" element={<PermissionRoute requiredPermission={PERMISSIONS.SUPER_ADMIN}><PermissionsManagement /></PermissionRoute>} />
       </Routes>
     </DogProvider>
   );

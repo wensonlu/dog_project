@@ -30,10 +30,15 @@ const Login = () => {
         e.preventDefault();
         setError('');
         setIsSubmitting(true);
+        console.log('[Login] 提交登录表单...');
         try {
+            console.log('[Login] 调用 login()...');
             await login(email, password);
+            console.log('[Login] login() 完成，准备跳转到首页');
             navigate('/');
+            console.log('[Login] navigate() 已调用');
         } catch (err) {
+            console.error('[Login] 登录失败:', err);
             setError(err.message || '登录失败，请检查账号密码');
         } finally {
             setIsSubmitting(false);
