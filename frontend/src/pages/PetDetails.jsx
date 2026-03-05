@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDogs } from '../context/DogContext';
 import { useAuth } from '../context/AuthContext';
+import { motion } from 'framer-motion';
 import { API_BASE_URL } from '../config/api';
 import ReviewSection from '../components/ReviewSection';
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Users, Sparkles, PawPrint } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://dog-project-backend.vercel.app';
