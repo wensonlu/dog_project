@@ -32,9 +32,12 @@ const ForumDetail = () => {
   const [deleteCommentReplyTarget, setDeleteCommentReplyTarget] = useState(null);
   const [deleteCommentReplyLoading, setDeleteCommentReplyLoading] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
+  const [barBottomPx, setBarBottomPx] = useState(80);
+  const [isBarInputMode, setIsBarInputMode] = useState(false);
   const imageScrollRef = useRef(null);
   const commentSectionRef = useRef(null);
   const commentInputRef = useRef(null);
+  const barInputRef = useRef(null);
 
   // 获取话题详情
   useEffect(() => {
@@ -68,6 +71,23 @@ const ForumDetail = () => {
       fetchTopic();
     }
   }, [id, user?.id]);
+
+  // 键盘弹起时底部栏吸附在键盘上方（visualViewport）
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const updateBarBottom = () => {
+      const keyboardHeight = window.innerHeight - vv.height;
+      const isKeyboardOpen = keyboardHeight > 80;
+      setBarBottomPx(isKeyboardOpen ? keyboardHeight : 80);
+    };
+    updateBarBottom();
+    vv.addEventListener('resize', updateBarBottom);
+    vv.addEventListener('scroll', updateBarBottom);
+    return () => {
+      vv.removeEventListener('resize', updateBarBottom);
+      vv.removeEventListener('scroll', updateBarBottom);
+    };
+  }, []);
 
   const handleLike = async () => {
     if (!user?.id) {
@@ -160,6 +180,9 @@ const ForumDetail = () => {
     }
     setReplyingTo(target);
     setReplyCity(null);
+    setIsBarInputMode(true);
+    commentSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => barInputRef.current?.focus(), 300);
     getCurrentCityName()
       .then((city) => {
         setReplyCity(city ?? null);
@@ -219,6 +242,7 @@ const ForumDetail = () => {
         setCommentText('');
         setReplyingTo(null);
         setReplyCity(null);
+        setIsBarInputMode(false);
       } else {
         const error = await response.json();
         setTipMessage(error.error || '提交失败，请重试');
@@ -236,6 +260,8 @@ const ForumDetail = () => {
   const handleCancelReply = () => {
     setReplyingTo(null);
     setReplyCity(null);
+    setIsBarInputMode(false);
+    barInputRef.current?.blur();
   };
 
   const handleOpenCommentReplyAction = (target) => {
@@ -627,20 +653,78 @@ const ForumDetail = () => {
         </div>
       </main>
 
-      {/* 底部固定操作栏 - 左侧圆角灰条 + 点赞/收藏/评论（BottomNav 之上） */}
-      <div className="fixed bottom-20 left-0 right-0 max-w-[430px] mx-auto z-40 bg-background-light dark:bg-background-dark border-t border-zinc-200 dark:border-zinc-700 px-4 py-2">
+      {/* 底部固定操作栏 - 键盘弹起时吸附在键盘上方并做文字回显 */}
+      <div
+        className="fixed left-0 right-0 max-w-[430px] mx-auto z-40 bg-background-light dark:bg-background-dark border-t border-zinc-200 dark:border-zinc-700 px-4 py-2 transition-[bottom] duration-200"
+        style={{ bottom: `${barBottomPx}px` }}
+      >
         <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              commentSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-              setTimeout(() => commentInputRef.current?.focus(), 300);
-            }}
-            className="flex-1 flex items-center gap-2 text-left text-sm text-zinc-500 dark:text-zinc-400 min-w-0 rounded-full bg-zinc-100 dark:bg-zinc-800 pl-4 pr-4 py-2.5"
-          >
-            <span className="material-symbols-outlined text-xl">edit_note</span>
-            说点什么...
-          </button>
+          {isBarInputMode ? (
+            <>
+              <div className="flex-1 min-w-0 flex items-center gap-2 rounded-full bg-zinc-100 dark:bg-zinc-800 pl-3 pr-1 py-1">
+                {replyingTo && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-xs text-warm-beige">回复 {replyingTo.author?.name}</span>
+                    <button
+                      type="button"
+                      onClick={handleCancelReply}
+                      className="size-5 rounded-full bg-zinc-200 dark:bg-zinc-600 flex items-center justify-center"
+                      aria-label="取消回复"
+                    >
+                      <span className="material-symbols-outlined text-xs text-warm-beige">close</span>
+                    </button>
+                  </div>
+                )}
+                <input
+                  ref={barInputRef}
+                  type="text"
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder={replyingTo ? `回复 ${replyingTo.author?.name}...` : '让大家听到你的声音'}
+                  className="flex-1 min-w-0 h-8 bg-transparent text-sm text-[#1b120e] dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmitComment();
+                    }
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      if (!commentText.trim()) setIsBarInputMode(false);
+                    }, 150);
+                  }}
+                />
+                {commentText.trim() && (
+                  <button
+                    type="button"
+                    onClick={handleSubmitComment}
+                    disabled={submitting}
+                    className="text-primary text-sm font-bold px-2 py-1 disabled:opacity-50"
+                  >
+                    {submitting ? '发送中...' : '发送'}
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (!user?.id) {
+                  setTipMessage('请先登录');
+                  setTipOpen(true);
+                  return;
+                }
+                setIsBarInputMode(true);
+                commentSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+                setTimeout(() => barInputRef.current?.focus(), 300);
+              }}
+              className="flex-1 flex items-center gap-2 text-left text-sm text-zinc-500 dark:text-zinc-400 min-w-0 rounded-full bg-zinc-100 dark:bg-zinc-800 pl-4 pr-4 py-2.5"
+            >
+              <span className="material-symbols-outlined text-xl">edit_note</span>
+              说点什么...
+            </button>
+          )}
           <div className="flex items-center gap-4 flex-shrink-0">
             <button
               type="button"
@@ -658,7 +742,7 @@ const ForumDetail = () => {
             </button>
             <button type="button" className="flex items-center gap-1 text-[#1b120e] dark:text-zinc-300">
               <span className="material-symbols-outlined text-2xl">chat_bubble_outline</span>
-              <span className="text-sm font-medium">{topic.comments}</span>
+              <span className="text-sm font-medium">{topic?.comments ?? 0}</span>
             </button>
           </div>
         </div>
