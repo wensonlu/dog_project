@@ -179,6 +179,17 @@ const ForumDetail = () => {
 
     setSubmitting(true);
     try {
+      // 点击发送时统一带上定位：已有则用，没有则请求一次（直接评论或回复都覆盖）
+      let locationCity = replyCity ?? undefined;
+      if (locationCity == null) {
+        try {
+          const city = await getCurrentCityName();
+          locationCity = city ?? undefined;
+          if (city) setReplyCity(city);
+        } catch {
+          // 定位失败仍可发送，不阻塞
+        }
+      }
       const response = await fetch(`${API_BASE_URL}/forum/${id}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -186,7 +197,7 @@ const ForumDetail = () => {
           content: commentText.trim(),
           userId: user.id,
           replyToCommentId: replyingTo?.commentId ?? replyingTo?.id ?? null,
-          locationCity: replyCity || undefined,
+          locationCity,
           replyToUserName: replyingTo?.author?.name ?? undefined
         })
       });
