@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getUserMessages, getMessageById, markMessageAsRead } = require('../controllers/messagesController');
+const { getUserMessages, getMessageById, markMessageAsRead, searchContacts } = require('../controllers/messagesController');
 const checkSupabase = require('../middleware/supabaseCheck');
 const { supabase } = require('../config/supabase');
 
@@ -24,6 +24,8 @@ router.get('/unread/:userId', checkSupabase, async (req, res) => {
     }
 });
 
+// 搜索联系人（模糊匹配全部注册用户），须放在 /:userId 之前
+router.get('/:userId/contacts/search', checkSupabase, searchContacts);
 // Get messages for a user
 router.get('/:userId', checkSupabase, getUserMessages);
 // Get single message (must belong to userId)

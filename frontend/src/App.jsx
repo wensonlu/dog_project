@@ -9,6 +9,7 @@ import Home from './pages/Home';
 import PetDetails from './pages/PetDetails';
 import Messages from './pages/Messages';
 import MessageDetail from './pages/MessageDetail';
+import MessageWith from './pages/MessageWith';
 import Profile from './pages/Profile';
 import Application from './pages/Application';
 import Favorites from './pages/Favorites';
@@ -39,6 +40,7 @@ function AppContent() {
         <Route path="/" element={<Home />} />
         <Route path="/pet/:id" element={<PetDetails />} />
         <Route path="/messages" element={<PrivateRoute><Messages /></PrivateRoute>} />
+        <Route path="/messages/with/:userId" element={<PrivateRoute><MessageWith /></PrivateRoute>} />
         <Route path="/messages/:id" element={<PrivateRoute><MessageDetail /></PrivateRoute>} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/application/:id" element={<PrivateRoute><Application /></PrivateRoute>} />

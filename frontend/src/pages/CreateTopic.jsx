@@ -124,7 +124,7 @@ const CreateTopic = () => {
   return (
     <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-background-light dark:bg-background-dark pb-24">
       {/* 头部 */}
-      <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-6 pt-12 pb-4">
+      <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-6 pt-6 pb-4">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/forum')}

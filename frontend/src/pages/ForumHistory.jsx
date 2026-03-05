@@ -30,7 +30,7 @@ const ForumHistory = () => {
 
   return (
     <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-background-light dark:bg-background-dark pb-24">
-      <header className="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 pt-12 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+      <header className="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 pt-6 pb-3 border-b border-zinc-100 dark:border-zinc-800">
         <div className="flex items-center justify-between">
           <button
             onClick={() => navigate('/forum')}

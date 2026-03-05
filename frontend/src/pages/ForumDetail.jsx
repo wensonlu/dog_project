@@ -423,7 +423,7 @@ const ForumDetail = () => {
   return (
     <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-background-light dark:bg-background-dark pb-24">
       {/* 头部 - 返回与作者头像+昵称贴近左侧，右侧关注/分享或删除 */}
-      <header className="fixed top-0 left-0 right-0 max-w-[430px] mx-auto z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 pt-12 pb-3">
+      <header className="fixed top-0 left-0 right-0 max-w-[430px] mx-auto z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 pt-6 pb-3">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <button

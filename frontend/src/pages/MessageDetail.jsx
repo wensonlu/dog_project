@@ -71,7 +71,7 @@ const MessageDetail = () => {
     if (!message) {
         return (
             <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-background-light dark:bg-background-dark pb-24">
-                <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-6 pt-12 pb-4">
+                <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-6 pt-6 pb-4">
                     <button
                         type="button"
                         onClick={() => navigate('/messages')}
@@ -99,7 +99,7 @@ const MessageDetail = () => {
 
     return (
         <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-background-light dark:bg-background-dark pb-24">
-            <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-6 pt-12 pb-4 border-b border-[#F0E6DD] dark:border-zinc-700">
+            <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-6 pt-6 pb-4 border-b border-[#F0E6DD] dark:border-zinc-700">
                 <div className="flex items-center gap-3">
                     <button
                         type="button"

@@ -9,7 +9,7 @@ const Favorites = () => {
 
     return (
         <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-background-light dark:bg-background-dark pb-24">
-            <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-6 pt-12 pb-4">
+            <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-6 pt-6 pb-4">
                 <h1 className="text-3xl font-bold tracking-tight text-[#1b120e] dark:text-white">我的收藏</h1>
             </header>
 
