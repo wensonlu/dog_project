@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { API_BASE_URL } from '../config/api';
 
 const ReviewForm = ({ dogId, applicationId, onSuccess, onCancel }) => {

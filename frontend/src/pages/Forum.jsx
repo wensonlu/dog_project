@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars -- used as motion.header, motion.div, etc.
 import BottomNav from '../components/BottomNav';
 import TopicCard from '../components/Forum/TopicCard';
 import CategoryFilter from '../components/Forum/CategoryFilter';

@@ -2,16 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { supabase } from '../config/supabase';
+import { useAuth } from '../context/AuthContext';
+import { PERMISSIONS } from '../constants/permissions';
 
 const AdminSubmissions = () => {
     const navigate = useNavigate();
+    const { user, loading: userLoading } = useAuth();
     const [submissions, setSubmissions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all'); // all, pending, approved, rejected
 
+    // Check permission
     useEffect(() => {
-        fetchSubmissions();
-    }, []);
+        if (!userLoading && (!user || !user.hasPermission(PERMISSIONS.MANAGE_SUBMISSIONS))) {
+            navigate('/');
+        }
+    }, [user, userLoading, navigate]);
+
+    useEffect(() => {
+        if (user && user.hasPermission(PERMISSIONS.MANAGE_SUBMISSIONS)) {
+            fetchSubmissions();
+        }
+    }, [user]);
 
     const fetchSubmissions = async () => {
         try {

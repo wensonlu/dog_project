@@ -56,7 +56,6 @@ const SubmitDog = () => {
                 setImagePreview(reader.result);
             };
             reader.readAsDataURL(file);
-            debugger
             // Auto upload after selection
             await handleImageUpload(file);
         }

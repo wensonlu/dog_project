@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';

@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const FilterBar = ({ filters, onFilterChange, breeds }) => {
   const ageOptions = [

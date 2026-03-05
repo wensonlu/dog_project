@@ -7,7 +7,6 @@ import StatsBar from '../components/StatsBar';
 import RecommendationQuestionnaire from '../components/RecommendationQuestionnaire';
 import RecommendedDogsSection from '../components/RecommendedDogsSection';
 import { API_BASE_URL } from '../config/api';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const Home = () => {
     const navigate = useNavigate();

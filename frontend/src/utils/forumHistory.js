@@ -15,8 +15,8 @@ export function addForumBrowseHistory(item) {
     const filtered = list.filter((e) => e.id !== newEntry.id);
     const next = [newEntry, ...filtered].slice(0, MAX_HISTORY);
     localStorage.setItem(FORUM_HISTORY_KEY, JSON.stringify(next));
-  } catch (_) {
-    // ignore
+  } catch (err) {
+    // localStorage error - silently ignore
   }
 }
 
@@ -29,7 +29,7 @@ export function getForumBrowseHistory() {
     const raw = localStorage.getItem(FORUM_HISTORY_KEY);
     const list = raw ? JSON.parse(raw) : [];
     return Array.isArray(list) ? list : [];
-  } catch (_) {
+  } catch (err) {
     return [];
   }
 }
@@ -40,5 +40,7 @@ export function getForumBrowseHistory() {
 export function clearForumBrowseHistory() {
   try {
     localStorage.removeItem(FORUM_HISTORY_KEY);
-  } catch (_) {}
+  } catch (err) {
+    // localStorage error - silently ignore
+  }
 }
