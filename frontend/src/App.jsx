@@ -23,6 +23,11 @@ import Admin from './pages/Admin';
 import AdminSubmissions from './pages/AdminSubmissions';
 import SubmitDog from './pages/SubmitDog';
 import PermissionsManagement from './pages/PermissionsManagement';
+import Stories from './pages/Stories';
+import StoryDetail from './pages/StoryDetail';
+import Wiki from './pages/Wiki';
+import WikiArticle from './pages/WikiArticle';
+import WikiSearch from './pages/WikiSearch';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -53,6 +58,16 @@ function AppContent() {
         <Route path="/admin-submissions" element={<PermissionRoute requiredPermission={PERMISSIONS.MANAGE_SUBMISSIONS}><AdminSubmissions /></PermissionRoute>} />
         <Route path="/submit-dog" element={<PrivateRoute><SubmitDog /></PrivateRoute>} />
         <Route path="/permissions-management" element={<PermissionRoute requiredPermission={PERMISSIONS.SUPER_ADMIN}><PermissionsManagement /></PermissionRoute>} />
+        
+        {/* 故事墙路由 */}
+        <Route path="/stories" element={<Stories />} />
+        <Route path="/stories/:id" element={<StoryDetail />} />
+        
+        {/* 百科路由 */}
+        <Route path="/wiki" element={<Wiki />} />
+        <Route path="/wiki/article/:slug" element={<WikiArticle />} />
+        <Route path="/wiki/search" element={<WikiSearch />} />
+        
         </Routes>
       </ForumListProvider>
     </DogProvider>
