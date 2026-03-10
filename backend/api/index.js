@@ -21,6 +21,8 @@ const statsRoutes = require('../routes/stats');
 const reviewsRoutes = require('../routes/reviews');
 const recommendationsRoutes = require('../routes/recommendations');
 const permissionsRoutes = require('../routes/permissions');
+const storiesRoutes = require('../routes/stories');
+const wikiRoutes = require('../routes/wiki');
 
 const app = express();
 
@@ -80,6 +82,8 @@ app.use('/stats', statsRoutes);
 app.use('/reviews', reviewsRoutes);
 app.use('/recommendations', recommendationsRoutes);
 app.use('/permissions', permissionsRoutes);
+app.use('/stories', storiesRoutes);
+app.use('/wiki', wikiRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
