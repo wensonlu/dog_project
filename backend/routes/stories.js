@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const storiesController = require('../controllers/storiesController');
-const { checkSupabase } = require('../middleware/supabaseCheck');
+const checkSupabase = require('../middleware/supabaseCheck');
 
 // 公开路由
 router.get('/', checkSupabase, storiesController.getStories);

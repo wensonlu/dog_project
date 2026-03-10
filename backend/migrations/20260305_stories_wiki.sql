@@ -269,22 +269,8 @@ INSERT INTO wiki_articles (category_id, title, slug, summary, content, is_publis
     NOW()
 );
 
--- 插入示例故事
-INSERT INTO adoption_stories (dog_id, adopter_id, foster_id, title, content, cover_image, status, created_at) VALUES
-(
-    1,
-    '2ff4be55-ce6e-4a7f-94e2-f8a4cace91d2',
-    '3aa7c123-bd5e-4b8f-91d1-a7b3c9de45f1',
-    '从流浪到被宠：小黄的逆袭人生',
-    '三个月前，我在汪星球看到了小黄的照片。它是一只被遗弃在街头的金毛，眼神里满是不安。现在，它已经成为我们家最快乐的一员！
-
-小黄刚到家时很胆小，总是躲在角落里。我们用耐心和爱慢慢感化它，现在它每天都会在门口迎接我下班，尾巴摇得像个小马达。
-
-感谢汪星球让我们相遇，也感谢原送养人的信任。领养代替购买，给这些毛孩子一个温暖的家！',
-    'https://images.unsplash.com/photo-1552053831-71594a27632d?w=800',
-    'approved',
-    NOW() - INTERVAL '7 days'
-);
+-- 示例故事数据已移除（需要真实用户 ID 才能插入）
+-- 可以在应用中通过 UI 创建故事
 
 -- 创建更新时间触发器
 CREATE OR REPLACE FUNCTION update_updated_at_column()

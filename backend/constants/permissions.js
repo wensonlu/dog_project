@@ -75,7 +75,7 @@ const getPermissionDescription = (permissions) => {
   return descriptions.length > 0 ? descriptions.join(', ') : '无权限';
 };
 
-export {
+module.exports = {
   PERMISSIONS,
   ROLE_PRESETS,
   hasPermission,

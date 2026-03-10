@@ -42,7 +42,7 @@ async function getArticles(req, res) {
             .select(`
                 *,
                 category:wiki_categories!category_id(id, name, slug),
-                author:profiles!author_id(id, username, avatar_url),
+                author:profiles!author_id(id, full_name, avatar_url),
                 tags:wiki_article_tags(tag:wiki_tags(id, name, slug))
             `)
             .eq('is_published', true);
@@ -90,7 +90,7 @@ async function getArticleBySlug(req, res) {
             .select(`
                 *,
                 category:wiki_categories!category_id(id, name, slug),
-                author:profiles!author_id(id, username, avatar_url),
+                author:profiles!author_id(id, full_name, avatar_url),
                 tags:wiki_article_tags(tag:wiki_tags(id, name, slug))
             `)
             .eq('slug', slug)

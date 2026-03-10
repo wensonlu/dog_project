@@ -16,8 +16,8 @@ async function getStories(req, res) {
             .from('adoption_stories')
             .select(`
                 *,
-                adopter:profiles!adopter_id(id, username, avatar_url),
-                dog:dogs!dog_id(id, name, breed, images)
+                adopter:profiles!adopter_id(id, full_name, avatar_url),
+                dog:dogs!dog_id(id, name, breed, image)
             `)
             .eq('status', status)
             .order('created_at', { ascending: false })
@@ -52,9 +52,9 @@ async function getStoryById(req, res) {
             .from('adoption_stories')
             .select(`
                 *,
-                adopter:profiles!adopter_id(id, username, avatar_url),
-                foster:profiles!foster_id(id, username, avatar_url),
-                dog:dogs!dog_id(id, name, breed, images)
+                adopter:profiles!adopter_id(id, full_name, avatar_url),
+                foster:profiles!foster_id(id, full_name, avatar_url),
+                dog:dogs!dog_id(id, name, breed, image)
             `)
             .eq('id', id)
             .single();
@@ -80,7 +80,7 @@ async function getStoryById(req, res) {
             .from('story_comments')
             .select(`
                 *,
-                user:profiles!user_id(id, username, avatar_url)
+                user:profiles!user_id(id, full_name, avatar_url)
             `)
             .eq('story_id', id)
             .is('parent_id', null)
@@ -309,7 +309,7 @@ async function addComment(req, res) {
             }])
             .select(`
                 *,
-                user:profiles!user_id(id, username, avatar_url)
+                user:profiles!user_id(id, full_name, avatar_url)
             `)
             .single();
         

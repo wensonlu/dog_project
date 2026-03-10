@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const wikiController = require('../controllers/wikiController');
-const { checkSupabase } = require('../middleware/supabaseCheck');
+const checkSupabase = require('../middleware/supabaseCheck');
 
 // 公开路由
 router.get('/categories', checkSupabase, wikiController.getCategories);
