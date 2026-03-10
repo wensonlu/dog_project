@@ -201,9 +201,9 @@ const Home = () => {
                         </button>
 
                         {/* 通知按钮 */}
-                        <button className="size-10 rounded-xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur shadow-sm flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:scale-105 transition-transform">
+                        {/* <button className="size-10 rounded-xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur shadow-sm flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:scale-105 transition-transform">
                             <span className="material-symbols-outlined text-[20px]">notifications</span>
-                        </button>
+                        </button> */}
 
                         {/* 消息入口 */}
                         <button

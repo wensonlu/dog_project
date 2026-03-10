@@ -117,9 +117,9 @@ const MessageDetail = () => {
                 <article className="rounded-xl bg-card-light dark:bg-zinc-800 shadow-sm border border-[#F0E6DD] dark:border-zinc-700 overflow-hidden">
                     <div className="p-4 border-b border-[#F0E6DD] dark:border-zinc-700">
                         <div className="flex items-center gap-3 mb-3">
-                            <div className="flex items-center justify-center aspect-square rounded-lg h-12 w-12 bg-primary/10">
+                            {/* <div className="flex items-center justify-center aspect-square rounded-lg h-12 w-12 bg-primary/10">
                                 <span className="material-symbols-outlined text-primary text-xl">notifications</span>
-                            </div>
+                            </div> */}
                             <div className="flex-1 min-w-0">
                                 <h2 className="text-lg font-bold text-[#1b120e] dark:text-white truncate">{message.sender_name}</h2>
                                 <p className="text-xs text-warm-beige">{formatDateTime(message.created_at)}</p>

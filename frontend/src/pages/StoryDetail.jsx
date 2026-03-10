@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config';
 
@@ -137,11 +138,11 @@ function StoryDetail() {
           <div className="flex items-center gap-3">
             <img
               src={story.adopter?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + story.adopter_id}
-              alt={story.adopter?.username}
+              alt={story.adopter?.full_name}
               className="w-10 h-10 rounded-full"
             />
             <div>
-              <p className="font-medium text-gray-900">{story.adopter?.username || '匿名用户'}</p>
+              <p className="font-medium text-gray-900">{story.adopter?.full_name || '匿名用户'}</p>
               <p className="text-xs text-gray-400">
                 {new Date(story.created_at).toLocaleDateString('zh-CN')}
               </p>
@@ -150,9 +151,14 @@ function StoryDetail() {
 
         {/* Content */}
         <div className="bg-white rounded-2xl p-4 mb-4">
-          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+          <div className="prose prose-slate max-w-none text-gray-700">
+            {/* <ReactMarkdown>{story.content.replace(/\\n/g, '\n')}</ReactMarkdown> */}
+            {/* <div dangerouslySetInnerHTML={{ __html: story.content }} /> */}
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
             {story.content}
           </p>
+
+          </div>
         </div>
 
         {/* Timeline */}
@@ -236,10 +242,10 @@ function StoryDetail() {
                 <div className="flex items-center gap-2 mb-2">
                   <img
                     src={item.user?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + item.user_id}
-                    alt={item.user?.username}
+                    alt={item.user?.full_name}
                     className="w-8 h-8 rounded-full"
                   />
-                  <span className="font-medium text-sm">{item.user?.username}</span>
+                  <span className="font-medium text-sm">{item.user?.full_name}</span>
                   <span className="text-xs text-gray-400">
                     {new Date(item.created_at).toLocaleDateString('zh-CN')}
                   </span>
