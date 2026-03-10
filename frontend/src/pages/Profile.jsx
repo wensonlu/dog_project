@@ -286,7 +286,7 @@ const Profile = () => {
                         whileTap={{ scale: 0.9 }}
                         className="relative flex size-11 rounded-xl bg-rose-100 dark:bg-rose-900/30 items-center justify-center text-rose-500"
                     >
-                        {/* <span className="material-symbols-outlined text-xl">notifications</span> */}
+                        <span className="material-symbols-outlined text-xl">notifications</span>
                         <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
                             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
