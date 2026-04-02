@@ -16,6 +16,7 @@ const recommendationsRoutes = require('./routes/recommendations');
 const permissionsRoutes = require('./routes/permissions');
 const storiesRoutes = require('./routes/stories');
 const wikiRoutes = require('./routes/wiki');
+const agentRoutes = require('./routes/agent');
 
 const app = express();
 const port = process.env.PORT || 5001;
@@ -39,6 +40,7 @@ app.use('/api/recommendations', recommendationsRoutes);
 app.use('/api/permissions', permissionsRoutes);
 app.use('/api/stories', storiesRoutes);
 app.use('/api/wiki', wikiRoutes);
+app.use('/api/agent', agentRoutes);
 
 // Health check endpoint（含 Supabase 状态，便于排查 500）
 app.get('/health', (req, res) => {
