@@ -70,3 +70,6 @@ venv.bak/
 .cursor/
 *.plan.md
 .gitnexus
+
+# Worktrees
+.worktrees/
