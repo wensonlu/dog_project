@@ -307,18 +307,23 @@ const Profile = () => {
                         <div className="relative mb-4">
                             <div className="size-24 rounded-full bg-gradient-to-br from-rose-300 via-pink-300 to-teal-300 p-1">
                                 <div className="w-full h-full rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center overflow-hidden">
-                                    <span className="text-5xl">🐕</span>
+                                    {user?.avatar_url ? (
+                                        <img src={user.avatar_url} alt="头像" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-5xl">🐕</span>
+                                    )}
                                 </div>
                             </div>
-                            <motion.button 
+                            <motion.button
                                 whileTap={{ scale: 0.9 }}
+                                onClick={() => navigate('/edit-profile')}
                                 className="absolute bottom-0 right-0 size-8 rounded-full bg-gradient-to-r from-rose-400 to-pink-500 flex items-center justify-center text-white shadow-lg"
                             >
                                 <span className="material-symbols-outlined text-sm">edit</span>
                             </motion.button>
                         </div>
                         <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-1">
-                            {user?.email?.split('@')[0] || '爱心铲屎官'}
+                            {user?.full_name || user?.email?.split('@')[0] || '爱心铲屎官'}
                         </h3>
                         <p className="text-sm text-rose-500 font-medium mb-2">汪星球领养人</p>
                         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3">

@@ -4,6 +4,8 @@ CREATE TABLE public.profiles (
   email TEXT NOT NULL,
   full_name TEXT,
   avatar_url TEXT,
+  bio TEXT,
+  phone TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
