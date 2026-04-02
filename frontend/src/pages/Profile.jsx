@@ -331,7 +331,9 @@ const Profile = () => {
                             <span>加入第 125 天</span>
                         </div>
                         <div className="px-4 py-2 bg-rose-50 dark:bg-rose-900/20 rounded-full">
-                            <p className="text-sm text-rose-600 dark:text-rose-300 italic">"愿每一只狗狗都有温暖的家"</p>
+                            <p className="text-sm text-rose-600 dark:text-rose-300 italic">
+                                "{user?.bio || '愿每一只狗狗都有温暖的家'}"
+                            </p>
                         </div>
                     </div>
                 </div>
