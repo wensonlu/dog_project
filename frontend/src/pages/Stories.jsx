@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
@@ -43,7 +43,7 @@ function Stories() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0] pb-20">
+    <div className="max-w-[430px] mx-auto min-h-screen bg-[#F5F5F0] pb-20">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-[#F5F5F0]/95 backdrop-blur-sm px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">

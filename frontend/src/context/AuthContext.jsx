@@ -36,6 +36,20 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // 从后端获取用户资料
+    const fetchProfile = async (userId) => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/profile/${userId}`);
+            if (res.ok) {
+                return await res.json();
+            }
+            return null;
+        } catch (error) {
+            console.error('获取资料失败:', error);
+            return null;
+        }
+    };
+
     // 用 Supabase session 同步到本地并拉取权限（Google OAuth 回调后调用）
     const syncSessionAndFetchPermissions = async (session, supabaseUser) => {
         if (!session?.access_token || !supabaseUser) return;
@@ -45,11 +59,19 @@ export const AuthProvider = ({ children }) => {
         };
         localStorage.setItem('pawmate_session', JSON.stringify(sessionToStore));
         const permissions = await fetchPermissions();
+
+        // 获取完整资料
+        const profile = await fetchProfile(supabaseUser.id);
+
         const userData = {
             id: supabaseUser.id,
             email: supabaseUser.email,
             name: supabaseUser.user_metadata?.name || supabaseUser.email,
             avatar: supabaseUser.user_metadata?.avatar_url || null,
+            full_name: profile?.full_name || null,
+            avatar_url: profile?.avatar_url || null,
+            bio: profile?.bio || null,
+            phone: profile?.phone || null,
             permissions,
             session: sessionToStore
         };
@@ -238,6 +260,23 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('pawmate_user', JSON.stringify(updatedUser));
     };
 
+    // 刷新用户资料（编辑资料后调用）
+    const refreshProfile = async () => {
+        if (!user?.id) return;
+        const profile = await fetchProfile(user.id);
+        if (profile) {
+            const updatedUser = {
+                ...user,
+                full_name: profile.full_name,
+                avatar_url: profile.avatar_url,
+                bio: profile.bio,
+                phone: profile.phone
+            };
+            setUser(updatedUser);
+            localStorage.setItem('pawmate_user', JSON.stringify(updatedUser));
+        }
+    };
+
     // 检查当前用户是否拥有指定权限
     const hasPermission = (requiredPermission) => {
         if (!user || user.permissions === undefined) return false;
@@ -253,6 +292,7 @@ export const AuthProvider = ({ children }) => {
             register,
             logout,
             refreshPermissions,
+            refreshProfile,
             hasPermission
         }}>
             {children}

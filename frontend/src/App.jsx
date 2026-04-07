@@ -28,6 +28,7 @@ import StoryDetail from './pages/StoryDetail';
 import Wiki from './pages/Wiki';
 import WikiArticle from './pages/WikiArticle';
 import WikiSearch from './pages/WikiSearch';
+import EditProfile from './pages/EditProfile';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -67,6 +68,9 @@ function AppContent() {
         <Route path="/wiki" element={<Wiki />} />
         <Route path="/wiki/article/:slug" element={<WikiArticle />} />
         <Route path="/wiki/search" element={<WikiSearch />} />
+
+        {/* 编辑资料 */}
+        <Route path="/edit-profile" element={<PrivateRoute><EditProfile /></PrivateRoute>} />
         
         </Routes>
       </ForumListProvider>

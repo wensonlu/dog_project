@@ -32,7 +32,50 @@ async function login(req, res) {
     });
 }
 
+/**
+ * Get user profile
+ */
+async function getProfile(req, res) {
+    const userId = req.params.id;
+
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+}
+
+/**
+ * Update user profile
+ */
+async function updateProfile(req, res) {
+    const userId = req.params.id;
+    const { full_name, avatar_url, bio, phone } = req.body;
+
+    // 更新 profiles 表
+    const updateData = {};
+    if (full_name !== undefined) updateData.full_name = full_name;
+    if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
+    if (bio !== undefined) updateData.bio = bio;
+    if (phone !== undefined) updateData.phone = phone;
+
+    const { data, error } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', userId)
+        .select()
+        .single();
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+}
+
 module.exports = {
     register,
-    login
+    login,
+    getProfile,
+    updateProfile
 };
