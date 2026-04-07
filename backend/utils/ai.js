@@ -4,14 +4,18 @@
  */
 
 import { generateText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
 
-// 模型配置 - 使用 AI Gateway 格式
-// 格式: "provider/model" - AI SDK 自动路由到 AI Gateway
+// 自定义 GLM-5 provider - 从环境变量读取配置
+const glm = createOpenAI({
+  baseURL: process.env.AI_BASE_URL,
+  apiKey: process.env.AI_API_KEY,
+});
+
+// 模型配置
 const MODELS = {
-  // 高质量模型（用于简历生成、图像分析）
-  sonnet: 'anthropic/claude-sonnet-4.6',
-  // 快速便宜模型（用于健康建议）
-  haiku: 'anthropic/claude-haiku-4.5',
+  // GLM-5 模型
+  glm5: glm('glm-5'),
 };
 
 /**
@@ -66,7 +70,7 @@ export async function generatePetBio({ name, breed, age, gender, photoUrl }) {
 }`;
 
     const { text } = await generateText({
-      model: MODELS.sonnet,
+      model: MODELS.glm5,
       prompt,
     });
 
@@ -79,7 +83,7 @@ export async function generatePetBio({ name, breed, age, gender, photoUrl }) {
       bio: result.bio,
       traits: result.traits,
       duration,
-      model: MODELS.sonnet,
+      model: 'glm-5',
     };
   } catch (error) {
     console.error('生成宠物简历失败:', error);
@@ -115,7 +119,7 @@ ${description ? `- 详细信息：${description}` : ''}
 直接返回建议文本即可。`;
 
     const { text } = await generateText({
-      model: MODELS.haiku,
+      model: MODELS.glm5,
       prompt,
     });
 
@@ -124,7 +128,7 @@ ${description ? `- 详细信息：${description}` : ''}
     return {
       advice: text.trim(),
       duration,
-      model: MODELS.haiku,
+      model: 'glm-5',
     };
   } catch (error) {
     console.error('生成健康建议失败:', error);
