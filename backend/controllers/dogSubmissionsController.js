@@ -132,11 +132,12 @@ async function approveSubmission(req, res) {
 
     if (insertError) return res.status(500).json({ error: insertError.message });
 
-    // Update submission status
+    // Update submission status and link dog_id
     const { error: updateError } = await supabase
         .from('dog_submissions')
-        .update({ 
+        .update({
             status: 'approved',
+            dog_id: dogData.id,
             reviewed_at: new Date().toISOString()
         })
         .eq('id', id);
