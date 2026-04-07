@@ -10,12 +10,13 @@ import { createOpenAI } from '@ai-sdk/openai';
 const glm = createOpenAI({
   baseURL: process.env.AI_BASE_URL,
   apiKey: process.env.AI_API_KEY,
+  compatibility: 'compatible', // 使用兼容模式，强制 chat completions API
 });
 
 // 模型配置
 const MODELS = {
   // GLM-5 模型
-  glm5: glm('glm-5'),
+  glm5: glm.chat('glm-5'), // 使用 .chat() 明确指定 chat completions
 };
 
 /**
@@ -74,8 +75,32 @@ export async function generatePetBio({ name, breed, age, gender, photoUrl }) {
       prompt,
     });
 
+    // 打印原始响应以便调试
+    console.log('AI 原始响应:', text);
+
+    // 尝试提取 JSON（GLM-5 可能在 JSON 前后添加文本）
+    let jsonStr = text;
+
+    // 尝试找到 JSON 块
+    const jsonMatch = text.match(/\{[\s\S]*"bio"[\s\S]*"traits"[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[0];
+    }
+
     // 解析 JSON 响应
-    const result = JSON.parse(text);
+    let result;
+    try {
+      result = JSON.parse(jsonStr);
+    } catch (parseError) {
+      console.error('JSON 解析失败，原始文本:', text);
+      throw new Error('AI 返回的格式不正确，请重试');
+    }
+
+    // 验证必需字段
+    if (!result.bio || !Array.isArray(result.traits)) {
+      console.error('缺少必需字段:', result);
+      throw new Error('AI 返回的数据格式不完整');
+    }
 
     const duration = Date.now() - startTime;
 
