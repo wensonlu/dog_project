@@ -19,10 +19,27 @@
     "@ai-sdk/provider-utils" "4.0.21"
     "@vercel/oidc" "3.1.0"
 
+"@ai-sdk/openai@^3.0.50":
+  version "3.0.50"
+  resolved "https://registry.npmmirror.com/@ai-sdk/openai/-/openai-3.0.50.tgz"
+  integrity sha512-7M7bklrS+gckzPdpQpC3iG5aN5aQPRJdAJQ5jt7sEgYCqDgUuef9x4Nd570+ghIfKTZvV6tSqeeTuD6De/bZig==
+  dependencies:
+    "@ai-sdk/provider" "3.0.8"
+    "@ai-sdk/provider-utils" "4.0.22"
+
 "@ai-sdk/provider-utils@4.0.21":
   version "4.0.21"
   resolved "https://registry.npmmirror.com/@ai-sdk/provider-utils/-/provider-utils-4.0.21.tgz"
   integrity sha512-MtFUYI1/8mgDvRmaBDjbLJPFFrMG777AvSgyIFQtZHIMzm88R/12vYBBpnk7pfiWLFE1DSZzY4WDYzGbKAcmiw==
+  dependencies:
+    "@ai-sdk/provider" "3.0.8"
+    "@standard-schema/spec" "^1.1.0"
+    eventsource-parser "^3.0.6"
+
+"@ai-sdk/provider-utils@4.0.22":
+  version "4.0.22"
+  resolved "https://registry.npmmirror.com/@ai-sdk/provider-utils/-/provider-utils-4.0.22.tgz"
+  integrity sha512-B2OTFcRw/Pdka9ZTjpXv6T6qZ6RruRuLokyb8HwW+aoW9ndJ3YasA3/mVswyJw7VMBF8ofXgqvcrCt9KYvFifg==
   dependencies:
     "@ai-sdk/provider" "3.0.8"
     "@standard-schema/spec" "^1.1.0"

@@ -1,5 +1,6 @@
 const { supabase } = require('../config/supabase');
 const { getSupabaseClient } = require('../utils/supabaseClient');
+const { generatePetBio } = require('../utils/ai');
 
 /**
  * Submit dog submission (user wants to give away their dog)
@@ -59,6 +60,47 @@ async function submitDogSubmission(req, res) {
             console.error('创建 submission 记录失败:', error);
             return res.status(500).json({ error: error.message });
         }
+
+        // 3. 异步生成 AI简历（不阻塞提交响应）
+        generatePetBio({
+            name,
+            breed,
+            age,
+            gender: gender || '公',
+            photoUrl: image,
+        }).then(async (result) => {
+            try {
+                // 创建 pet_agent 记录
+                const { data: agent, error: agentError } = await client
+                    .from('pet_agents')
+                    .insert([{
+                        dog_id: dogData.id,
+                        generated_bio: result.bio,
+                        personality_traits: result.traits,
+                        status: 'active',
+                        last_active_at: new Date().toISOString(),
+                    }])
+                    .select()
+                    .single();
+
+                if (agentError) {
+                    console.error('创建 agent 失败:', agentError);
+                    return;
+                }
+
+                // 更新 dogs 表的 agent_id
+                await client
+                    .from('dogs')
+                    .update({ agent_id: agent.id })
+                    .eq('id', dogData.id);
+
+                console.log(`AI简历已生成: dog_id=${dogData.id}, submission_id=${data.id}`);
+            } catch (err) {
+                console.error('处理AI简历失败:', err);
+            }
+        }).catch(err => {
+            console.error('调用AI生成失败:', err);
+        });
 
         res.json({ message: 'Dog submission submitted successfully', data });
     } catch (err) {
@@ -146,23 +188,55 @@ async function approveSubmission(req, res) {
     if (fetchError) return res.status(500).json({ error: fetchError.message });
     if (!submission) return res.status(404).json({ error: 'Submission not found or already processed' });
 
-    // Insert into dogs table
-    // 注意：现在 dog 已在提交时创建，这里不再创建
+    // 兼容旧数据：如果 dog_id 为 null，先创建 dog
+    let dogId = submission.dog_id;
+    let dogData;
 
-    if (!submission.dog_id) {
-        return res.status(400).json({ error: 'Submission has no associated dog record' });
-    }
+    if (!dogId) {
+        const { data: newDog, error: dogError } = await supabase
+            .from('dogs')
+            .insert([{
+                name: submission.name,
+                age: submission.age,
+                breed: submission.breed,
+                location: submission.location,
+                image: submission.image,
+                gender: submission.gender,
+                description: submission.description,
+                traits: submission.traits
+            }])
+            .select()
+            .single();
 
-    // Get the existing dog
-    const { data: dogData, error: dogFetchError } = await supabase
-        .from('dogs')
-        .select('*')
-        .eq('id', submission.dog_id)
-        .single();
+        if (dogError) {
+            console.error('Failed to create dog:', dogError);
+            return res.status(500).json({ error: dogError.message });
+        }
 
-    if (dogFetchError) {
-        console.error('Failed to fetch dog:', dogFetchError);
-        return res.status(500).json({ error: dogFetchError.message });
+        // 更新 submission.dog_id
+        const { error: linkError } = await supabase
+            .from('dog_submissions')
+            .update({ dog_id: newDog.id })
+            .eq('id', id);
+
+        if (linkError) console.error('Failed to link dog_id:', linkError);
+
+        dogId = newDog.id;
+        dogData = newDog;
+    } else {
+        // 新数据：获取已存在的 dog
+        const { data: existingDog, error: dogFetchError } = await supabase
+            .from('dogs')
+            .select('*')
+            .eq('id', dogId)
+            .single();
+
+        if (dogFetchError) {
+            console.error('Failed to fetch dog:', dogFetchError);
+            return res.status(500).json({ error: dogFetchError.message });
+        }
+
+        dogData = existingDog;
     }
 
     // Update submission status
@@ -178,6 +252,66 @@ async function approveSubmission(req, res) {
         console.error('Failed to update submission status:', updateError);
         // Don't fail the request, dog is already added
     }
+
+    // 异步生成 AI简历（不阻塞响应）
+    generatePetBio({
+        name: submission.name,
+        breed: submission.breed,
+        age: submission.age,
+        gender: submission.gender,
+        photoUrl: submission.image,
+    }).then(async (result) => {
+        try {
+            // 检查是否已存在 agent
+            const { data: existingAgent } = await supabase
+                .from('pet_agents')
+                .select('id')
+                .eq('dog_id', dogId)
+                .single();
+
+            if (existingAgent) {
+                // 更新现有 agent
+                await supabase
+                    .from('pet_agents')
+                    .update({
+                        generated_bio: result.bio,
+                        personality_traits: result.traits,
+                        last_active_at: new Date().toISOString(),
+                    })
+                    .eq('id', existingAgent.id);
+            } else {
+                // 创建新 agent
+                const { data: agent, error: agentError } = await supabase
+                    .from('pet_agents')
+                    .insert([{
+                        dog_id: dogId,
+                        generated_bio: result.bio,
+                        personality_traits: result.traits,
+                        status: 'active',
+                        last_active_at: new Date().toISOString(),
+                    }])
+                    .select()
+                    .single();
+
+                if (agentError) {
+                    console.error('创建 agent 失败:', agentError);
+                    return;
+                }
+
+                // 更新 dogs 表的 agent_id
+                await supabase
+                    .from('dogs')
+                    .update({ agent_id: agent.id })
+                    .eq('id', dogId);
+            }
+
+            console.log(`AI简历已生成: dog_id=${dogId}`);
+        } catch (err) {
+            console.error('处理AI简历失败:', err);
+        }
+    }).catch(err => {
+        console.error('调用AI生成失败:', err);
+    });
 
     // Send notification to user (optional)
     const { error: messageError } = await supabase

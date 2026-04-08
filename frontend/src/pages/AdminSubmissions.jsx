@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { supabase } from '../config/supabase';
@@ -8,6 +8,8 @@ const AdminSubmissions = () => {
     const [submissions, setSubmissions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all'); // all, pending, approved, rejected
+    const [expandedId, setExpandedId] = useState(null); // 展开的卡片 ID
+    const [agentData, setAgentData] = useState({}); // 存储 Agent 数据
 
     useEffect(() => {
         fetchSubmissions();
@@ -33,6 +35,75 @@ const AdminSubmissions = () => {
             console.error('获取发布申请列表失败:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // 切换卡片展开状态
+    const toggleExpand = async (submissionId, dogId) => {
+        console.log('点击卡片:', { submissionId, dogId, expandedId }); // 调试日志
+
+        if (expandedId === submissionId) {
+            setExpandedId(null);
+            return;
+        }
+
+        setExpandedId(submissionId);
+
+        // 如果已经获取过Agent数据，不重复获取
+        if (agentData[submissionId]) {
+            console.log('已有缓存数据:', agentData[submissionId]); // 调试日志
+            return;
+        }
+
+        // 如果没有 dog_id，显示提示
+        if (!dogId) {
+            console.log('没有 dog_id，无法获取简历'); // 调试日志
+            setAgentData(prev => ({
+                ...prev,
+                [submissionId]: { noAgent: true }
+            }));
+            return;
+        }
+
+        // 获取Agent数据（如果有）
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            const token = session.access_token;
+            console.log('调用 API:', `${API_BASE_URL}/agent/${dogId}`); // 调试日志
+
+            const response = await fetch(`${API_BASE_URL}/agent/${dogId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            console.log('API 响应状态:', response.status); // 调试日志
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('API 返回数据:', data); // 调试日志
+                if (data.success && data.data) {
+                    setAgentData(prev => ({
+                        ...prev,
+                        [submissionId]: data.data
+                    }));
+                }
+            } else {
+                // API 返回 404，说明没有 AI 简历
+                console.log('API 错误: Agent 不存在');
+                setAgentData(prev => ({
+                    ...prev,
+                    [submissionId]: { noAgent: true }
+                }));
+            }
+        } catch (error) {
+            console.error('获取Agent数据失败:', error);
+            setAgentData(prev => ({
+                ...prev,
+                [submissionId]: { error: true }
+            }));
         }
     };
 
@@ -193,7 +264,8 @@ const AdminSubmissions = () => {
                     filteredSubmissions.map((sub) => (
                         <div
                             key={sub.id}
-                            className="bg-white dark:bg-zinc-800 rounded-2xl p-4 shadow-md"
+                            className="bg-white dark:bg-zinc-800 rounded-2xl p-4 shadow-md cursor-pointer"
+                            onClick={() => sub.dog_id && toggleExpand(sub.id, sub.dog_id)}
                         >
                             {/* Dog Image and Info */}
                             <div className="flex gap-4 mb-4">
@@ -212,13 +284,60 @@ const AdminSubmissions = () => {
                                                 {sub.breed} · {sub.age} · {sub.gender}
                                             </p>
                                         </div>
-                                        {getStatusBadge(sub.status)}
+                                        <div className="flex items-center gap-2">
+                                            {getStatusBadge(sub.status)}
+                                            {sub.dog_id && (
+                                                <span className="material-symbols-outlined text-zinc-400">
+                                                    {expandedId === sub.id ? 'expand_less' : 'expand_more'}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
                                         {sub.location}
                                     </p>
                                 </div>
                             </div>
+
+                            {/* 展开的简历内容 */}
+                            {expandedId === sub.id && agentData[sub.id] && (
+                                <div className="mb-4">
+                                    {agentData[sub.id].noAgent ? (
+                                        // 没有 AI 简历的情况
+                                        <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                                            <p className="text-sm text-zinc-600 dark:text-zinc-400 text-center">
+                                                📝 暂无 AI 生成的简历
+                                            </p>
+                                            <p className="text-xs text-zinc-500 dark:text-zinc-500 text-center mt-1">
+                                                用户可在提交成功页面生成简历
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        // 有 AI 简历的情况
+                                        <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                                            <h4 className="font-semibold text-purple-700 dark:text-purple-300 mb-2 flex items-center gap-2">
+                                                <span className="material-symbols-outlined">auto_awesome</span>
+                                                AI 生成的领养简历
+                                            </h4>
+                                            <p className="text-sm text-zinc-700 dark:text-zinc-300 mb-3 leading-relaxed">
+                                                {agentData[sub.id].generatedBio}
+                                            </p>
+                                            {agentData[sub.id].personalityTraits && (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {agentData[sub.id].personalityTraits.map((trait, index) => (
+                                                        <span
+                                                            key={index}
+                                                            className="px-3 py-1 bg-primary text-white text-xs rounded-full font-medium"
+                                                        >
+                                                            {trait}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Description */}
                             {sub.description && (
@@ -247,7 +366,7 @@ const AdminSubmissions = () => {
 
                             {/* Actions */}
                             {sub.status === 'pending' && (
-                                <div className="flex gap-2">
+                                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                                     <button
                                         onClick={() => handleReject(sub.id)}
                                         className="flex-1 py-2.5 bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl font-semibold transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-600"
