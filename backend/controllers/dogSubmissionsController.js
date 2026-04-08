@@ -13,26 +13,58 @@ async function submitDogSubmission(req, res) {
     }
 
     const client = getSupabaseClient(req);
-    
-    const { data, error } = await client
-        .from('dog_submissions')
-        .insert([{
-            user_id: userId,
-            name,
-            age,
-            breed,
-            location,
-            image,
-            gender: gender || '公',
-            description: description || null,
-            traits: traits || [],
-            status: 'pending'
-        }])
-        .select()
-        .single();
 
-    if (error) return res.status(500).json({ error: error.message });
-    res.json({ message: 'Dog submission submitted successfully', data });
+    try {
+        // 1. 先创建 dog 记录
+        const { data: dogData, error: dogError } = await client
+            .from('dogs')
+            .insert([{
+                name,
+                age,
+                breed,
+                location,
+                image,
+                gender: gender || '公',
+                description: description || null,
+                traits: traits || []
+            }])
+            .select()
+            .single();
+
+        if (dogError) {
+            console.error('创建 dog 记录失败:', dogError);
+            return res.status(500).json({ error: dogError.message });
+        }
+
+        // 2. 创建 submission 记录，关联 dog_id
+        const { data, error } = await client
+            .from('dog_submissions')
+            .insert([{
+                user_id: userId,
+                dog_id: dogData.id, // 关联 dog_id
+                name,
+                age,
+                breed,
+                location,
+                image,
+                gender: gender || '公',
+                description: description || null,
+                traits: traits || [],
+                status: 'pending'
+            }])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('创建 submission 记录失败:', error);
+            return res.status(500).json({ error: error.message });
+        }
+
+        res.json({ message: 'Dog submission submitted successfully', data });
+    } catch (err) {
+        console.error('提交失败:', err);
+        res.status(500).json({ error: err.message });
+    }
 }
 
 /**
@@ -115,27 +147,28 @@ async function approveSubmission(req, res) {
     if (!submission) return res.status(404).json({ error: 'Submission not found or already processed' });
 
     // Insert into dogs table
-    const { data: dogData, error: insertError } = await supabase
+    // 注意：现在 dog 已在提交时创建，这里不再创建
+
+    if (!submission.dog_id) {
+        return res.status(400).json({ error: 'Submission has no associated dog record' });
+    }
+
+    // Get the existing dog
+    const { data: dogData, error: dogFetchError } = await supabase
         .from('dogs')
-        .insert([{
-            name: submission.name,
-            age: submission.age,
-            breed: submission.breed,
-            location: submission.location,
-            image: submission.image,
-            gender: submission.gender,
-            description: submission.description,
-            traits: submission.traits
-        }])
-        .select()
+        .select('*')
+        .eq('id', submission.dog_id)
         .single();
 
-    if (insertError) return res.status(500).json({ error: insertError.message });
+    if (dogFetchError) {
+        console.error('Failed to fetch dog:', dogFetchError);
+        return res.status(500).json({ error: dogFetchError.message });
+    }
 
     // Update submission status
     const { error: updateError } = await supabase
         .from('dog_submissions')
-        .update({ 
+        .update({
             status: 'approved',
             reviewed_at: new Date().toISOString()
         })
