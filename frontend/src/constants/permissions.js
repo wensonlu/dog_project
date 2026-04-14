@@ -15,7 +15,7 @@ export const PERMISSIONS = {
 
 // 预设角色组合
 export const ROLE_PRESETS = {
-  // 只有领养管理权限
+  // 只有领养管理权限1
   ADOPTION_ADMIN: PERMISSIONS.MANAGE_ADOPTIONS,
 
   // 只有发布管理权限1
