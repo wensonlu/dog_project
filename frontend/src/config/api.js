@@ -17,7 +17,7 @@ function getApiBaseUrl() {
         
         // 如果域名包含 'dog-project'，使用后端完整域名
         if (hostname.includes('dog-project')) {
-            return 'https://dog-project-backend-git-prod-wensons-projects-bb20578e.vercel.app/api';
+            return 'https://dog-project-backend-4khg.vercel.app/api';
         }
     }
     
