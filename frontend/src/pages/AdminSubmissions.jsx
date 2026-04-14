@@ -50,6 +50,15 @@ const AdminSubmissions = () => {
         // 如果已经获取过Agent数据，不重复获取
         if (agentData[submissionId]) return;
 
+        // 如果没有 dog_id，显示提示
+        if (!dogId) {
+            setAgentData(prev => ({
+                ...prev,
+                [submissionId]: { noAgent: true }
+            }));
+            return;
+        }
+
         // 获取Agent数据（如果有）
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -70,9 +79,19 @@ const AdminSubmissions = () => {
                         [submissionId]: data.data
                     }));
                 }
+            } else {
+                // API 返回 404，说明没有 AI 简历
+                setAgentData(prev => ({
+                    ...prev,
+                    [submissionId]: { noAgent: true }
+                }));
             }
         } catch (error) {
             console.error('获取Agent数据失败:', error);
+            setAgentData(prev => ({
+                ...prev,
+                [submissionId]: { error: true }
+            }));
         }
     };
 
@@ -167,9 +186,9 @@ const AdminSubmissions = () => {
     const formatDate = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
-        return date.toLocaleDateString('zh-CN', { 
-            year: 'numeric', 
-            month: 'long', 
+        return date.toLocaleDateString('zh-CN', {
+            year: 'numeric',
+            month: 'long',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
@@ -270,24 +289,37 @@ const AdminSubmissions = () => {
 
                             {/* 展开的简历内容 */}
                             {expandedId === sub.id && agentData[sub.id] && (
-                                <div className="mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
-                                    <h4 className="font-semibold text-purple-700 dark:text-purple-300 mb-2 flex items-center gap-2">
-                                        <span className="material-symbols-outlined">auto_awesome</span>
-                                        AI 生成的领养简历
-                                    </h4>
-                                    <p className="text-sm text-zinc-700 dark:text-zinc-300 mb-3 leading-relaxed">
-                                        {agentData[sub.id].generatedBio}
-                                    </p>
-                                    {agentData[sub.id].personalityTraits && (
-                                        <div className="flex flex-wrap gap-2">
-                                            {agentData[sub.id].personalityTraits.map((trait, index) => (
-                                                <span
-                                                    key={index}
-                                                    className="px-3 py-1 bg-primary text-white text-xs rounded-full font-medium"
-                                                >
-                                                    {trait}
-                                                </span>
-                                            ))}
+                                <div className="mb-4">
+                                    {agentData[sub.id].noAgent ? (
+                                        <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                                            <p className="text-sm text-zinc-600 dark:text-zinc-400 text-center">
+                                                暂无 AI 生成的简历
+                                            </p>
+                                            <p className="text-xs text-zinc-500 dark:text-zinc-500 text-center mt-1">
+                                                用户可在提交成功页面生成简历
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                                            <h4 className="font-semibold text-purple-700 dark:text-purple-300 mb-2 flex items-center gap-2">
+                                                <span className="material-symbols-outlined">auto_awesome</span>
+                                                AI 生成的领养简历
+                                            </h4>
+                                            <p className="text-sm text-zinc-700 dark:text-zinc-300 mb-3 leading-relaxed">
+                                                {agentData[sub.id].generatedBio}
+                                            </p>
+                                            {agentData[sub.id].personalityTraits && (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {agentData[sub.id].personalityTraits.map((trait, index) => (
+                                                        <span
+                                                            key={index}
+                                                            className="px-3 py-1 bg-primary text-white text-xs rounded-full font-medium"
+                                                        >
+                                                            {trait}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BottomNav from '../components/BottomNav';
+import AIPetBioGenerator from '../components/AIPetBioGenerator';
 import { API_BASE_URL } from '../config/api';
 
 const SubmitDog = () => {
@@ -12,6 +13,8 @@ const SubmitDog = () => {
     const [step, setStep] = useState(1);
     const [selectedFile, setSelectedFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
+    const [submittedDogId, setSubmittedDogId] = useState(null);
+    const [aiGeneratedContent, setAiGeneratedContent] = useState(null);
     const [formData, setFormData] = useState({
         name: '',
         age: '',
@@ -140,6 +143,7 @@ const SubmitDog = () => {
             const data = await response.json();
 
             if (response.ok) {
+                setSubmittedDogId(data.data?.id || data.id);
                 setStep(3); // Success step
             } else {
                 alert(data.error || '提交失败，请重试');
@@ -154,18 +158,62 @@ const SubmitDog = () => {
 
     if (step === 3) {
         return (
-            <div className="max-w-[430px] mx-auto min-h-screen flex flex-col items-center justify-center bg-background-light dark:bg-background-dark p-6 text-center pb-24">
-                <div className="size-24 rounded-full bg-primary/20 flex items-center justify-center mb-6">
-                    <span className="material-symbols-outlined text-6xl text-primary">check_circle</span>
+            <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-background-light dark:bg-background-dark text-[#1b120e] dark:text-[#fcf9f8] pb-24">
+                <header className="flex items-center bg-background-light dark:bg-background-dark p-4 sticky top-0 z-10">
+                    <button
+                        type="button"
+                        onClick={() => navigate('/profile')}
+                        className="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+                    >
+                        <span className="material-symbols-outlined text-2xl">close</span>
+                    </button>
+                    <h2 className="text-center text-lg font-bold leading-tight tracking-tight flex-1 mr-10">提交成功</h2>
+                </header>
+
+                <div className="flex-1 px-4">
+                    {/* 成功提示 */}
+                    <div className="text-center py-8">
+                        <div className="size-20 rounded-full bg-primary/20 flex items-center justify-center mb-4 mx-auto">
+                            <span className="material-symbols-outlined text-5xl text-primary">check_circle</span>
+                        </div>
+                        <h3 className="text-2xl font-bold mb-2">提交成功！</h3>
+                        <p className="text-sm opacity-70">
+                            {formData.name} 的信息已提交审核
+                        </p>
+                    </div>
+
+                    {/* AI 简历生成器 */}
+                    {submittedDogId && (
+                        <div className="bg-card-light dark:bg-zinc-800 rounded-xl p-5 shadow-sm border border-[#e7d7d0]/30 dark:border-zinc-700">
+                            <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-purple-500">auto_awesome</span>
+                                AI 领养简历生成器
+                            </h3>
+                            <p className="text-sm opacity-70 mb-4">
+                                让 AI 为 {formData.name} 生成一段吸引人的领养简历，提高领养成功率
+                            </p>
+                            <AIPetBioGenerator
+                                dogId={submittedDogId}
+                                petInfo={formData}
+                                onGenerated={(content) => {
+                                    setAiGeneratedContent(content);
+                                }}
+                            />
+                        </div>
+                    )}
+
+                    {/* 如果 AI 已生成内容，显示完成按钮 */}
+                    {aiGeneratedContent && (
+                        <div className="mt-4">
+                            <button
+                                onClick={() => navigate('/profile')}
+                                className="w-full bg-primary text-white font-bold h-14 rounded-xl"
+                            >
+                                完成
+                            </button>
+                        </div>
+                    )}
                 </div>
-                <h2 className="text-3xl font-bold mb-2 text-[#1b120e] dark:text-white">提交成功！</h2>
-                <p className="text-warm-beige mb-10">您的小狗信息已提交，我们会尽快审核，审核通过后将发布到平台上供其他用户查看。</p>
-                <button
-                    onClick={() => navigate('/profile')}
-                    className="w-full bg-primary text-white font-bold h-14 rounded-xl"
-                >
-                    返回个人中心
-                </button>
             </div>
         );
     }

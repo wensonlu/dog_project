@@ -330,6 +330,12 @@ const Profile = () => {
                             <span className="material-symbols-outlined text-sm text-rose-400">calendar_today</span>
                             <span>加入第 125 天</span>
                         </div>
+                        {user?.phone && (
+                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3">
+                                <span className="material-symbols-outlined text-sm text-rose-400">phone</span>
+                                <span>{user.phone}</span>
+                            </div>
+                        )}
                         <div className="px-4 py-2 bg-rose-50 dark:bg-rose-900/20 rounded-full">
                             <p className="text-sm text-rose-600 dark:text-rose-300 italic">
                                 "{user?.bio || '愿每一只狗狗都有温暖的家'}"

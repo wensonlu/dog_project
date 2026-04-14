@@ -10,7 +10,8 @@ const {
   toggleReplyLike,
   deleteComment,
   deleteReply,
-  deleteTopic
+  deleteTopic,
+  generateTopicWithAI
 } = require('../controllers/forumController');
 const checkSupabase = require('../middleware/supabaseCheck');
 const supabase = require('../config/supabase');
@@ -59,6 +60,9 @@ router.get('/related/:dogId', checkSupabase, async (req, res) => {
 
 // Get all topics with filters
 router.get('/', checkSupabase, getAllTopics);
+
+// AI generate topic content
+router.post('/ai-generate', checkSupabase, generateTopicWithAI);
 
 // Get topic by ID
 router.get('/:id', checkSupabase, getTopicById);

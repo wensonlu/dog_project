@@ -1,4 +1,5 @@
 const { getSupabaseClient } = require('../utils/supabaseClient');
+const { generateTopicContent } = require('../utils/ai');
 
 /**
  * Helper function to fetch user profiles in batch
@@ -788,6 +789,55 @@ async function deleteTopic(req, res) {
   }
 }
 
+/**
+ * Generate topic content with AI
+ */
+async function generateTopicWithAI(req, res) {
+  const { keywords } = req.body;
+
+  if (!keywords || typeof keywords !== 'string') {
+    return res.status(400).json({ error: 'Keywords are required' });
+  }
+
+  try {
+    // 调用AI生成函数
+    const result = await generateTopicContent(keywords);
+
+    // 记录AI使用日志（可选）
+    const client = getSupabaseClient(req);
+    try {
+      await client.from('ai_usage_log').insert([{
+        operation: 'topic_generation',
+        model: result.model,
+        duration_ms: result.duration,
+        success: true
+      }]);
+    } catch (logError) {
+      console.error('Failed to log AI usage:', logError);
+      // 不影响主流程，继续返回结果
+    }
+
+    // 返回生成结果
+    res.json({
+      success: true,
+      data: {
+        title: result.title,
+        content: result.content,
+        category: result.category,
+        tags: result.tags,
+        cost: 0.03, // 预估成本
+        model: result.model
+      }
+    });
+  } catch (error) {
+    console.error('Error generating topic:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate topic content'
+    });
+  }
+}
+
 module.exports = {
   getAllTopics,
   getTopicById,
@@ -798,5 +848,6 @@ module.exports = {
   toggleReplyLike,
   deleteComment,
   deleteReply,
-  deleteTopic
+  deleteTopic,
+  generateTopicWithAI
 };
