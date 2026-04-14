@@ -17,7 +17,7 @@ async function register(req, res) {
 }
 
 /**
- * Login user
+ * Login user1
  */
 async function login(req, res) {
     const { email, password } = req.body;
