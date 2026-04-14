@@ -18,7 +18,7 @@ export const ROLE_PRESETS = {
   // 只有领养管理权限
   ADOPTION_ADMIN: PERMISSIONS.MANAGE_ADOPTIONS,
 
-  // 只有发布管理权限
+  // 只有发布管理权限1
   SUBMISSION_ADMIN: PERMISSIONS.MANAGE_SUBMISSIONS,
 
   // 拥有所有管理权限（包括权限管理）
