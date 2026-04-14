@@ -40,8 +40,6 @@ const AdminSubmissions = () => {
 
     // 切换卡片展开状态
     const toggleExpand = async (submissionId, dogId) => {
-        console.log('点击卡片:', { submissionId, dogId, expandedId }); // 调试日志
-
         if (expandedId === submissionId) {
             setExpandedId(null);
             return;
@@ -50,14 +48,10 @@ const AdminSubmissions = () => {
         setExpandedId(submissionId);
 
         // 如果已经获取过Agent数据，不重复获取
-        if (agentData[submissionId]) {
-            console.log('已有缓存数据:', agentData[submissionId]); // 调试日志
-            return;
-        }
+        if (agentData[submissionId]) return;
 
         // 如果没有 dog_id，显示提示
         if (!dogId) {
-            console.log('没有 dog_id，无法获取简历'); // 调试日志
             setAgentData(prev => ({
                 ...prev,
                 [submissionId]: { noAgent: true }
@@ -71,19 +65,14 @@ const AdminSubmissions = () => {
             if (!session) return;
 
             const token = session.access_token;
-            console.log('调用 API:', `${API_BASE_URL}/agent/${dogId}`); // 调试日志
-
             const response = await fetch(`${API_BASE_URL}/agent/${dogId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
 
-            console.log('API 响应状态:', response.status); // 调试日志
-
             if (response.ok) {
                 const data = await response.json();
-                console.log('API 返回数据:', data); // 调试日志
                 if (data.success && data.data) {
                     setAgentData(prev => ({
                         ...prev,
@@ -92,7 +81,6 @@ const AdminSubmissions = () => {
                 }
             } else {
                 // API 返回 404，说明没有 AI 简历
-                console.log('API 错误: Agent 不存在');
                 setAgentData(prev => ({
                     ...prev,
                     [submissionId]: { noAgent: true }
@@ -198,9 +186,9 @@ const AdminSubmissions = () => {
     const formatDate = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
-        return date.toLocaleDateString('zh-CN', { 
-            year: 'numeric', 
-            month: 'long', 
+        return date.toLocaleDateString('zh-CN', {
+            year: 'numeric',
+            month: 'long',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
@@ -303,17 +291,15 @@ const AdminSubmissions = () => {
                             {expandedId === sub.id && agentData[sub.id] && (
                                 <div className="mb-4">
                                     {agentData[sub.id].noAgent ? (
-                                        // 没有 AI 简历的情况
                                         <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
                                             <p className="text-sm text-zinc-600 dark:text-zinc-400 text-center">
-                                                📝 暂无 AI 生成的简历
+                                                暂无 AI 生成的简历
                                             </p>
                                             <p className="text-xs text-zinc-500 dark:text-zinc-500 text-center mt-1">
                                                 用户可在提交成功页面生成简历
                                             </p>
                                         </div>
                                     ) : (
-                                        // 有 AI 简历的情况
                                         <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
                                             <h4 className="font-semibold text-purple-700 dark:text-purple-300 mb-2 flex items-center gap-2">
                                                 <span className="material-symbols-outlined">auto_awesome</span>
