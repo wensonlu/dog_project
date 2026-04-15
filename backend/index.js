@@ -20,9 +20,31 @@ const wikiRoutes = require('./routes/wiki');
 const app = express();
 const port = process.env.PORT || 5001;
 
+process.on('uncaughtException', (error) => {
+    console.error('[Uncaught Exception]');
+    console.error(error?.stack || error);
+});
+
+process.on('unhandledRejection', (reason) => {
+    console.error('[Unhandled Rejection]');
+    console.error(reason?.stack || reason);
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use((req, _res, next) => {
+    console.log(`[Request] ${req.method} ${req.originalUrl}`);
+    next();
+});
+
+// Probe endpoints that do not depend on database or optional modules.
+app.get('/_ping', (_req, res) => {
+    res.json({ ok: true, service: 'backend', ts: Date.now() });
+});
+app.get('/api/_ping', (_req, res) => {
+    res.json({ ok: true, service: 'backend', ts: Date.now() });
+});
 
 // Routes
 // Support both `/xxx` and `/api/xxx` to avoid environment-specific routing issues.
@@ -86,6 +108,12 @@ app.get('/api/health', (_req, res) => {
             hasAnonKey: !!(process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY),
         },
     });
+});
+
+app.use((err, _req, res, _next) => {
+    console.error('[Express Error Middleware]');
+    console.error(err?.stack || err);
+    res.status(500).json({ error: 'Internal server error' });
 });
 
 // Only start a local HTTP server when this file is executed directly.
