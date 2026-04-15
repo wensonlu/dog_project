@@ -64,6 +64,14 @@ const corsOptions = {
     maxAge: 86400 // 预检请求缓存时间（24小时）
 };
 
+// 去掉 /api 前缀，匹配路由注册路径（Vercel rewrite 保留了 /api 前缀）
+app.use((req, _res, next) => {
+    if (req.path.startsWith('/api/')) {
+        req.url = req.url.replace(/^\/api/, '');
+    }
+    next();
+});
+
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
