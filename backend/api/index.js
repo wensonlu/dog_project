@@ -1,5 +1,5 @@
 /**
  * Vercel Serverless Function 入口点
- * 直接导出 index.js，统一开发和部署行为
+ * 仅导出 app，避免触发本地启动逻辑
  */
-module.exports = require('../index');
+module.exports = require('../app');
