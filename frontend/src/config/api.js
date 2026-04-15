@@ -15,7 +15,7 @@ function getApiBaseUrl() {
     }
 
     // 生产环境默认使用稳定后端域名，避免预览域名失效导致 404/CORS
-    return 'https://dog-project-backend.vercel.app/api';
+    return 'https://dog-project-6aoq.vercel.app/api';
 }
 
 export const API_BASE_URL = getApiBaseUrl();

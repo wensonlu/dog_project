@@ -16,8 +16,6 @@ const recommendationsRoutes = require('./routes/recommendations');
 const permissionsRoutes = require('./routes/permissions');
 const storiesRoutes = require('./routes/stories');
 const wikiRoutes = require('./routes/wiki');
-const agentRoutes = require('./routes/agent');
-const healthRoutes = require('./routes/health');
 
 const app = express();
 const port = process.env.PORT || 5001;
@@ -31,6 +29,17 @@ app.use(express.json());
 const mountRoute = (path, route) => {
     app.use(path, route);
     app.use(`/api${path}`, route);
+};
+
+// Load non-critical routes lazily so one optional module failure won't crash the whole API.
+const mountOptionalRoute = (path, modulePath) => {
+    try {
+        const route = require(modulePath);
+        mountRoute(path, route);
+    } catch (error) {
+        console.error(`[Route Init] Failed to load route "${path}" from "${modulePath}"`);
+        console.error(error?.stack || error?.message || error);
+    }
 };
 
 mountRoute('/auth', authRoutes);
@@ -47,8 +56,8 @@ mountRoute('/recommendations', recommendationsRoutes);
 mountRoute('/permissions', permissionsRoutes);
 mountRoute('/stories', storiesRoutes);
 mountRoute('/wiki', wikiRoutes);
-mountRoute('/agent', agentRoutes);
-mountRoute('/health', healthRoutes);
+mountOptionalRoute('/agent', './routes/agent');
+mountOptionalRoute('/health', './routes/health');
 
 // Health check endpoint（含 Supabase 状态，便于排查 500）
 app.get('/health', (_req, res) => {
