@@ -3,21 +3,17 @@
  * 封装 AI SDK 调用，提供成本监控和错误处理
  */
 
-import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+const { generateText } = require('ai');
+const { createOpenAI } = require('@ai-sdk/openai');
 
-// 自定义 GLM-5 provider - 从环境变量读取配置
-const glm = createOpenAI({
-  baseURL: process.env.AI_BASE_URL,
-  apiKey: process.env.AI_API_KEY,
-  compatibility: 'compatible', // 使用兼容模式，强制 chat completions API
-});
-
-// 模型配置
-const MODELS = {
-  // GLM-5 模型
-  glm5: glm.chat('glm-5'), // 使用 .chat() 明确指定 chat completions
-};
+function getGlmModel() {
+  const glm = createOpenAI({
+    baseURL: process.env.AI_BASE_URL,
+    apiKey: process.env.AI_API_KEY,
+    compatibility: 'compatible',
+  });
+  return glm.chat('glm-5');
+}
 
 /**
  * 生成宠物简历
@@ -29,7 +25,7 @@ const MODELS = {
  * @param {string} [params.photoUrl] - 照片URL（可选）
  * @returns {Promise<{bio: string, traits: string[]}>}
  */
-export async function generatePetBio({ name, breed, age, gender, photoUrl }) {
+async function generatePetBio({ name, breed, age, gender, photoUrl }) {
   const startTime = Date.now();
 
   try {
@@ -71,7 +67,7 @@ export async function generatePetBio({ name, breed, age, gender, photoUrl }) {
 }`;
 
     const { text } = await generateText({
-      model: MODELS.glm5,
+      model: getGlmModel(),
       prompt,
     });
 
@@ -125,7 +121,7 @@ export async function generatePetBio({ name, breed, age, gender, photoUrl }) {
  * @param {string} [params.description] - 记录描述
  * @returns {Promise<{advice: string}>}
  */
-export async function generateHealthAdvice({ breed, age, recordType, description }) {
+async function generateHealthAdvice({ breed, age, recordType, description }) {
   const startTime = Date.now();
 
   try {
@@ -144,7 +140,7 @@ ${description ? `- 详细信息：${description}` : ''}
 直接返回建议文本即可。`;
 
     const { text } = await generateText({
-      model: MODELS.glm5,
+      model: getGlmModel(),
       prompt,
     });
 
@@ -166,7 +162,7 @@ ${description ? `- 详细信息：${description}` : ''}
  * @param {string} keywords - 用户输入的关键词
  * @returns {Promise<{title: string, content: string, category: string, tags: string[], duration: number, model: string}>}
  */
-export async function generateTopicContent(keywords) {
+async function generateTopicContent(keywords) {
   const startTime = Date.now();
 
   try {
@@ -203,7 +199,7 @@ export async function generateTopicContent(keywords) {
 请只返回JSON，不要包含其他文本。`;
 
     const { text } = await generateText({
-      model: MODELS.glm5,
+      model: getGlmModel(),
       prompt,
     });
 
@@ -261,3 +257,9 @@ export async function generateTopicContent(keywords) {
     throw new Error(`生成话题内容失败: ${error.message}`);
   }
 }
+
+module.exports = {
+  generatePetBio,
+  generateHealthAdvice,
+  generateTopicContent,
+};
