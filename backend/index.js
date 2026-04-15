@@ -88,9 +88,9 @@ app.get('/api/health', (_req, res) => {
     });
 });
 
-// Vercel serverless 环境：只导出 app，不调用 app.listen()
-// 本地开发环境：需要启动服务器
-if (process.env.VERCEL !== '1') {
+// Only start a local HTTP server when this file is executed directly.
+// In serverless runtimes the module is required, so we must not call app.listen().
+if (require.main === module) {
     app.listen(port, () => {
         console.log(`Server running at http://localhost:${port}`);
     });
