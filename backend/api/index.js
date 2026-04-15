@@ -25,22 +25,22 @@ const wikiRoutes = require('../routes/wiki');
 
 const app = express();
 
-// Routes (Vercel Express 框架不会自动去掉 /api 前缀)
+// Routes (handler 会先去掉 /api 前缀再传递给 Express)
 // 每个路由文件内部已经包含了 checkSupabase 中间件
-app.use('/api/auth', authRoutes);
-app.use('/api/dogs', dogsRoutes);
-app.use('/api/favorites', favoritesRoutes);
-app.use('/api/applications', applicationsRoutes);
-app.use('/api/messages', messagesRoutes);
-app.use('/api/dog-submissions', dogSubmissionsRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/forum', forumRoutes);
-app.use('/api/stats', statsRoutes);
-app.use('/api/reviews', reviewsRoutes);
-app.use('/api/recommendations', recommendationsRoutes);
-app.use('/api/permissions', permissionsRoutes);
-app.use('/api/stories', storiesRoutes);
-app.use('/api/wiki', wikiRoutes);
+app.use('/auth', authRoutes);
+app.use('/dogs', dogsRoutes);
+app.use('/favorites', favoritesRoutes);
+app.use('/applications', applicationsRoutes);
+app.use('/messages', messagesRoutes);
+app.use('/dog-submissions', dogSubmissionsRoutes);
+app.use('/upload', uploadRoutes);
+app.use('/forum', forumRoutes);
+app.use('/stats', statsRoutes);
+app.use('/reviews', reviewsRoutes);
+app.use('/recommendations', recommendationsRoutes);
+app.use('/permissions', permissionsRoutes);
+app.use('/stories', storiesRoutes);
+app.use('/wiki', wikiRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
