@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { Heart, Users, Sparkles, PawPrint } from 'lucide-react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://dog-project-backend.vercel.app';
+import { API_BASE_URL } from '../config/api';
 
 const StatsBar = ({ isVisible }) => {
   const [stats, setStats] = useState({
@@ -18,12 +17,12 @@ const StatsBar = ({ isVisible }) => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/stats`);
+      const response = await fetch(`${API_BASE_URL}/stats`);
       if (response.ok) {
         const data = await response.json();
         setStats(data);
       }
-    } catch (error) {
+    } catch {
       console.log('Using default stats');
     } finally {
       setLoading(false);
