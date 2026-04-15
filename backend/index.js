@@ -27,25 +27,25 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/dogs', dogsRoutes);
-app.use('/api/favorites', favoritesRoutes);
-app.use('/api/applications', applicationsRoutes);
-app.use('/api/messages', messagesRoutes);
-app.use('/api/dog-submissions', dogSubmissionsRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/forum', forumRoutes);
-app.use('/api/stats', statsRoutes);
-app.use('/api/reviews', reviewsRoutes);
-app.use('/api/recommendations', recommendationsRoutes);
-app.use('/api/permissions', permissionsRoutes);
-app.use('/api/stories', storiesRoutes);
-app.use('/api/wiki', wikiRoutes);
-app.use('/api/agent', agentRoutes);
-app.use('/api/health', healthRoutes);
+app.use('/auth', authRoutes);
+app.use('/dogs', dogsRoutes);
+app.use('/favorites', favoritesRoutes);
+app.use('/applications', applicationsRoutes);
+app.use('/messages', messagesRoutes);
+app.use('/dog-submissions', dogSubmissionsRoutes);
+app.use('/upload', uploadRoutes);
+app.use('/forum', forumRoutes);
+app.use('/stats', statsRoutes);
+app.use('/reviews', reviewsRoutes);
+app.use('/recommendations', recommendationsRoutes);
+app.use('/permissions', permissionsRoutes);
+app.use('/stories', storiesRoutes);
+app.use('/wiki', wikiRoutes);
+app.use('/agent', agentRoutes);
+app.use('/health', healthRoutes);
 
 // Health check endpoint（含 Supabase 状态，便于排查 500）
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
     const { supabase } = require('./config/supabase');
     res.json({
         status: 'ok',
