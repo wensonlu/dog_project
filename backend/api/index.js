@@ -6,7 +6,6 @@
  * 到达这里时路径已经变成了 /auth/login
  */
 const express = require('express');
-const cors = require('cors');
 
 // 导入路由
 const authRoutes = require('../routes/auth');
@@ -26,72 +25,22 @@ const wikiRoutes = require('../routes/wiki');
 
 const app = express();
 
-// CORS 配置：允许 Vercel 前端域名和本地开发环境
-const corsOptions = {
-    origin: function (origin, callback) {
-        // 允许无 origin 的请求（如 Postman、移动应用等）
-        if (!origin) {
-            return callback(null, true);
-        }
-        
-        // 允许本地开发环境
-        if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
-            return callback(null, true);
-        }
-        
-        // 允许所有 Vercel 部署的前端域名（包含 wensons-projects-bb20578e.vercel.app）
-        if (origin.includes('wensons-projects-bb20578e.vercel.app') || 
-            origin.includes('vercel.app')) {
-            return callback(null, true);
-        }
-        
-        // 允许通过环境变量配置的额外域名
-        const allowedOrigins = process.env.ALLOWED_ORIGINS 
-            ? process.env.ALLOWED_ORIGINS.split(',') 
-            : [];
-        
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-        
-        // 拒绝其他来源
-        callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true, // 允许携带凭证（cookies、authorization headers）
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    exposedHeaders: ['Content-Range', 'X-Content-Range'],
-    maxAge: 86400 // 预检请求缓存时间（24小时）
-};
-
-// 去掉 /api 前缀，匹配路由注册路径（Vercel rewrite 保留了 /api 前缀）
-app.use((req, _res, next) => {
-    if (req.path.startsWith('/api/')) {
-        req.url = req.url.replace(/^\/api/, '');
-    }
-    next();
-});
-
-// Middleware
-app.use(cors(corsOptions));
-app.use(express.json());
-
-// Routes (注意：这里不需要 /api 前缀，因为 Vercel 已经去掉了)
+// Routes (Vercel Express 框架不会自动去掉 /api 前缀)
 // 每个路由文件内部已经包含了 checkSupabase 中间件
-app.use('/auth', authRoutes);
-app.use('/dogs', dogsRoutes);
-app.use('/favorites', favoritesRoutes);
-app.use('/applications', applicationsRoutes);
-app.use('/messages', messagesRoutes);
-app.use('/dog-submissions', dogSubmissionsRoutes);
-app.use('/upload', uploadRoutes);
-app.use('/forum', forumRoutes);
-app.use('/stats', statsRoutes);
-app.use('/reviews', reviewsRoutes);
-app.use('/recommendations', recommendationsRoutes);
-app.use('/permissions', permissionsRoutes);
-app.use('/stories', storiesRoutes);
-app.use('/wiki', wikiRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/dogs', dogsRoutes);
+app.use('/api/favorites', favoritesRoutes);
+app.use('/api/applications', applicationsRoutes);
+app.use('/api/messages', messagesRoutes);
+app.use('/api/dog-submissions', dogSubmissionsRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/forum', forumRoutes);
+app.use('/api/stats', statsRoutes);
+app.use('/api/reviews', reviewsRoutes);
+app.use('/api/recommendations', recommendationsRoutes);
+app.use('/api/permissions', permissionsRoutes);
+app.use('/api/stories', storiesRoutes);
+app.use('/api/wiki', wikiRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
