@@ -3,16 +3,24 @@
  * 封装 AI SDK 调用，提供成本监控和错误处理
  */
 
-const { generateText } = require('ai');
-const { createOpenAI } = require('@ai-sdk/openai');
+function isAiEnabled() {
+  return process.env.AI_ENABLED === 'true';
+}
 
-function getGlmModel() {
+function getAiRuntime() {
+  const { generateText } = require('ai');
+  const { createOpenAI } = require('@ai-sdk/openai');
+
   const glm = createOpenAI({
     baseURL: process.env.AI_BASE_URL,
     apiKey: process.env.AI_API_KEY,
     compatibility: 'compatible',
   });
-  return glm.chat('glm-5');
+
+  return {
+    generateText,
+    model: glm.chat('glm-5'),
+  };
 }
 
 /**
@@ -66,36 +74,27 @@ async function generatePetBio({ name, breed, age, gender, photoUrl }) {
   "traits": ["标签1", "标签2", "标签3"]
 }`;
 
-    const { text } = await generateText({
-      model: getGlmModel(),
-      prompt,
-    });
-
-    // 打印原始响应以便调试
-    console.log('AI 原始响应:', text);
-
-    // 尝试提取 JSON（GLM-5 可能在 JSON 前后添加文本）
-    let jsonStr = text;
-
-    // 尝试找到 JSON 块
-    const jsonMatch = text.match(/\{[\s\S]*"bio"[\s\S]*"traits"[\s\S]*\}/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[0];
-    }
-
-    // 解析 JSON 响应
     let result;
-    try {
-      result = JSON.parse(jsonStr);
-    } catch (parseError) {
-      console.error('JSON 解析失败，原始文本:', text);
-      throw new Error('AI 返回的格式不正确，请重试');
-    }
+    let modelName = 'mock-disabled';
+    if (isAiEnabled()) {
+      const { generateText, model } = getAiRuntime();
+      const { text } = await generateText({ model, prompt });
+      modelName = 'glm-5';
 
-    // 验证必需字段
-    if (!result.bio || !Array.isArray(result.traits)) {
-      console.error('缺少必需字段:', result);
-      throw new Error('AI 返回的数据格式不完整');
+      console.log('AI 原始响应:', text);
+      let jsonStr = text;
+      const jsonMatch = text.match(/\{[\s\S]*"bio"[\s\S]*"traits"[\s\S]*\}/);
+      if (jsonMatch) jsonStr = jsonMatch[0];
+      result = JSON.parse(jsonStr);
+
+      if (!result.bio || !Array.isArray(result.traits)) {
+        throw new Error('AI 返回的数据格式不完整');
+      }
+    } else {
+      result = {
+        bio: `${name}是一只${gender === 'female' ? '可爱' : '阳光'}的${breed}，目前${age}。性格温和，亲人友好，适应力好，喜欢与人互动，也能在安静环境中放松休息。日常作息稳定，愿意学习新习惯，适合希望长期陪伴的家庭。领养后建议保持规律喂养与散步节奏，给予耐心和正向引导，相信它会很快成为家里不可或缺的一员。${photoUrl ? '已提供照片信息供参考。' : ''}`,
+        traits: ['亲人', '温顺', '适应力强'],
+      };
     }
 
     const duration = Date.now() - startTime;
@@ -104,7 +103,7 @@ async function generatePetBio({ name, breed, age, gender, photoUrl }) {
       bio: result.bio,
       traits: result.traits,
       duration,
-      model: 'glm-5',
+      model: modelName,
     };
   } catch (error) {
     console.error('生成宠物简历失败:', error);
@@ -139,17 +138,21 @@ ${description ? `- 详细信息：${description}` : ''}
 
 直接返回建议文本即可。`;
 
-    const { text } = await generateText({
-      model: getGlmModel(),
-      prompt,
-    });
-
     const duration = Date.now() - startTime;
+    if (isAiEnabled()) {
+      const { generateText, model } = getAiRuntime();
+      const { text } = await generateText({ model, prompt });
+      return {
+        advice: text.trim(),
+        duration,
+        model: 'glm-5',
+      };
+    }
 
     return {
-      advice: text.trim(),
+      advice: `已记录${breed}${age}的${recordType}${description ? `（${description}）` : ''}。建议近期继续观察精神状态、食欲、排便与体温变化，按时复查并保留记录；如出现持续不适或异常反应，请尽快联系线下兽医进一步评估。`,
       duration,
-      model: 'glm-5',
+      model: 'mock-disabled',
     };
   } catch (error) {
     console.error('生成健康建议失败:', error);
@@ -198,33 +201,29 @@ async function generateTopicContent(keywords) {
 
 请只返回JSON，不要包含其他文本。`;
 
-    const { text } = await generateText({
-      model: getGlmModel(),
-      prompt,
-    });
-
-    console.log('AI 原始响应:', text);
-
-    // 提取JSON块
-    let jsonStr = text;
-    const jsonMatch = text.match(/\{[\s\S]*"title"[\s\S]*"content"[\s\S]*"category"[\s\S]*"tags"[\s\S]*\}/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[0];
-    }
-
-    // 解析JSON响应
+    const normalizedKeywords = keywords.trim();
     let result;
-    try {
-      result = JSON.parse(jsonStr);
-    } catch (parseError) {
-      console.error('JSON 解析失败，原始文本:', text);
-      throw new Error('AI 返回的格式不正确，请重试');
-    }
+    let modelName = 'mock-disabled';
+    if (isAiEnabled()) {
+      const { generateText, model } = getAiRuntime();
+      const { text } = await generateText({ model, prompt });
+      modelName = 'glm-5';
+      console.log('AI 原始响应:', text);
 
-    // 验证必需字段
-    if (!result.title || !result.content || !result.category || !Array.isArray(result.tags)) {
-      console.error('缺少必需字段:', result);
-      throw new Error('AI 返回的数据格式不完整');
+      let jsonStr = text;
+      const jsonMatch = text.match(/\{[\s\S]*"title"[\s\S]*"content"[\s\S]*"category"[\s\S]*"tags"[\s\S]*\}/);
+      if (jsonMatch) jsonStr = jsonMatch[0];
+      result = JSON.parse(jsonStr);
+      if (!result.title || !result.content || !result.category || !Array.isArray(result.tags)) {
+        throw new Error('AI 返回的数据格式不完整');
+      }
+    } else {
+      result = {
+        title: `想聊聊：${normalizedKeywords.slice(0, 20)}`,
+        content: `最近我在关注「${normalizedKeywords}」这个话题，想和大家交流一下真实经验。欢迎分享你们在日常照护、行为训练、领养准备或健康管理方面的做法，也欢迎说说踩过的坑和有效建议。希望这条帖子能帮到有类似困惑的朋友，一起把毛孩子照顾得更好。`,
+        category: '日常分享',
+        tags: normalizedKeywords.split(/\s+/).slice(0, 3),
+      };
     }
 
     // 验证分类是否合法
@@ -250,7 +249,7 @@ async function generateTopicContent(keywords) {
       category: result.category,
       tags: result.tags,
       duration,
-      model: 'glm-5',
+      model: modelName,
     };
   } catch (error) {
     console.error('生成话题内容失败:', error);
