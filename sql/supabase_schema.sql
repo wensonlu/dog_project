@@ -66,6 +66,9 @@ CREATE TABLE applications (
   has_pets BOOLEAN DEFAULT FALSE,
   housing_type TEXT NOT NULL,
   status TEXT DEFAULT 'pending',
+  reviewed_at TIMESTAMPTZ,
+  reject_reason_codes JSONB DEFAULT '[]',
+  reject_note TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

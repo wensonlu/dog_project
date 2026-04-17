@@ -1,5 +1,18 @@
 const { supabase } = require('../config/supabase');
 const { getSupabaseClient } = require('../utils/supabaseClient');
+const {
+    normalizeRejectReasonCodes,
+    buildApplicationTimeline,
+    buildRejectionMessage,
+} = require('../utils/applicationWorkflow');
+
+async function getApplicationWithDog(client, applicationId) {
+    return client
+        .from('applications')
+        .select('*, dogs(name)')
+        .eq('id', applicationId)
+        .single();
+}
 
 /**
  * Submit adoption application
@@ -22,7 +35,10 @@ async function submitApplication(req, res) {
             address: address,
             has_pets: hasPets,
             housing_type: housingType,
-            status: 'pending'
+            status: 'pending',
+            reject_reason_codes: [],
+            reject_note: null,
+            reviewed_at: null,
         }]);
 
     if (error) return res.status(500).json({ error: error.message });
@@ -67,16 +83,57 @@ async function getUserApplications(req, res) {
 }
 
 /**
+ * Get application timeline
+ */
+async function getApplicationTimeline(req, res) {
+    const { id } = req.params;
+    const client = getSupabaseClient(req);
+
+    const { data: application, error } = await getApplicationWithDog(client, id);
+
+    if (error) {
+        const statusCode = error.code === 'PGRST116' ? 404 : 500;
+        return res.status(statusCode).json({ error: error.message });
+    }
+
+    const isOwner = application.user_id === req.user.userId;
+    const isAdmin = (req.user.permissions & 1) > 0;
+
+    if (!isOwner && !isAdmin) {
+        return res.status(403).json({ error: '无权查看该申请时间线' });
+    }
+
+    return res.json({
+        applicationId: application.id,
+        status: application.status,
+        dogName: application.dogs?.name || null,
+        timeline: buildApplicationTimeline(application),
+    });
+}
+
+/**
  * Approve application
  */
 async function approveApplication(req, res) {
     const { id } = req.params;
-    const { userId, dogName } = req.body;
+    const client = getSupabaseClient(req);
+
+    const { data: application, error: applicationError } = await getApplicationWithDog(client, id);
+
+    if (applicationError) {
+        const statusCode = applicationError.code === 'PGRST116' ? 404 : 500;
+        return res.status(statusCode).json({ error: applicationError.message });
+    }
 
     // Update application status
     const { error: updateError } = await supabase
         .from('applications')
-        .update({ status: 'approved' })
+        .update({
+            status: 'approved',
+            reviewed_at: new Date().toISOString(),
+            reject_reason_codes: [],
+            reject_note: null,
+        })
         .eq('id', id);
 
     if (updateError) return res.status(500).json({ error: updateError.message });
@@ -85,9 +142,9 @@ async function approveApplication(req, res) {
     const { error: messageError } = await supabase
         .from('messages')
         .insert([{
-            user_id: userId,
+            user_id: application.user_id,
             sender_name: '系统通知',
-            content: `恭喜！您申请领养 ${dogName} 的申请已通过审核。请尽快联系我们安排见面时间。`,
+            content: `恭喜！您申请领养 ${application.dogs?.name || '狗狗'} 的申请已通过审核。请尽快联系我们安排见面时间。`,
             is_unread: true
         }]);
 
@@ -101,12 +158,28 @@ async function approveApplication(req, res) {
  */
 async function rejectApplication(req, res) {
     const { id } = req.params;
-    const { userId, dogName } = req.body;
+    const { rejectReasonCodes, rejectNote } = req.body;
+    const client = getSupabaseClient(req);
+
+    const { data: application, error: applicationError } = await getApplicationWithDog(client, id);
+
+    if (applicationError) {
+        const statusCode = applicationError.code === 'PGRST116' ? 404 : 500;
+        return res.status(statusCode).json({ error: applicationError.message });
+    }
+
+    const normalizedReasonCodes = normalizeRejectReasonCodes(rejectReasonCodes);
+    const normalizedRejectNote = typeof rejectNote === 'string' && rejectNote.trim() ? rejectNote.trim() : null;
 
     // Update application status
     const { error: updateError } = await supabase
         .from('applications')
-        .update({ status: 'rejected' })
+        .update({
+            status: 'rejected',
+            reviewed_at: new Date().toISOString(),
+            reject_reason_codes: normalizedReasonCodes,
+            reject_note: normalizedRejectNote,
+        })
         .eq('id', id);
 
     if (updateError) return res.status(500).json({ error: updateError.message });
@@ -115,9 +188,9 @@ async function rejectApplication(req, res) {
     const { error: messageError } = await supabase
         .from('messages')
         .insert([{
-            user_id: userId,
+            user_id: application.user_id,
             sender_name: '系统通知',
-            content: `很抱歉，您申请领养 ${dogName} 的申请未通过审核。如有疑问请联系我们。`,
+            content: buildRejectionMessage(application.dogs?.name || '狗狗', normalizedReasonCodes, normalizedRejectNote),
             is_unread: true
         }]);
 
@@ -130,6 +203,7 @@ module.exports = {
     submitApplication,
     getAllApplications,
     getUserApplications,
+    getApplicationTimeline,
     approveApplication,
     rejectApplication
 };

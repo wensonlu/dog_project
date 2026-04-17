@@ -1,4 +1,5 @@
 const { supabase } = require('../config/supabase');
+const { calculateProfileCompletion } = require('../utils/applicationWorkflow');
 
 /**
  * Register a new user
@@ -73,9 +74,39 @@ async function updateProfile(req, res) {
     res.json(data);
 }
 
+/**
+ * Get user profile completion summary
+ */
+async function getProfileCompletion(req, res) {
+    const userId = req.params.id;
+    const isSelf = req.user.userId === userId;
+    const isAdmin = (req.user.permissions & 1) > 0 || (req.user.permissions & 4) > 0;
+
+    if (!isSelf && !isAdmin) {
+        return res.status(403).json({ error: '无权查看该用户资料完整度' });
+    }
+
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, avatar_url, bio, phone')
+        .eq('id', userId)
+        .single();
+
+    if (error) {
+        const statusCode = error.code === 'PGRST116' ? 404 : 400;
+        return res.status(statusCode).json({ error: error.message });
+    }
+
+    return res.json({
+        userId: data.id,
+        completion: calculateProfileCompletion(data),
+    });
+}
+
 module.exports = {
     register,
     login,
     getProfile,
-    updateProfile
+    updateProfile,
+    getProfileCompletion
 };

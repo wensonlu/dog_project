@@ -4,11 +4,12 @@ const {
     submitApplication,
     getAllApplications,
     getUserApplications,
+    getApplicationTimeline,
     approveApplication,
     rejectApplication
 } = require('../controllers/applicationsController');
 const checkSupabase = require('../middleware/supabaseCheck');
-const { checkPermission } = require('../middleware/checkPermission');
+const { checkPermission, authenticateUser } = require('../middleware/checkPermission');
 const { PERMISSIONS } = require('../constants/permissions');
 
 // Submit adoption application
@@ -16,6 +17,9 @@ router.post('/', checkSupabase, submitApplication);
 
 // Get all applications (for admin - requires MANAGE_ADOPTIONS permission)
 router.get('/', checkSupabase, checkPermission(PERMISSIONS.MANAGE_ADOPTIONS), getAllApplications);
+
+// Get application timeline (owner or adoption admin)
+router.get('/:id/timeline', checkSupabase, authenticateUser(), getApplicationTimeline);
 
 // Get applications for a user
 router.get('/:userId', checkSupabase, getUserApplications);
