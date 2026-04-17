@@ -3,11 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { supabase } from '../config/supabase';
 
+const REJECT_REASON_TEMPLATES = [
+    '居住条件暂不匹配',
+    '养宠经验还需要补充',
+    '联系方式暂时无法核验',
+    '当前申请资料不完整'
+];
+
 const Admin = () => {
     const navigate = useNavigate();
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all'); // all, pending, approved, rejected
+    const [rejectTarget, setRejectTarget] = useState(null);
+    const [selectedRejectReason, setSelectedRejectReason] = useState(REJECT_REASON_TEMPLATES[0]);
+    const [customRejectReason, setCustomRejectReason] = useState('');
 
     useEffect(() => {
         fetchApplications();
@@ -64,7 +74,7 @@ const Admin = () => {
         }
     };
 
-    const handleReject = async (applicationId, userId, dogName) => {
+    const handleReject = async (applicationId, userId, dogName, reason) => {
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
@@ -79,17 +89,33 @@ const Admin = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ userId, dogName })
+                body: JSON.stringify({ userId, dogName, reason })
             });
 
             if (response.ok) {
                 alert('已拒绝申请并通知用户');
+                setRejectTarget(null);
+                setCustomRejectReason('');
+                setSelectedRejectReason(REJECT_REASON_TEMPLATES[0]);
                 fetchApplications();
             }
         } catch (error) {
             console.error('拒绝失败:', error);
             alert('操作失败，请重试');
         }
+    };
+
+    const openRejectModal = (application) => {
+        setRejectTarget(application);
+        setSelectedRejectReason(REJECT_REASON_TEMPLATES[0]);
+        setCustomRejectReason('');
+    };
+
+    const submitRejectDecision = () => {
+        if (!rejectTarget) return;
+
+        const reason = customRejectReason.trim() || selectedRejectReason;
+        handleReject(rejectTarget.id, rejectTarget.user_id, rejectTarget.dog_name, reason);
     };
 
     const filteredApplications = applications.filter(app => {
@@ -208,7 +234,7 @@ const Admin = () => {
                             {app.status === 'pending' && (
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => handleReject(app.id, app.user_id, app.dog_name)}
+                                        onClick={() => openRejectModal(app)}
                                         className="flex-1 py-2.5 bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl font-semibold transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-600"
                                     >
                                         拒绝
@@ -225,6 +251,72 @@ const Admin = () => {
                     ))
                 )}
             </div>
+
+            {rejectTarget && (
+                <div className="fixed inset-0 z-40 flex items-end bg-black/40 px-4 pb-4 pt-12">
+                    <div className="w-full rounded-[28px] bg-white p-5 shadow-2xl dark:bg-zinc-900">
+                        <div className="mb-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900 dark:text-white">选择拒绝原因模板</h2>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    给 {rejectTarget.full_name} 的反馈会随通知一起发送
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setRejectTarget(null)}
+                                className="flex size-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                            >
+                                <span className="material-symbols-outlined text-[20px]">close</span>
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {REJECT_REASON_TEMPLATES.map((template) => (
+                                <button
+                                    key={template}
+                                    type="button"
+                                    onClick={() => setSelectedRejectReason(template)}
+                                    className={`w-full rounded-2xl border px-4 py-3 text-left text-sm font-medium transition-colors ${
+                                        selectedRejectReason === template
+                                            ? 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300'
+                                            : 'border-zinc-200 bg-white text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'
+                                    }`}
+                                >
+                                    {template}
+                                </button>
+                            ))}
+                        </div>
+
+                        <label className="mt-4 block">
+                            <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">补充说明</span>
+                            <textarea
+                                value={customRejectReason}
+                                onChange={(event) => setCustomRejectReason(event.target.value)}
+                                rows="3"
+                                placeholder="可补充具体建议，留空则直接发送模板"
+                                className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-rose-300 focus:bg-white dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                            />
+                        </label>
+
+                        <div className="mt-5 flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setRejectTarget(null)}
+                                className="flex-1 rounded-2xl bg-zinc-100 py-3 text-sm font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                            >
+                                取消
+                            </button>
+                            <button
+                                type="button"
+                                onClick={submitRejectDecision}
+                                className="flex-1 rounded-2xl bg-rose-500 py-3 text-sm font-semibold text-white"
+                            >
+                                确认拒绝
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

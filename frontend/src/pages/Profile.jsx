@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { PERMISSIONS } from '../constants/permissions';
 import { supabase } from '../config/supabase';
+import ApplicationTimeline from '../components/ApplicationTimeline';
 
 const Profile = () => {
     const { user, logout, hasPermission } = useAuth();
@@ -71,6 +72,21 @@ const Profile = () => {
     }, [user?.id]);
 
     const pendingCount = applications.filter(app => app.status === 'pending').length;
+    const approvedCount = applications.filter(app => app.status === 'approved' || app.status === 'completed').length;
+    const profileBadges = [
+        user?.full_name && user?.phone && {
+            label: '资料已完善',
+            tone: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'
+        },
+        approvedCount > 0 && {
+            label: '领养申请通过',
+            tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+        },
+        submissionsCount > 0 && {
+            label: '送养发布者',
+            tone: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300'
+        }
+    ].filter(Boolean);
 
     // 未登录状态显示登录引导
     if (!user) {
@@ -326,6 +342,18 @@ const Profile = () => {
                             {user?.full_name || user?.email?.split('@')[0] || '爱心铲屎官'}
                         </h3>
                         <p className="text-sm text-rose-500 font-medium mb-2">汪星球领养人</p>
+                        {profileBadges.length > 0 && (
+                            <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
+                                {profileBadges.map((badge) => (
+                                    <span
+                                        key={badge.label}
+                                        className={`rounded-full px-3 py-1 text-xs font-semibold ${badge.tone}`}
+                                    >
+                                        {badge.label}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3">
                             <span className="material-symbols-outlined text-sm text-rose-400">calendar_today</span>
                             <span>加入第 125 天</span>
@@ -522,6 +550,7 @@ const Profile = () => {
                                                 <p>申请人：{app.full_name}</p>
                                                 <p>电话：{app.phone}</p>
                                             </div>
+                                            <ApplicationTimeline status={app.status} className="mt-4" />
                                         </motion.div>
                                     ))}
                                 </div>

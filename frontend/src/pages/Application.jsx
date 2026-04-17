@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
+import ApplicationTimeline from '../components/ApplicationTimeline';
 
 const Application = () => {
     const navigate = useNavigate();
@@ -67,7 +68,8 @@ const Application = () => {
                     <span className="material-symbols-outlined text-6xl text-primary">check_circle</span>
                 </div>
                 <h2 className="text-3xl font-bold mb-2">申请已提交！</h2>
-                <p className="text-warm-beige mb-10">我们会尽快审核您的申请，请留意消息通知。</p>
+                <p className="text-warm-beige mb-6">我们会尽快审核您的申请，请留意消息通知。</p>
+                <ApplicationTimeline status="pending" className="mb-8 w-full text-left" />
                 <button
                     onClick={() => navigate('/')}
                     className="w-full bg-primary text-white font-bold h-14 rounded-xl"
