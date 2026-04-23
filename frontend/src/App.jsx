@@ -1,10 +1,10 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { DogProvider } from './context/DogContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ForumListProvider } from './context/ForumListContext';
 import PermissionRoute from './components/PermissionRoute';
 import { PERMISSIONS } from './constants/permissions';
+import ChatAssistant from './components/ChatAssistant';
 import Home from './pages/Home';
 import PetDetails from './pages/PetDetails';
 import Messages from './pages/Messages';
@@ -27,6 +27,7 @@ import Stories from './pages/Stories';
 import StoryDetail from './pages/StoryDetail';
 import Wiki from './pages/Wiki';
 import WikiArticle from './pages/WikiArticle';
+import WikiCategory from './pages/WikiCategory';
 import WikiSearch from './pages/WikiSearch';
 import EditProfile from './pages/EditProfile';
 
@@ -66,6 +67,7 @@ function AppContent() {
         
         {/* 百科路由 */}
         <Route path="/wiki" element={<Wiki />} />
+        <Route path="/wiki/category/:slug" element={<WikiCategory />} />
         <Route path="/wiki/article/:slug" element={<WikiArticle />} />
         <Route path="/wiki/search" element={<WikiSearch />} />
 
@@ -83,6 +85,7 @@ function App() {
     <AuthProvider>
       <Router>
         <AppContent />
+        <ChatAssistant />
       </Router>
     </AuthProvider>
   );
