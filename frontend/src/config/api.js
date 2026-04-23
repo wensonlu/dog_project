@@ -19,3 +19,10 @@ function getApiBaseUrl() {
 }
 
 export const API_BASE_URL = getApiBaseUrl();
+
+export const CHAT_API = {
+  CREATE_SESSION: `${API_BASE_URL}/chat/sessions`,
+  SEND_MESSAGE: `${API_BASE_URL}/chat/messages`,
+  GET_SESSION: (sessionId) => `${API_BASE_URL}/chat/sessions/${sessionId}`,
+  DELETE_SESSION: (sessionId) => `${API_BASE_URL}/chat/sessions/${sessionId}`
+};
