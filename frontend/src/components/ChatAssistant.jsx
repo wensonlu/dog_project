@@ -1,7 +1,7 @@
 // frontend/src/components/ChatAssistant.jsx
 
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useChatSession } from '../hooks/useChatSession';
 import { useChat } from '../hooks/useChat';
@@ -9,13 +9,16 @@ import ChatMessage from './ChatMessage';
 import ChatReferenceCard from './ChatReferenceCard';
 import '../styles/ChatAssistant.css';
 
+const MAX_MESSAGE_LENGTH = 500;
+
 export default function ChatAssistant() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [inputError, setInputError] = useState('');
   const messagesEndRef = useRef(null);
 
-  const { sessionId, loading: sessionLoading, error: sessionError } = useChatSession();
+  const { sessionId, loading: sessionLoading } = useChatSession();
   const { messages, loading: chatLoading, error: chatError, sendMessage } = useChat(sessionId);
 
   // 自动滚动到底部
@@ -23,10 +26,31 @@ export default function ChatAssistant() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || !sessionId || chatLoading) return;
+  const handleInputChange = (e) => {
+    const text = e.target.value;
+    setInputValue(text);
 
-    await sendMessage(inputValue);
+    // 检查消息长度
+    if (text.trim().length > MAX_MESSAGE_LENGTH) {
+      setInputError(`消息过长（最多${MAX_MESSAGE_LENGTH}字）`);
+    } else {
+      setInputError('');
+    }
+  };
+
+  const handleSendMessage = async () => {
+    const trimmedInput = inputValue.trim();
+
+    if (!trimmedInput || !sessionId || chatLoading) return;
+
+    // 再次验证长度
+    if (trimmedInput.length > MAX_MESSAGE_LENGTH) {
+      setInputError(`消息过长（最多${MAX_MESSAGE_LENGTH}字）`);
+      return;
+    }
+
+    setInputError('');
+    await sendMessage(trimmedInput);
     setInputValue('');
   };
 
@@ -168,16 +192,22 @@ export default function ChatAssistant() {
                 className="chat-input"
                 placeholder="问我任何宠物相关的问题..."
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
                 disabled={!isInitialized || chatLoading}
                 rows="1"
+                maxLength={MAX_MESSAGE_LENGTH}
               />
+              {inputError && (
+                <div className="text-red-600 text-xs p-1 mt-1">
+                  {inputError}
+                </div>
+              )}
               <button
                 className="chat-send-btn"
                 onClick={handleSendMessage}
-                disabled={!isInitialized || !inputValue.trim() || chatLoading}
-                title={chatLoading ? '回答中...' : '发送'}
+                disabled={!isInitialized || !inputValue.trim() || chatLoading || inputError}
+                title={chatLoading ? '回答中...' : (inputError ? inputError : '发送')}
               >
                 {chatLoading ? '...' : '→'}
               </button>
