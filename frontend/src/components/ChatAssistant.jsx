@@ -1,7 +1,7 @@
 // frontend/src/components/ChatAssistant.jsx
 
 import { useState, useRef, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useChatSession } from '../hooks/useChatSession';
 import { useChat } from '../hooks/useChat';
