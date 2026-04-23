@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDogs } from '../context/DogContext';
 import { useAuth } from '../context/AuthContext';
@@ -22,7 +22,6 @@ const Home = () => {
     // 推荐功能状态
     const [showRecommendations, setShowRecommendations] = useState(false);
     const [recommendations, setRecommendations] = useState([]);
-    const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
 
     // 手势滑动状态
     const [dragX, setDragX] = useState(0);
@@ -71,14 +70,15 @@ const Home = () => {
 
     if (loading) {
         return (
-            <div className="mx-auto max-w-[430px] h-screen flex items-center justify-center bg-gradient-to-b from-rose-50 to-cream-50 dark:from-zinc-900 dark:to-zinc-900">
-                <motion.div 
+            <div className="mx-auto max-w-[430px] h-screen flex flex-col items-center justify-center bg-gradient-to-b from-rose-50 to-cream-50 dark:from-zinc-900 dark:to-zinc-900 gap-4">
+                <motion.div
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ repeat: Infinity, duration: 1.5 }}
                     className="text-4xl flex items-center justify-center"
                 >
-                    <span className="material-symbols-outlined text-4xl text-rose-400">pets</span>
+                    🐕
                 </motion.div>
+                <p className="text-gray-600 dark:text-gray-300">加载中...</p>
             </div>
         );
     }
@@ -141,7 +141,6 @@ const Home = () => {
 
     // 处理推荐问卷提交
     const handleRecommendationSubmit = async (preferences) => {
-        setIsLoadingRecommendations(true);
         try {
             const response = await fetch(`${API_BASE_URL}/recommendations/calculate`, {
                 method: 'POST',
@@ -161,8 +160,6 @@ const Home = () => {
         } catch (error) {
             console.error('推荐请求错误:', error);
             setRecommendations([]);
-        } finally {
-            setIsLoadingRecommendations(false);
         }
     };
 

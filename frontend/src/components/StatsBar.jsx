@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Heart, Users, Sparkles, PawPrint } from 'lucide-react';
 import { API_BASE_URL } from '../config/api';
 

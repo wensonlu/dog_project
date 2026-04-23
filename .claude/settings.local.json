@@ -1,8 +1,15 @@
 {
-  "outputStyle": "Learning",
   "permissions": {
     "allow": [
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(pnpm dev *)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git reset *)",
+      "mcp__plugin_supabase_supabase__apply_migration"
     ]
-  }
+  },
+  "outputStyle": "Learning"
 }
