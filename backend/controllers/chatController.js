@@ -3,6 +3,7 @@
 const { getSupabaseClient } = require('../utils/supabaseClient');
 const { searchContext, constructSystemPrompt, formatReferences } = require('../utils/chatUtils');
 const { streamText } = require('ai');
+const { anthropic } = require('@ai-sdk/anthropic');
 
 /**
  * 创建新的聊天会话
