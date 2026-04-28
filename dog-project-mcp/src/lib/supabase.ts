@@ -1,29 +1,49 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 const envSchema = z.object({
-  SUPABASE_URL: z.string().url(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
 });
 
-const parsed = envSchema.safeParse(process.env);
-
-if (!parsed.success) {
-  console.error("Invalid environment variables:", parsed.error.flatten());
-  console.error("Required: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY");
-  process.exit(1);
+function getEnv() {
+  const parsed = envSchema.safeParse(process.env);
+  return parsed.success ? parsed.data : {};
 }
 
-export const env = parsed.data;
+export const env = getEnv();
 
-// 使用 Service Role Key，跳过 RLS
-// 适用于后端 MCP 服务
-export const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
+// Lazy initialization - only create client when env vars are available
+let _supabase: SupabaseClient | null = null;
+
+export function getSupabase(): SupabaseClient {
+  if (_supabase) return _supabase;
+
+  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = env;
+
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required");
+  }
+
+  _supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  return _supabase;
+}
+
+// For backwards compatibility - used in tools
+export const supabase = {
+  get client() {
+    return getSupabase();
   },
-});
+  from(table: string) {
+    return getSupabase().from(table);
+  },
+};
 
 // ===== 工具函数 =====
 
