@@ -9,7 +9,7 @@ import ReviewSection from '../components/ReviewSection';
 const PetDetails = () => {
     const navigate = useNavigate();
     const { id } = useParams();
-    const { DOGS } = useDogs();
+    const { DOGS, toggleFavorite } = useDogs();
     const { user } = useAuth();
     const [relatedTopics, setRelatedTopics] = useState([]);
     const [loadingTopics, setLoadingTopics] = useState(true);
@@ -91,7 +91,7 @@ const PetDetails = () => {
             navigate('/login');
             return;
         }
-        // Toggle favorite logic here
+        toggleFavorite(dog.id);
     };
 
     return (
