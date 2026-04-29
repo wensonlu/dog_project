@@ -19,6 +19,29 @@
 | **收藏** | `list_favorites` | 收藏列表 |
 | | `notify_favorite_users` | 通知收藏用户 |
 
+## 当前状态 ⚠️
+
+**MCP 代码已完成，但需要数据库迁移以正常工作：**
+
+- ✅ 12 个工具已实现（宠物、申请、分析等）
+- ✅ 类型定义和 Supabase 客户端完成
+- ✅ 测试框架就位
+- ❌ **缺失：dogs 表需要 `status` 和 `updated_at` 列**
+
+### 必需的迁移步骤
+
+**dogs 表目前缺少以下列**：
+- `status` (available|adopted|pending|urgent) - 领养状态
+- `updated_at` (TIMESTAMPTZ) - 更新时间
+
+运行迁移：
+1. 打开 [Supabase Dashboard](https://supabase.com/dashboard) 
+2. 找到你的项目 → **SQL Editor**
+3. 新建 query，粘贴 `sql/migration_add_status_column.sql` 的内容
+4. 点击 **Run**
+
+或查看 [sql/MIGRATION_GUIDE.md](../sql/MIGRATION_GUIDE.md) 获取详细步骤。
+
 ## 快速开始
 
 ### 1. 安装依赖
@@ -31,11 +54,25 @@ pnpm install
 ### 2. 配置环境变量
 
 ```bash
-export SUPABASE_URL=https://your-project.supabase.co
-export SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+cp .env.example .env
+# 编辑 .env，填入真实 Supabase 配置
 ```
 
-### 3. 运行
+`.env` 示例:
+
+```env
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+```
+
+### 3. 运行迁移（必须！）
+
+```bash
+# 运行 Supabase SQL Editor 中的迁移脚本
+# 参见上方"必需的迁移步骤"
+```
+
+### 4. 运行
 
 ```bash
 # 开发模式（热重载）
@@ -44,6 +81,9 @@ pnpm dev
 # 生产构建
 pnpm build
 node dist/index.js
+
+# 验证是否正常工作
+npx tsx test-list-pets.ts
 ```
 
 ### 4. Claude Code 接入
@@ -109,6 +149,9 @@ pnpm test
 
 # 类型检查
 pnpm build
+
+# 本地联调（需先配置 .env）
+pnpm dev
 ```
 
 ## 项目结构
