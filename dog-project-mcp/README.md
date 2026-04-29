@@ -68,8 +68,10 @@ SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 ### 3. 运行迁移（必须！）
 
 ```bash
-# 运行 Supabase SQL Editor 中的迁移脚本
-# 参见上方"必需的迁移步骤"
+# 推荐：直连 PostgreSQL 运行迁移（需要 SUPABASE_DB_PASSWORD）
+npx tsx migrate-with-jwt.ts
+
+# 备用：在 Supabase SQL Editor 手动执行 sql/migration_add_status_column.sql
 ```
 
 ### 4. 运行
