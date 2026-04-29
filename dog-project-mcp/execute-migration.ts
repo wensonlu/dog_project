@@ -2,9 +2,8 @@ import { config as loadDotenv } from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import fs from "node:fs";
-import pg from "pg";
+import { createClient } from "@supabase/supabase-js";
 
-const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -18,38 +17,39 @@ if (!supabaseUrl || !serviceRoleKey) {
   process.exit(1);
 }
 
-// Extract PostgreSQL connection info from Supabase URL
-// Format: https://[project-ref].supabase.co
-const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
-const postgresUrl = `postgresql://postgres:${serviceRoleKey}@db.${projectRef}.supabase.co:5432/postgres`;
+const supabase = createClient(supabaseUrl, serviceRoleKey);
 
 async function executeSql(sql: string): Promise<void> {
-  const pool = new Pool({
-    connectionString: postgresUrl,
-    ssl: { rejectUnauthorized: false }, // Supabase uses SSL
-  });
+  const statements = sql
+    .split(";")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && !s.startsWith("--"));
 
-  try {
-    const client = await pool.connect();
+  console.log(`📋 Found ${statements.length} SQL statements to execute\n`);
 
-    // Split statements by semicolon
-    const statements = sql
-      .split(";")
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0 && !s.startsWith("--"));
+  for (let i = 0; i < statements.length; i++) {
+    const statement = statements[i];
+    const preview = statement.substring(0, 70).replace(/\n/g, " ");
+    console.log(`[${i + 1}/${statements.length}] ⏳ ${preview}...`);
 
-    console.log(`📋 Found ${statements.length} SQL statements to execute\n`);
+    try {
+      const { error } = await supabase.rpc("exec_sql", {
+        sql_text: statement,
+      });
 
-    for (let i = 0; i < statements.length; i++) {
-      const statement = statements[i];
-      const preview = statement.substring(0, 70).replace(/\n/g, " ");
-      console.log(`[${i + 1}/${statements.length}] ⏳ ${preview}...`);
+      if (error) {
+        if (error.message.includes("function") || error.message.includes("does not exist")) {
+          throw new Error(
+            `Helper function 'exec_sql' not found. Please run this in Supabase SQL Editor first:\n\n` +
+              `CREATE OR REPLACE FUNCTION exec_sql(sql_text text)\n` +
+              `RETURNS void AS $$\n` +
+              `BEGIN\n` +
+              `  EXECUTE sql_text;\n` +
+              `END;\n` +
+              `$$ LANGUAGE plpgsql SECURITY DEFINER;`
+          );
+        }
 
-      try {
-        await client.query(statement);
-        console.log(`           ✅ Success`);
-      } catch (error: any) {
-        // Check for common "already exists" errors that we can safely ignore
         if (
           error.message.includes("already exists") ||
           error.message.includes("duplicate key") ||
@@ -60,17 +60,19 @@ async function executeSql(sql: string): Promise<void> {
           console.error(`           ❌ Error: ${error.message}`);
           throw error;
         }
+      } else {
+        console.log(`           ✅ Success`);
       }
+    } catch (error: any) {
+      if (error.message.includes("Helper function")) {
+        throw error; // Re-throw setup errors
+      }
+      console.error(`           ❌ Error: ${error.message}`);
+      throw error;
     }
-
-    client.release();
-    console.log("\n✅ All migrations executed successfully!");
-  } catch (error) {
-    console.error("\n❌ Migration failed:", error instanceof Error ? error.message : error);
-    process.exit(1);
-  } finally {
-    await pool.end();
   }
+
+  console.log("\n✅ All migrations executed successfully!");
 }
 
 async function main() {
@@ -83,9 +85,23 @@ async function main() {
   );
 
   console.log("✅ Migration script loaded\n");
-  console.log("🔗 Connecting to Supabase PostgreSQL...\n");
+  console.log("🔗 Connecting to Supabase via Supabase SDK...\n");
 
-  await executeSql(migrationSql);
+  try {
+    await executeSql(migrationSql);
+  } catch (error) {
+    console.error("\n❌ Migration failed:");
+    console.error(error instanceof Error ? error.message : error);
+
+    console.log("\n📋 Manual SQL (copy to Supabase SQL Editor):\n");
+    const migrationSql = fs.readFileSync(
+      path.resolve(__dirname, "..", "sql", "migration_add_status_column.sql"),
+      "utf-8"
+    );
+    console.log(migrationSql);
+
+    process.exit(1);
+  }
 }
 
 main();
