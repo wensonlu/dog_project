@@ -43,7 +43,9 @@ CREATE TABLE dogs (
   gender TEXT DEFAULT '公',
   description TEXT,
   traits JSONB DEFAULT '[]',
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  status TEXT DEFAULT 'available' CHECK (status IN ('available', 'adopted', 'pending', 'urgent')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Favorites table

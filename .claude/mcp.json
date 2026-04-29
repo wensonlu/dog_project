@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "dog-project": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "tsx",
+        "dog-project-mcp/src/index.ts"
+      ]
+    }
+  }
+}
