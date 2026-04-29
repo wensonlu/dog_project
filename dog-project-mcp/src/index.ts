@@ -1,3 +1,6 @@
+import { config as loadDotenv } from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -11,6 +14,11 @@ import { batchUpdatePetStatus } from "./tools/status.js";
 import { generateOperationsReport, analyzeAdoptionPatterns } from "./tools/analytics.js";
 import { getPendingAlerts } from "./tools/alerts.js";
 import { notifyFavoriteUsers, listFavorites } from "./tools/favorites.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+loadDotenv({ path: path.resolve(__dirname, "../.env") });
 
 // ===== MCP Tool 定义 =====
 

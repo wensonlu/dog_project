@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClawTeam</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #000000;
+    --surface: #0a0a0a;
+    --surface2: #111111;
+    --surface3: #1a1a1a;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.15);
+    --text: #f5f5f7;
+    --text-secondary: #86868b;
+    --text-tertiary: #6e6e73;
+    --accent: #ffffff;
+    --green: #30d158;
+    --orange: #ff9f0a;
+    --red: #ff453a;
+    --blue: #0a84ff;
+    --purple: #bf5af2;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+</style>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo } = React;
+
+// ─── Styles ────────────────────────────────────────────────────────────────
+
+const S = {
+  nav: {
+    position: 'sticky', top: 0, zIndex: 100,
+    background: 'rgba(0,0,0,0.72)',
+    backdropFilter: 'saturate(180%) blur(20px)',
+    WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+    borderBottom: '1px solid var(--border)',
+    padding: '0 32px', height: 52,
+    display: 'flex', alignItems: 'center', gap: 16,
+  },
+  navTitle: {
+    fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em',
+    color: 'var(--text)',
+  },
+  select: {
+    background: 'var(--surface2)', color: 'var(--text)',
+    border: '1px solid var(--border)', borderRadius: 8,
+    padding: '6px 12px', fontSize: 13, outline: 'none',
+    cursor: 'pointer',
+  },
+  statusDot: (connected) => ({
+    width: 8, height: 8, borderRadius: '50%', marginLeft: 'auto',
+    background: connected ? 'var(--green)' : 'var(--red)',
+    boxShadow: connected ? '0 0 8px var(--green)' : 'none',
+  }),
+  statusText: {
+    fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 6,
+  },
+  container: {
+    maxWidth: 1200, margin: '0 auto', padding: '24px 32px',
+  },
+
+  // Summary cards
+  summaryGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: 12, marginBottom: 24,
+  },
+  summaryCard: {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius)',
+    padding: '20px 16px', textAlign: 'center',
+    transition: 'border-color 0.2s',
+  },
+  summaryNum: (color) => ({
+    fontSize: 32, fontWeight: 700, letterSpacing: '-0.02em',
+    color: color, lineHeight: 1,
+  }),
+  summaryLabel: {
+    fontSize: 11, fontWeight: 500, color: 'var(--text-tertiary)',
+    textTransform: 'uppercase', letterSpacing: '0.06em',
+    marginTop: 6,
+  },
+
+  // Section
+  section: {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius)',
+    marginBottom: 20, overflow: 'hidden',
+  },
+  sectionHeader: {
+    padding: '14px 20px',
+    borderBottom: '1px solid var(--border)',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  },
+  sectionTitle: {
+    fontSize: 13, fontWeight: 600, color: 'var(--text)',
+    letterSpacing: '-0.01em',
+  },
+  sectionBadge: {
+    fontSize: 11, fontWeight: 500, color: 'var(--text-tertiary)',
+    background: 'var(--surface3)', borderRadius: 10,
+    padding: '2px 8px',
+  },
+
+  // Members
+  membersGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+    gap: 12,
+  },
+  memberCard: (selected) => ({
+    appearance: 'none',
+    width: '100%',
+    textAlign: 'left',
+    background: selected ? 'rgba(10,132,255,0.08)' : 'var(--surface2)',
+    border: selected ? '1px solid rgba(10,132,255,0.45)' : '1px solid var(--border)',
+    borderRadius: 'var(--radius)',
+    padding: '14px 16px',
+    cursor: 'pointer',
+    transition: 'border-color 0.15s, background 0.15s, transform 0.15s',
+  }),
+  memberCardTop: {
+    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+    gap: 12,
+  },
+  memberName: {
+    fontSize: 14, fontWeight: 600, color: 'var(--text)',
+  },
+  memberUser: {
+    fontSize: 12, color: 'var(--purple)', marginTop: 2,
+  },
+  memberType: {
+    fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4,
+  },
+  memberAction: (selected) => ({
+    fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    color: selected ? 'var(--blue)' : 'var(--text-tertiary)',
+  }),
+  inboxBadge: (count, selected) => ({
+    display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10,
+    fontSize: 11, fontWeight: 500,
+    padding: '2px 8px', borderRadius: 10,
+    background: count > 0
+      ? (selected ? 'rgba(255,69,58,0.2)' : 'rgba(255,69,58,0.15)')
+      : 'var(--surface3)',
+    color: count > 0 ? 'var(--red)' : 'var(--text-tertiary)',
+  }),
+  sectionSubtext: {
+    fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4,
+  },
+
+  // Messages
+  msgList: {
+    maxHeight: 360, overflowY: 'auto',
+  },
+  msgControls: {
+    display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+  },
+  filterGroup: {
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+    background: 'var(--surface2)', border: '1px solid var(--border)',
+    borderRadius: 999, padding: 4,
+  },
+  filterButton: (active, disabled) => ({
+    appearance: 'none',
+    border: 'none',
+    background: active ? 'var(--accent)' : 'transparent',
+    color: active ? 'var(--bg)' : 'var(--text-secondary)',
+    borderRadius: 999,
+    padding: '5px 10px',
+    fontSize: 11,
+    fontWeight: 600,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.35 : 1,
+  }),
+  clearFilter: {
+    appearance: 'none',
+    border: '1px solid var(--border)',
+    background: 'var(--surface2)',
+    color: 'var(--text-secondary)',
+    borderRadius: 999,
+    padding: '5px 10px',
+    fontSize: 11,
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  msgItem: (highlighted) => ({
+    padding: '12px 20px',
+    borderBottom: '1px solid var(--border)',
+    transition: 'background 0.15s',
+    background: highlighted ? 'rgba(10,132,255,0.06)' : 'transparent',
+  }),
+  msgMeta: {
+    display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+    fontSize: 12, marginBottom: 6,
+  },
+  msgTag: {
+    fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    padding: '2px 6px', borderRadius: 4,
+    background: 'var(--surface3)', color: 'var(--text-tertiary)',
+  },
+  msgDirection: (kind) => {
+    const palette = {
+      direct: ['rgba(10,132,255,0.14)', 'var(--blue)'],
+      sent: ['rgba(10,132,255,0.14)', 'var(--blue)'],
+      received: ['rgba(48,209,88,0.14)', 'var(--green)'],
+      broadcast: ['rgba(191,90,242,0.14)', 'var(--purple)'],
+    };
+    const [bg, color] = palette[kind] || palette.direct;
+    return {
+      fontSize: 10,
+      fontWeight: 600,
+      textTransform: 'uppercase',
+      letterSpacing: '0.04em',
+      padding: '2px 6px',
+      borderRadius: 4,
+      background: bg,
+      color,
+    };
+  },
+  msgFlow: {
+    display: 'flex', alignItems: 'center', gap: 8, minWidth: 0,
+    color: 'var(--text-secondary)',
+  },
+  msgParty: (selected) => ({
+    color: selected ? 'var(--text)' : 'var(--text-secondary)',
+    fontWeight: selected ? 600 : 500,
+  }),
+  msgArrow: {
+    color: 'var(--text-tertiary)',
+    fontSize: 11,
+  },
+  msgTime: { color: 'var(--text-tertiary)', marginLeft: 'auto', fontSize: 11 },
+  msgContent: {
+    fontSize: 13, color: 'var(--text-secondary)',
+    lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+  },
+  msgEmpty: {
+    padding: 32, textAlign: 'center',
+    fontSize: 13, color: 'var(--text-tertiary)',
+  },
+
+  // Kanban
+  kanban: {
+    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: 12,
+  },
+  kanbanCol: {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius)',
+    minHeight: 200, overflow: 'hidden',
+  },
+  kanbanHeader: (color) => ({
+    padding: '12px 16px',
+    borderBottom: `2px solid ${color}`,
+    fontSize: 11, fontWeight: 600, textTransform: 'uppercase',
+    letterSpacing: '0.06em', color: color,
+    display: 'flex', justifyContent: 'space-between',
+  }),
+  kanbanBody: { padding: 8 },
+  taskCard: {
+    background: 'var(--surface2)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-sm)',
+    padding: '10px 12px', marginBottom: 6,
+    transition: 'border-color 0.15s',
+    cursor: 'default',
+  },
+  taskId: {
+    fontSize: 11, fontFamily: 'SF Mono, Menlo, monospace',
+    color: 'var(--text-tertiary)',
+  },
+  taskSubject: {
+    fontSize: 13, fontWeight: 500, color: 'var(--text)',
+    marginTop: 2, lineHeight: 1.4,
+  },
+  taskOwner: {
+    fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4,
+  },
+  taskBlocked: {
+    fontSize: 11, color: 'var(--red)', marginTop: 2,
+  },
+  emptyCol: {
+    padding: 24, textAlign: 'center',
+    fontSize: 12, color: 'var(--text-tertiary)',
+  },
+
+  // Team header
+  teamInfo: {
+    display: 'flex', alignItems: 'baseline', gap: 16,
+    marginBottom: 20,
+  },
+  teamName: {
+    fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em',
+    color: 'var(--text)',
+  },
+  teamMeta: {
+    fontSize: 13, color: 'var(--text-tertiary)',
+  },
+};
+
+// ─── Components ────────────────────────────────────────────────────────────
+
+function SummaryCards({ summary }) {
+  const items = [
+    { key: 'pending', label: 'Pending', color: 'var(--orange)' },
+    { key: 'in_progress', label: 'In Progress', color: 'var(--blue)' },
+    { key: 'completed', label: 'Completed', color: 'var(--green)' },
+    { key: 'blocked', label: 'Blocked', color: 'var(--red)' },
+  ];
+  return (
+    <div style={S.summaryGrid}>
+      {items.map(it => (
+        <div key={it.key} style={S.summaryCard}>
+          <div style={S.summaryNum(it.color)}>{summary[it.key] || 0}</div>
+          <div style={S.summaryLabel}>{it.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function directionMeta(msg, selectedMemberKey) {
+  if (selectedMemberKey) {
+    if (msg.fromKey === selectedMemberKey && msg.toKey === selectedMemberKey) {
+      return { tone: 'sent', label: 'Self' };
+    }
+    if (msg.fromKey === selectedMemberKey) {
+      return { tone: 'sent', label: 'Sent' };
+    }
+    if (msg.toKey === selectedMemberKey) {
+      return { tone: 'received', label: 'Received' };
+    }
+  }
+  if (msg.isBroadcast) {
+    return { tone: 'broadcast', label: 'Broadcast' };
+  }
+  return { tone: 'direct', label: 'Direct' };
+}
+
+function formatMessageTime(timestamp) {
+  const time = (timestamp || '').slice(11, 19);
+  const date = (timestamp || '').slice(5, 10);
+  return [date, time].filter(Boolean).join(' ');
+}
+
+function Members({ members, selectedMemberKey, onSelectMember }) {
+  return (
+    <div style={S.section}>
+      <div style={S.sectionHeader}>
+        <div>
+          <div style={S.sectionTitle}>Members</div>
+          <div style={S.sectionSubtext}>Click an inbox to inspect that member&apos;s received and sent history.</div>
+        </div>
+        <span style={S.sectionBadge}>{members.length}</span>
+      </div>
+      <div style={S.membersGrid}>
+        {members.map(m => (
+          <button
+            key={m.memberKey || m.name}
+            type="button"
+            style={S.memberCard(selectedMemberKey === m.memberKey)}
+            aria-pressed={selectedMemberKey === m.memberKey}
+            onClick={() => onSelectMember(m.memberKey)}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = selectedMemberKey === m.memberKey ? 'rgba(10,132,255,0.45)' : 'rgba(255,255,255,0.08)'}
+          >
+            <div style={S.memberCardTop}>
+              <div>
+                <div style={S.memberName}>{m.name}</div>
+                {m.user && <div style={S.memberUser}>{m.user}</div>}
+                <div style={S.memberType}>{m.agentType}</div>
+              </div>
+              <span style={S.memberAction(selectedMemberKey === m.memberKey)}>
+                {selectedMemberKey === m.memberKey ? 'Viewing' : 'Open inbox'}
+              </span>
+            </div>
+            <span style={S.inboxBadge(m.inboxCount, selectedMemberKey === m.memberKey)}>
+              {m.inboxCount > 0 ? `${m.inboxCount} new` : 'Inbox empty'}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Messages({ messages, members, selectedMemberKey, selectedMode, onChangeMode, onClearMember }) {
+  const selectedMember = useMemo(
+    () => members.find(member => member.memberKey === selectedMemberKey) || null,
+    [members, selectedMemberKey]
+  );
+  const modeText = {
+    all: 'all messages',
+    received: 'received messages',
+    sent: 'sent messages',
+  };
+
+  const sorted = useMemo(() => {
+    return [...messages].sort((a, b) =>
+      (b.timestamp || '').localeCompare(a.timestamp || '')
+    );
+  }, [messages]);
+
+  const filtered = useMemo(() => {
+    return sorted.filter(msg => {
+      const touchesSelected = !selectedMemberKey || msg.fromKey === selectedMemberKey || msg.toKey === selectedMemberKey;
+      if (!touchesSelected) return false;
+      if (!selectedMemberKey || selectedMode === 'all') return true;
+      if (selectedMode === 'received') return msg.toKey === selectedMemberKey;
+      if (selectedMode === 'sent') return msg.fromKey === selectedMemberKey;
+      return true;
+    });
+  }, [sorted, selectedMemberKey, selectedMode]);
+
+  const modes = [
+    { key: 'all', label: 'All' },
+    { key: 'received', label: 'Received' },
+    { key: 'sent', label: 'Sent' },
+  ];
+
+  return (
+    <div style={S.section}>
+      <div style={S.sectionHeader}>
+        <div>
+          <div style={S.sectionTitle}>Message History</div>
+          <div style={S.sectionSubtext}>
+            {selectedMember
+              ? `Viewing ${selectedMember.name}${selectedMember.user ? ` (${selectedMember.user})` : ''} · ${modeText[selectedMode] || selectedMode}.`
+              : 'Team-wide event log. Select a member inbox to switch perspective.'}
+          </div>
+        </div>
+        <div style={S.msgControls}>
+          {selectedMember && (
+            <button type="button" style={S.clearFilter} onClick={onClearMember}>
+              Clear member
+            </button>
+          )}
+          <div style={S.filterGroup}>
+            {modes.map(mode => {
+              const disabled = !selectedMember && mode.key !== 'all';
+              return (
+                <button
+                  key={mode.key}
+                  type="button"
+                  style={S.filterButton(selectedMode === mode.key, disabled)}
+                  aria-pressed={selectedMode === mode.key}
+                  disabled={disabled}
+                  onClick={() => !disabled && onChangeMode(mode.key)}
+                >
+                  {mode.label}
+                </button>
+              );
+            })}
+          </div>
+          <span style={S.sectionBadge}>{filtered.length}</span>
+        </div>
+      </div>
+      <div style={S.msgList}>
+        {filtered.length === 0 ? (
+          <div style={S.msgEmpty}>
+            {selectedMember ? 'No message history for this view' : 'No message history yet'}
+          </div>
+        ) : filtered.map((msg, i) => {
+          const direction = directionMeta(msg, selectedMemberKey);
+          const fromLabel = msg.fromLabel || msg.from || 'system';
+          const toLabel = msg.toLabel || msg.to || 'everyone';
+          const highlightsSelected = Boolean(selectedMemberKey && (msg.fromKey === selectedMemberKey || msg.toKey === selectedMemberKey));
+          return (
+            <div key={`${msg.requestId || i}-${msg.timestamp || i}`} style={S.msgItem(highlightsSelected)}>
+              <div style={S.msgMeta}>
+                <span style={S.msgTag}>{msg.type || 'message'}</span>
+                <span style={S.msgDirection(direction.tone)}>{direction.label}</span>
+                <div style={S.msgFlow}>
+                  <span style={S.msgParty(msg.fromKey === selectedMemberKey)}>{fromLabel}</span>
+                  <span style={S.msgArrow}>{msg.isBroadcast ? '↠' : '→'}</span>
+                  <span style={S.msgParty(msg.toKey === selectedMemberKey)}>{toLabel}</span>
+                </div>
+                <span style={S.msgTime}>{formatMessageTime(msg.timestamp)}</span>
+              </div>
+              <div style={S.msgContent}>{msg.content || ''}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TaskCard({ task, status }) {
+  return (
+    <div style={S.taskCard}
+      onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
+      onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}>
+      <div style={S.taskId}>#{(task.id || '').slice(0, 8)}</div>
+      <div style={S.taskSubject}>{task.subject || ''}</div>
+      <div style={S.taskOwner}>{task.owner || '-'}</div>
+      {status === 'blocked' && task.blockedBy && task.blockedBy.length > 0 && (
+        <div style={S.taskBlocked}>blocked by: {task.blockedBy.join(', ')}</div>
+      )}
+    </div>
+  );
+}
+
+function Kanban({ tasks }) {
+  const cols = [
+    { key: 'pending', label: 'Pending', color: 'var(--orange)' },
+    { key: 'in_progress', label: 'In Progress', color: 'var(--blue)' },
+    { key: 'completed', label: 'Completed', color: 'var(--green)' },
+    { key: 'blocked', label: 'Blocked', color: 'var(--red)' },
+  ];
+  return (
+    <div style={S.kanban}>
+      {cols.map(col => {
+        const items = tasks[col.key] || [];
+        return (
+          <div key={col.key} style={S.kanbanCol}>
+            <div style={S.kanbanHeader(col.color)}>
+              <span>{col.label}</span>
+              <span>{items.length}</span>
+            </div>
+            <div style={S.kanbanBody}>
+              {items.length === 0 ? (
+                <div style={S.emptyCol}>&mdash;</div>
+              ) : items.map(t => (
+                <TaskCard key={t.id} task={t} status={col.key} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Dashboard({ data }) {
+  const { team, members = [], tasks = {}, taskSummary = {}, messages = [] } = data;
+  const [selectedMemberKey, setSelectedMemberKey] = useState('');
+  const [selectedMode, setSelectedMode] = useState('all');
+
+  useEffect(() => {
+    setSelectedMemberKey('');
+    setSelectedMode('all');
+  }, [team.name]);
+
+  useEffect(() => {
+    if (selectedMemberKey && !members.some(member => member.memberKey === selectedMemberKey)) {
+      setSelectedMemberKey('');
+      setSelectedMode('all');
+    }
+  }, [members, selectedMemberKey]);
+
+  function handleSelectMember(memberKey) {
+    setSelectedMemberKey(current => current === memberKey ? '' : memberKey);
+    setSelectedMode('all');
+  }
+
+  return (
+    <div style={S.container}>
+      <div style={S.teamInfo}>
+        <span style={S.teamName}>{team.name}</span>
+        <span style={S.teamMeta}>
+          led by {team.leaderName || '?'} &middot; {members.length} member{members.length !== 1 ? 's' : ''}
+          {team.description ? ` \u2014 ${team.description}` : ''}
+        </span>
+      </div>
+      <SummaryCards summary={taskSummary} />
+      <Members members={members} selectedMemberKey={selectedMemberKey} onSelectMember={handleSelectMember} />
+      <Messages
+        messages={messages}
+        members={members}
+        selectedMemberKey={selectedMemberKey}
+        selectedMode={selectedMode}
+        onChangeMode={setSelectedMode}
+        onClearMember={() => {
+          setSelectedMemberKey('');
+          setSelectedMode('all');
+        }}
+      />
+      <Kanban tasks={tasks} />
+    </div>
+  );
+}
+
+function App() {
+  const [teams, setTeams] = useState([]);
+  const [current, setCurrent] = useState('');
+  const [data, setData] = useState(null);
+  const [connected, setConnected] = useState(false);
+  const evtRef = useRef(null);
+
+  useEffect(() => {
+    fetch('/api/overview').then(r => r.json()).then(list => {
+      setTeams(list);
+      if (list.length === 1) setCurrent(list[0].name);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (evtRef.current) { evtRef.current.close(); evtRef.current = null; }
+    if (!current) { setData(null); setConnected(false); return; }
+
+    const src = new EventSource('/api/events/' + encodeURIComponent(current));
+    src.onmessage = e => {
+      const d = JSON.parse(e.data);
+      if (!d.error) { setData(d); setConnected(true); }
+    };
+    src.onerror = () => setConnected(false);
+    evtRef.current = src;
+    return () => src.close();
+  }, [current]);
+
+  return (
+    <>
+      <nav style={S.nav}>
+        <span style={S.navTitle}>ClawTeam</span>
+        <select style={S.select} value={current} onChange={e => setCurrent(e.target.value)}>
+          <option value="">Select Team</option>
+          {teams.map(t => (
+            <option key={t.name} value={t.name}>
+              {t.name}{t.description ? ` \u2014 ${t.description}` : ''}
+            </option>
+          ))}
+        </select>
+        <div style={{display:'flex',alignItems:'center',marginLeft:'auto'}}>
+          <div style={S.statusDot(connected)} />
+          <span style={S.statusText}>{connected ? 'Live' : 'Disconnected'}</span>
+        </div>
+      </nav>
+      {data ? <Dashboard data={data} /> : (
+        <div style={{...S.container, textAlign:'center', paddingTop:120}}>
+          <div style={{fontSize:48, fontWeight:700, letterSpacing:'-0.04em', color:'var(--text)'}}>
+            ClawTeam
+          </div>
+          <div style={{fontSize:15, color:'var(--text-tertiary)', marginTop:8}}>
+            Select a team to get started
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
