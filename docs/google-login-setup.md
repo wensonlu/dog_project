@@ -31,6 +31,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here
 1. 进入 **Authentication** → **URL Configuration**
 2. 在 **Redirect URLs** 中添加：
    - 开发环境：`http://localhost:5173`
+   - 原生 App（Capacitor）：`com.wenson.dogadopt://login-callback/`
    - 生产环境：你的实际域名（例如 `https://your-domain.com`）
 
 ### 4. 验证 Google OAuth 配置

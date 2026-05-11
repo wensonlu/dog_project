@@ -152,7 +152,7 @@ const Admin = () => {
     return (
         <div className="relative mx-auto max-w-[430px] min-h-screen bg-background-light dark:bg-background-dark">
             {/* Header */}
-            <div className="sticky top-0 z-20 bg-background-light dark:bg-background-dark border-b border-zinc-200 dark:border-zinc-800 px-5 py-4">
+            <div className="sticky top-0 ios-safe-top z-20 bg-background-light dark:bg-background-dark border-b border-zinc-200 dark:border-zinc-800 px-5 py-4">
                 <div className="flex items-center justify-between mb-4">
                     <button
                         onClick={() => navigate(-1)}

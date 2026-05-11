@@ -64,6 +64,16 @@ CREATE TABLE IF NOT EXISTS forum_reply_likes (
   UNIQUE(reply_id, user_id)
 );
 
+-- Forum User Follows Table (用户关注作者)
+CREATE TABLE IF NOT EXISTS forum_user_follows (
+  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  follower_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  following_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(follower_user_id, following_user_id),
+  CHECK (follower_user_id <> following_user_id)
+);
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_forum_topics_user_id ON forum_topics(user_id);
 CREATE INDEX IF NOT EXISTS idx_forum_topics_category ON forum_topics(category);
@@ -72,6 +82,8 @@ CREATE INDEX IF NOT EXISTS idx_forum_comments_topic_id ON forum_comments(topic_i
 CREATE INDEX IF NOT EXISTS idx_forum_replies_comment_id ON forum_replies(comment_id);
 CREATE INDEX IF NOT EXISTS idx_forum_topic_likes_topic_id ON forum_topic_likes(topic_id);
 CREATE INDEX IF NOT EXISTS idx_forum_topic_likes_user_id ON forum_topic_likes(user_id);
+CREATE INDEX IF NOT EXISTS idx_forum_user_follows_follower ON forum_user_follows(follower_user_id);
+CREATE INDEX IF NOT EXISTS idx_forum_user_follows_following ON forum_user_follows(following_user_id);
 
 -- Enable RLS
 ALTER TABLE forum_topics ENABLE ROW LEVEL SECURITY;
@@ -80,6 +92,7 @@ ALTER TABLE forum_replies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE forum_topic_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE forum_comment_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE forum_reply_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE forum_user_follows ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for forum_topics
 DROP POLICY IF EXISTS "Anyone can view topics" ON forum_topics;
@@ -158,6 +171,19 @@ CREATE POLICY "Anyone can view reply likes" ON forum_reply_likes
 DROP POLICY IF EXISTS "Users can like/unlike replies" ON forum_reply_likes;
 CREATE POLICY "Users can like/unlike replies" ON forum_reply_likes
   FOR ALL USING (auth.uid() = user_id);
+
+-- RLS Policies for forum_user_follows
+DROP POLICY IF EXISTS "Anyone can view user follows" ON forum_user_follows;
+CREATE POLICY "Anyone can view user follows" ON forum_user_follows
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can follow others" ON forum_user_follows;
+CREATE POLICY "Users can follow others" ON forum_user_follows
+  FOR INSERT WITH CHECK (auth.uid() = follower_user_id AND follower_user_id <> following_user_id);
+
+DROP POLICY IF EXISTS "Users can unfollow others" ON forum_user_follows;
+CREATE POLICY "Users can unfollow others" ON forum_user_follows
+  FOR DELETE USING (auth.uid() = follower_user_id);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

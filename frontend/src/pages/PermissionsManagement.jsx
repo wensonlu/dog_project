@@ -111,7 +111,7 @@ const PermissionsManagement = () => {
     return (
         <div className="mx-auto max-w-[430px] min-h-screen bg-gradient-to-b from-rose-50/50 via-cream-50 to-teal-50/30 text-gray-800 font-sans relative pb-32">
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
+            <div className="sticky top-0 ios-safe-top z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
                 <div className="flex items-center justify-between px-4 py-4">
                     <button
                         onClick={() => navigate(-1)}

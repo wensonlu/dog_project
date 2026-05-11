@@ -44,7 +44,7 @@ function WikiSearch() {
   return (
     <div className="min-h-screen bg-[#F5F5F0] pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#F5F5F0]/95 backdrop-blur-sm px-4 py-4">
+      <header className="sticky top-0 ios-safe-top z-30 bg-[#F5F5F0]/95 backdrop-blur-sm px-4 py-4">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/wiki')}

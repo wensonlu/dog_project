@@ -119,8 +119,25 @@ async function getAllTopics(req, res) {
         .in('topic_id', topicIds);
 
       const likedTopicIds = new Set(likes?.map(l => l.topic_id) || []);
+
+      const authorIds = [...new Set(formattedTopics.map(t => t.author?.id).filter(Boolean))];
+      let followedAuthorIds = new Set();
+      if (authorIds.length > 0) {
+        const { data: follows } = await client
+          .from('forum_user_follows')
+          .select('following_user_id')
+          .eq('follower_user_id', userId)
+          .in('following_user_id', authorIds);
+        followedAuthorIds = new Set((follows || []).map(f => f.following_user_id));
+      }
+
       formattedTopics.forEach(topic => {
         topic.isLiked = likedTopicIds.has(topic.id);
+        topic.isFollowingAuthor = topic.author?.id ? followedAuthorIds.has(topic.author.id) : false;
+      });
+    } else {
+      formattedTopics.forEach(topic => {
+        topic.isFollowingAuthor = false;
       });
     }
 
@@ -128,6 +145,61 @@ async function getAllTopics(req, res) {
   } catch (error) {
     console.error('Error fetching topics:', error);
     res.status(500).json({ error: 'Failed to fetch topics' });
+  }
+}
+
+/**
+ * Get my following authors list
+ */
+async function getMyFollowingAuthors(req, res) {
+  const client = getSupabaseClient(req);
+  const userId = req.query.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'User ID is required' });
+  }
+
+  try {
+    const { data: follows, error: followsError } = await client
+      .from('forum_user_follows')
+      .select('following_user_id, created_at')
+      .eq('follower_user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (followsError) {
+      return res.status(500).json({ error: followsError.message });
+    }
+
+    const followingIds = (follows || []).map(item => item.following_user_id);
+    const profileMap = await fetchUserProfiles(client, followingIds);
+
+    let topicCountMap = {};
+    if (followingIds.length > 0) {
+      const { data: topics } = await client
+        .from('forum_topics')
+        .select('user_id')
+        .in('user_id', followingIds);
+      topicCountMap = (topics || []).reduce((acc, t) => {
+        acc[t.user_id] = (acc[t.user_id] || 0) + 1;
+        return acc;
+      }, {});
+    }
+
+    const result = (follows || []).map((item) => {
+      const profile = profileMap[item.following_user_id];
+      return {
+        userId: item.following_user_id,
+        name: profile?.full_name || profile?.email?.split('@')[0] || '匿名用户',
+        avatar: profile?.avatar_url || 'https://lh3.googleusercontent.com/aida-public/AB6AXuB6ZfAu74fVn19xwt_mCCWmnG0o7CZVapQ8kcQLS4X-Bq4t9inNQHpNA2CtIDIILlKL7BEwdeDFD1ir1ExQXcadXX1G0ZeCruY06uZCg-nslkcMsFEssRFlRG9WUkpJ1A6HzO8kRmhQdRu6pihqtzjdpfK-FD-VL3z-S_AoQG8KrdjqvQ3CSQdDha2DtsEiRkV3RGcfoZHR12Ii9gsm_0C6CJ79z0Hu7LkUOIdgB5G5XcVAN8qPe5tGxLh1fauXT7-L58wrQ_eXFM0',
+        topicCount: topicCountMap[item.following_user_id] || 0,
+        followedAt: item.created_at
+      };
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching following authors:', error);
+    res.status(500).json({ error: 'Failed to fetch following authors' });
   }
 }
 
@@ -195,6 +267,8 @@ async function getTopicById(req, res) {
 
     // Check if user has liked topic
     let isLiked = false;
+    let isFollowingAuthor = false;
+    let authorFollowers = 0;
     const userId = req.query.userId;
     if (userId) {
       const { data: like } = await client
@@ -204,7 +278,23 @@ async function getTopicById(req, res) {
         .eq('user_id', userId)
         .single();
       isLiked = !!like;
+
+      if (userId !== topic.user_id) {
+        const { data: follow } = await client
+          .from('forum_user_follows')
+          .select('id')
+          .eq('follower_user_id', userId)
+          .eq('following_user_id', topic.user_id)
+          .single();
+        isFollowingAuthor = !!follow;
+      }
     }
+
+    const { count: followersCount } = await client
+      .from('forum_user_follows')
+      .select('id', { count: 'exact', head: true })
+      .eq('following_user_id', topic.user_id);
+    authorFollowers = followersCount || 0;
 
     // Format response
     const topicProfile = profileMap[topic.user_id];
@@ -220,6 +310,8 @@ async function getTopicById(req, res) {
       views: (topic.views_count || 0) + 1,
       createdAt: topic.created_at,
       isLiked,
+      isFollowingAuthor,
+      authorFollowers,
       author: {
         id: topicProfile?.id || topic.user_id,
         name: topicProfile?.full_name || topicProfile?.email?.split('@')[0] || '匿名用户',
@@ -300,6 +392,75 @@ async function getTopicById(req, res) {
   } catch (error) {
     console.error('Error fetching topic:', error);
     res.status(500).json({ error: 'Failed to fetch topic' });
+  }
+}
+
+/**
+ * Toggle follow on topic author
+ */
+async function toggleTopicAuthorFollow(req, res) {
+  const client = getSupabaseClient(req);
+  const { id } = req.params;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'User ID is required' });
+  }
+
+  try {
+    const { data: topic, error: topicError } = await client
+      .from('forum_topics')
+      .select('id, user_id')
+      .eq('id', id)
+      .single();
+
+    if (topicError || !topic) {
+      return res.status(404).json({ error: 'Topic not found' });
+    }
+
+    const authorId = topic.user_id;
+    if (!authorId) {
+      return res.status(400).json({ error: 'Topic author not found' });
+    }
+
+    if (authorId === userId) {
+      return res.status(400).json({ error: 'Cannot follow yourself' });
+    }
+
+    const { data: existingFollow } = await client
+      .from('forum_user_follows')
+      .select('id')
+      .eq('follower_user_id', userId)
+      .eq('following_user_id', authorId)
+      .single();
+
+    if (existingFollow) {
+      await client
+        .from('forum_user_follows')
+        .delete()
+        .eq('follower_user_id', userId)
+        .eq('following_user_id', authorId);
+    } else {
+      await client
+        .from('forum_user_follows')
+        .insert({
+          follower_user_id: userId,
+          following_user_id: authorId
+        });
+    }
+
+    const { count: followersCount } = await client
+      .from('forum_user_follows')
+      .select('id', { count: 'exact', head: true })
+      .eq('following_user_id', authorId);
+
+    res.json({
+      followed: !existingFollow,
+      authorFollowers: followersCount || 0
+    });
+  } catch (error) {
+    console.error('Error toggling author follow:', error);
+    res.status(500).json({ error: 'Failed to toggle follow' });
   }
 }
 
@@ -849,5 +1010,7 @@ module.exports = {
   deleteComment,
   deleteReply,
   deleteTopic,
-  generateTopicWithAI
+  generateTopicWithAI,
+  toggleTopicAuthorFollow,
+  getMyFollowingAuthors
 };

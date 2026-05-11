@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -23,8 +23,14 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { login, loginWithGoogle } = useAuth();
+    const { user, login, loginWithGoogle } = useAuth();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!user) return;
+        setIsSubmitting(false);
+        navigate('/');
+    }, [user, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -50,7 +56,7 @@ const Login = () => {
         setIsSubmitting(true);
         try {
             await loginWithGoogle();
-            // OAuth 会自动跳转，不需要手动 navigate
+            // Native OAuth 回调成功后会触发 user 更新，由 useEffect 自动结束 loading 并跳转
         } catch (err) {
             setError(err.message || 'Google 登录失败，请重试');
             setIsSubmitting(false);

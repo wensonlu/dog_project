@@ -139,6 +139,25 @@ router.post('/register', checkSupabase, register);
 
 ## API 路由映射
 
+### 论坛路由 (`/api/forum`)
+
+| 方法 | 路径 | 控制器 | 说明 |
+|------|------|--------|------|
+| GET | `/:id` | `forumController.getTopicById` | 获取话题详情（含 `isFollowingAuthor`、`authorFollowers`） |
+| GET | `/follows/me` | `forumController.getMyFollowingAuthors` | 获取当前用户关注的作者列表 |
+| POST | `/:id/follow` | `forumController.toggleTopicAuthorFollow` | 关注/取消关注该话题作者 |
+
+**关注接口请求示例**：
+```javascript
+POST /api/forum/123/follow
+Body: { "userId": "uuid" }
+```
+
+**关注接口响应示例**：
+```json
+{ "followed": true, "authorFollowers": 12 }
+```
+
 ### 认证路由 (`/api/auth`)
 
 | 方法 | 路径 | 控制器 | 说明 |

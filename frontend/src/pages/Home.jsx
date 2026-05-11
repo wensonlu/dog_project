@@ -87,7 +87,7 @@ const Home = () => {
         return (
             <div className="relative mx-auto max-w-[430px] min-h-screen flex flex-col bg-gradient-to-b from-rose-50/50 via-cream-50 to-teal-50/30 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900 overflow-hidden pb-20">
                 {/* Header */}
-                <header className="relative z-30 px-5 pt-6 pb-2">
+                <header className="relative z-30 ios-safe-top px-5 pt-6 pb-2">
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -173,7 +173,7 @@ const Home = () => {
             </div>
 
             {/* Header */}
-            <header className="relative z-30 px-5 pt-6 pb-2">
+            <header className="relative z-30 ios-safe-top px-5 pt-6 pb-2">
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}

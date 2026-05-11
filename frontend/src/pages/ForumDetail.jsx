@@ -18,6 +18,8 @@ const ForumDetail = () => {
   const [comments, setComments] = useState([]);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [isFollowingAuthor, setIsFollowingAuthor] = useState(false);
+  const [authorFollowers, setAuthorFollowers] = useState(0);
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyCity, setReplyCity] = useState(null);
@@ -57,6 +59,8 @@ const ForumDetail = () => {
         setComments(data.comments || []);
         setIsLiked(data.topic?.isLiked || false);
         setLikeCount(data.topic?.likes || 0);
+        setIsFollowingAuthor(data.topic?.isFollowingAuthor || false);
+        setAuthorFollowers(data.topic?.authorFollowers || 0);
         if (data.topic?.id != null && data.topic?.title) {
           addForumBrowseHistory({ id: data.topic.id, title: data.topic.title });
         }
@@ -111,6 +115,44 @@ const ForumDetail = () => {
     } catch (error) {
       console.error('Error toggling like:', error);
     }
+  };
+
+  const handleFollowAuthor = () => {
+    if (!user?.id) {
+      setTipMessage('请先登录后再关注作者');
+      setTipOpen(true);
+      return;
+    }
+
+    if (isOwnTopic) {
+      setTipMessage('这是你自己的帖子');
+      setTipOpen(true);
+      return;
+    }
+
+    fetch(`${API_BASE_URL}/forum/${id}/follow`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.id })
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || '关注操作失败');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        setIsFollowingAuthor(Boolean(data.followed));
+        setAuthorFollowers(data.authorFollowers || 0);
+        setTipMessage(data.followed ? '已关注作者' : '已取消关注');
+        setTipOpen(true);
+      })
+      .catch((error) => {
+        console.error('Error toggling follow:', error);
+        setTipMessage(error.message || '关注操作失败');
+        setTipOpen(true);
+      });
   };
 
   const handleCommentLike = async (commentId) => {
@@ -423,7 +465,7 @@ const ForumDetail = () => {
   return (
     <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-background-light dark:bg-background-dark pb-24">
       {/* 头部 - 返回与作者头像+昵称贴近左侧，右侧关注/分享或删除 */}
-      <header className="fixed top-0 left-0 right-0 max-w-[430px] mx-auto z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 pt-6 pb-3">
+      <header className="fixed top-0 ios-safe-top left-0 right-0 max-w-[430px] mx-auto z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 pt-6 pb-3">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <button
@@ -454,8 +496,16 @@ const ForumDetail = () => {
               </button>
             ) : (
               <>
-                <button className="px-3 py-1.5 bg-primary text-white text-sm font-bold rounded-full">
-                  关注
+                <button
+                  type="button"
+                  onClick={handleFollowAuthor}
+                  className={`px-3 py-1.5 text-sm font-bold rounded-full ${
+                    isFollowingAuthor
+                      ? 'bg-zinc-200 dark:bg-zinc-700 text-[#1b120e] dark:text-white'
+                      : 'bg-primary text-white'
+                  }`}
+                >
+                  {isFollowingAuthor ? '已关注' : '关注'}
                 </button>
                 <button className="size-9 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-[#1b120e] dark:text-white">
                   <span className="material-symbols-outlined text-lg">share</span>
@@ -544,7 +594,7 @@ const ForumDetail = () => {
 
         {/* 日期和不喜欢 - 正文下、共 N 条评论上 */}
         <div className="px-4 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 py-2 border-t border-zinc-100 dark:border-zinc-800">
-          <span>{formatTime(topic.createdAt)}</span>
+          <span>{formatTime(topic.createdAt)} · {authorFollowers} 人关注作者</span>
           <button type="button" className="flex items-center gap-1">
             <span className="material-symbols-outlined text-base">thumb_down</span>
             不喜欢

@@ -82,7 +82,7 @@ const Application = () => {
 
     return (
         <form onSubmit={handleSubmit} className="max-w-[430px] mx-auto min-h-screen flex flex-col pb-10 bg-background-light dark:bg-background-dark text-[#1b120e] dark:text-[#fcf9f8]">
-            <header className="flex items-center bg-background-light dark:bg-background-dark p-4 sticky top-0 z-10">
+            <header className="flex items-center bg-background-light dark:bg-background-dark p-4 sticky top-0 ios-safe-top z-10">
                 <button
                     type="button"
                     onClick={() => navigate(-1)}

@@ -61,6 +61,11 @@ const TopicCard = ({ topic, onBeforeNavigate }) => {
                 <span className="text-xs text-warm-beige dark:text-zinc-400 truncate">
                   {topic.author?.name ?? '匿名'}
                 </span>
+                {topic.isFollowingAuthor && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex-shrink-0">
+                    已关注
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
                 <span className={`material-symbols-outlined text-sm ${topic.isLiked ? 'fill text-red-500' : 'text-warm-beige dark:text-zinc-400'}`}>
@@ -95,6 +100,11 @@ const TopicCard = ({ topic, onBeforeNavigate }) => {
               <span className="text-xs text-warm-beige dark:text-zinc-400 truncate">
                 {topic.author?.name ?? '匿名'}
               </span>
+              {topic.isFollowingAuthor && (
+                <span className="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex-shrink-0">
+                  已关注
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">
               <span className={`material-symbols-outlined text-sm ${topic.isLiked ? 'fill text-red-500' : 'text-warm-beige dark:text-zinc-400'}`}>

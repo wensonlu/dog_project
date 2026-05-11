@@ -11,7 +11,9 @@ const {
   deleteComment,
   deleteReply,
   deleteTopic,
-  generateTopicWithAI
+  generateTopicWithAI,
+  toggleTopicAuthorFollow,
+  getMyFollowingAuthors
 } = require('../controllers/forumController');
 const checkSupabase = require('../middleware/supabaseCheck');
 const supabase = require('../config/supabase');
@@ -64,6 +66,9 @@ router.get('/', checkSupabase, getAllTopics);
 // AI generate topic content
 router.post('/ai-generate', checkSupabase, generateTopicWithAI);
 
+// Get my following authors
+router.get('/follows/me', checkSupabase, getMyFollowingAuthors);
+
 // Get topic by ID
 router.get('/:id', checkSupabase, getTopicById);
 
@@ -72,6 +77,9 @@ router.post('/', checkSupabase, createTopic);
 
 // Toggle like on a topic
 router.post('/:id/like', checkSupabase, toggleTopicLike);
+
+// Toggle follow on topic author
+router.post('/:id/follow', checkSupabase, toggleTopicAuthorFollow);
 
 // Delete own topic (query: userId)
 router.delete('/:id', checkSupabase, deleteTopic);

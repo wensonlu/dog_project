@@ -66,7 +66,7 @@ function WikiCategory() {
   return (
     <div className="max-w-[430px] mx-auto min-h-screen bg-[#F5F5F0] pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#F5F5F0]/95 backdrop-blur-sm px-5 pt-6 pb-4 border-b border-gray-200">
+      <header className="sticky top-0 ios-safe-top z-30 bg-[#F5F5F0]/95 backdrop-blur-sm px-5 pt-6 pb-4 border-b border-gray-200">
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => navigate(-1)}

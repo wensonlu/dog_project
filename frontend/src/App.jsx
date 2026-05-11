@@ -30,6 +30,7 @@ import WikiArticle from './pages/WikiArticle';
 import WikiCategory from './pages/WikiCategory';
 import WikiSearch from './pages/WikiSearch';
 import EditProfile from './pages/EditProfile';
+import FollowingAuthors from './pages/FollowingAuthors';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -50,6 +51,7 @@ function AppContent() {
         <Route path="/messages/with/:userId" element={<PrivateRoute><MessageWith /></PrivateRoute>} />
         <Route path="/messages/:id" element={<PrivateRoute><MessageDetail /></PrivateRoute>} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/following" element={<PrivateRoute><FollowingAuthors /></PrivateRoute>} />
         <Route path="/application/:id" element={<PrivateRoute><Application /></PrivateRoute>} />
         <Route path="/favorites" element={<PrivateRoute><Favorites /></PrivateRoute>} />
         <Route path="/forum" element={<Forum />} />

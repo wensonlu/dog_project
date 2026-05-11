@@ -1,9 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 import { API_BASE_URL } from '../config/api';
 import { supabase } from '../config/supabase';
 import { hasPermission as checkPermission } from '../constants/permissions';
 
 const AuthContext = createContext();
+const NATIVE_REDIRECT_URL = 'com.wenson.dogadopt://login-callback/';
+const OAUTH_SESSION_POLL_ATTEMPTS = 12;
+const OAUTH_SESSION_POLL_INTERVAL_MS = 300;
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
@@ -119,15 +125,58 @@ export const AuthProvider = ({ children }) => {
         checkSession();
     }, []);
 
+    useEffect(() => {
+        if (!Capacitor.isNativePlatform()) return undefined;
+
+        const handleAuthCallbackUrl = async (callbackUrl) => {
+            if (!callbackUrl || !callbackUrl.startsWith('com.wenson.dogadopt://')) return;
+
+            try {
+                const url = new URL(callbackUrl);
+                const queryParams = new URLSearchParams(url.search);
+                const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
+
+                const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+                const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+                const code = queryParams.get('code');
+
+                if (accessToken && refreshToken) {
+                    await supabase.auth.setSession({
+                        access_token: accessToken,
+                        refresh_token: refreshToken
+                    });
+                } else if (code) {
+                    await supabase.auth.exchangeCodeForSession(code);
+                }
+            } catch (error) {
+                console.error('[AuthContext] 处理 OAuth 回调失败:', error);
+            } finally {
+                await Browser.close().catch(() => {});
+            }
+        };
+
+        const handleAuthCallback = async (event) => {
+            await handleAuthCallbackUrl(event?.url);
+        };
+
+        CapacitorApp.getLaunchUrl()
+            .then((result) => handleAuthCallbackUrl(result?.url))
+            .catch(() => {});
+
+        const listenerPromise = CapacitorApp.addListener('appUrlOpen', handleAuthCallback);
+        return () => {
+            Promise.resolve(listenerPromise)
+                .then((listener) => listener.remove())
+                .catch(() => {});
+        };
+    }, []);
+
     // 监听 Supabase 登录状态（Google OAuth 回调后会触发 SIGNED_IN）
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_IN' && session?.user) {
-                const storedSession = localStorage.getItem('pawmate_session');
-                if (!storedSession) {
-                    console.log('[AuthContext] onAuthStateChange SIGNED_IN，同步 session 并调用 permissions/me');
-                    await syncSessionAndFetchPermissions(session, session.user);
-                }
+                console.log('[AuthContext] onAuthStateChange SIGNED_IN，同步 session 并调用 permissions/me');
+                await syncSessionAndFetchPermissions(session, session.user);
             }
             if (event === 'SIGNED_OUT') {
                 setUser(null);
@@ -188,6 +237,63 @@ export const AuthProvider = ({ children }) => {
     };
 
     const loginWithGoogle = async () => {
+        if (Capacitor.isNativePlatform()) {
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: NATIVE_REDIRECT_URL,
+                    skipBrowserRedirect: true,
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent'
+                    }
+                }
+            });
+
+            if (error) throw error;
+            if (!data?.url) throw new Error('未获取到 Google 授权地址');
+
+            const authUrl = new URL(data.url);
+            authUrl.searchParams.set('redirect_to', NATIVE_REDIRECT_URL);
+
+            let resolveBrowserFinished;
+            const browserFinishedPromise = new Promise((resolve) => {
+                resolveBrowserFinished = resolve;
+            });
+
+            const finishedListener = await Browser.addListener('browserFinished', () => {
+                resolveBrowserFinished();
+            });
+
+            try {
+                await Browser.open({
+                    url: authUrl.toString(),
+                    presentationStyle: 'fullscreen'
+                });
+
+                await browserFinishedPromise;
+
+                let session = null;
+                for (let i = 0; i < OAUTH_SESSION_POLL_ATTEMPTS; i += 1) {
+                    const { data: sessionData } = await supabase.auth.getSession();
+                    session = sessionData?.session ?? null;
+                    if (session?.user) break;
+                    await new Promise((resolve) => setTimeout(resolve, OAUTH_SESSION_POLL_INTERVAL_MS));
+                }
+
+                if (session?.user) {
+                    await syncSessionAndFetchPermissions(session, session.user);
+                } else {
+                    throw new Error(
+                        `Google 登录未完成：未收到 OAuth 会话。请在 Supabase -> Authentication -> URL Configuration 的 Redirect URLs 中添加 ${NATIVE_REDIRECT_URL}`
+                    );
+                }
+            } finally {
+                finishedListener.remove();
+            }
+            return data;
+        }
+
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {

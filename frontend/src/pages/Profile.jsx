@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars -- used as motion.div, motion.button, AnimatePresence
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -103,7 +103,7 @@ const Profile = () => {
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-rose-100/50 dark:border-zinc-800"
+                    className="sticky top-0 ios-safe-top z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-rose-100/50 dark:border-zinc-800"
                 >
                     <div className="flex items-center p-4 pt-6 pb-3 justify-center">
                         <h2 className="text-lg font-bold text-gray-800 dark:text-white">我的</h2>
@@ -234,6 +234,11 @@ const Profile = () => {
             action: () => navigate('/forum')
         },
         {
+            icon: 'person_search',
+            label: '我关注的人',
+            action: () => navigate('/profile/following')
+        },
+        {
             icon: 'assignment',
             label: '领养管理',
             action: () => navigate('/admin'),
@@ -285,7 +290,7 @@ const Profile = () => {
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-rose-100/50 dark:border-zinc-800"
+                className="sticky top-0 ios-safe-top z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-rose-100/50 dark:border-zinc-800"
             >
                 <div className="flex items-center p-4 pt-6 pb-3 justify-between">
                     <motion.button 
@@ -491,7 +496,7 @@ const Profile = () => {
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 bg-white dark:bg-zinc-900"
                     >
-                        <div className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-rose-100/50 dark:border-zinc-800">
+                        <div className="sticky top-0 ios-safe-top z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-rose-100/50 dark:border-zinc-800">
                             <div className="flex items-center p-4 pb-3 justify-between">
                                 <motion.button
                                     whileTap={{ scale: 0.9 }}

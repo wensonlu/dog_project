@@ -45,7 +45,7 @@ function Stories() {
   return (
     <div className="max-w-[430px] mx-auto min-h-screen bg-[#F5F5F0] pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#F5F5F0]/95 backdrop-blur-sm px-5 pt-6 pb-4">
+      <header className="sticky top-0 ios-safe-top z-30 bg-[#F5F5F0]/95 backdrop-blur-sm px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black text-gray-900">幸福故事</h1>

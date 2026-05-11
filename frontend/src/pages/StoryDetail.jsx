@@ -107,7 +107,7 @@ function StoryDetail() {
   return (
     <div className="min-h-screen bg-[#F5F5F0] pb-24">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#F5F5F0]/95 backdrop-blur-sm px-4 py-4 flex items-center gap-3">
+      <header className="sticky top-0 ios-safe-top z-30 bg-[#F5F5F0]/95 backdrop-blur-sm px-4 py-4 flex items-center gap-3">
         <button
           onClick={() => navigate(-1)}
           className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"

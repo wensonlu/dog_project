@@ -16,7 +16,7 @@ const BottomNav = () => {
     ];
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 h-20 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-lg border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-around px-4 pb-4 z-50">
+        <nav className="fixed bottom-0 left-0 right-0 min-h-20 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-lg border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-around px-4 pb-4 ios-safe-bottom z-50">
             {navItems.map((item) => {
                 const isActive = location.pathname === item.path ||
                     (item.path === '/wiki' && location.pathname.startsWith('/wiki')) ||
