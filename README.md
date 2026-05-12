@@ -119,6 +119,67 @@ npm run dev  # 开发服务器（默认端口 5173）
 
 访问 `http://localhost:5173` 查看应用。
 
+### iOS 本地真机运行（从 GitHub 拉源码）
+
+适用场景：开发者从 GitHub 拉取本项目后，在本地使用 iPhone 真机运行（非 TestFlight）。
+
+#### 前置条件
+
+- macOS（建议最新稳定版）
+- Xcode（建议 15+）
+- Apple ID（免费账号可真机调试，付费开发者账号可分发/TestFlight）
+- Node.js 20.x（项目推荐版本）
+- CocoaPods（`pod --version` 可用）
+- iPhone 已连接 Mac，并在设备上信任此电脑
+
+#### 步骤 1：拉取代码并安装依赖
+
+```bash
+git clone https://github.com/wensonlu/dog_project.git
+cd dog_project/frontend
+pnpm install
+```
+
+#### 步骤 2：构建前端并同步到 iOS 工程
+
+```bash
+pnpm build
+npx cap sync ios
+```
+
+#### 步骤 3：打开 Xcode 工程
+
+```bash
+npx cap open ios
+```
+
+打开后请使用 `ios/App/App.xcworkspace`（不要用 `.xcodeproj`）。
+
+#### 步骤 4：配置签名并选择真机
+
+在 Xcode 中：
+
+1. 选择 `TARGETS -> App -> Signing & Capabilities`
+2. 勾选 `Automatically manage signing`
+3. 选择你的 `Team`
+4. 确认 `Bundle Identifier` 唯一（例如 `com.yourname.dogproject`）
+5. 顶部运行设备选择你的 iPhone（不是模拟器）
+
+#### 步骤 5：首次真机运行
+
+点击 Xcode 运行按钮（或 `Cmd + R`）安装到手机。
+
+若手机提示开发者不受信任：
+
+`设置 -> 通用 -> VPN与设备管理 -> 开发者App -> 信任`
+
+#### 常见问题
+
+- `pod install` 失败：先执行 `sudo gem install cocoapods`，再重新 `npx cap sync ios`
+- 签名报错：检查 Team、Bundle Identifier 唯一性、Apple ID 登录状态
+- 代码改动未生效：重新执行 `pnpm build && npx cap sync ios`
+- Node 版本不符：切换到 Node 20.x 再安装依赖
+
 ## 核心功能
 
 - 🐕 **宠物浏览**: 卡片滑动式浏览宠物信息
