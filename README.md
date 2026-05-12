@@ -8,8 +8,8 @@
 
 快速入口（建议放在手机上打开）：
 
-- H5 在线体验：[https://dog-project-git-prod-wensons-projects-bb20578e.vercel.app](https://dog-project-git-prod-wensons-projects-bb20578e.vercel.app)
-- Android APK 下载：[GitHub Releases（最新版）](https://github.com/tonybigdeals/dog_project/releases/latest)
+- H5 在线体验：[https://dog-project-lyart.vercel.app/](https://dog-project-lyart.vercel.app/)
+- Android APK 下载：[GitHub Releases（APK 下载页）](https://github.com/wensonlu/dog_project/releases)
 - iOS 扫码安装：[iOS 安装二维码（请替换为你的实际地址）](https://example.com/ios-install-qr)
 
 说明：
