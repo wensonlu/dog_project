@@ -8,11 +8,26 @@
 :root {
   font-family: 'Noto Sans SC', sans-serif;
   -webkit-tap-highlight-color: transparent;
+  --app-bg-light: #f7f7f6;
+  --app-bg-dark: #1d1a15;
 }
 
+html,
 body {
   margin: 0;
   min-height: 100dvh;
+  background-color: var(--app-bg-light);
+}
+
+#root {
+  min-height: 100dvh;
+  background-color: var(--app-bg-light);
+}
+
+html.dark,
+html.dark body,
+html.dark #root {
+  background-color: var(--app-bg-dark);
 }
 
 @layer base {

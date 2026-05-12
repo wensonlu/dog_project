@@ -4,6 +4,22 @@
 
 这是一个**宠物领养平台**应用，采用类似 Tinder 的卡片滑动交互方式。项目采用前后端分离架构，支持用户浏览宠物、收藏、提交领养申请和管理后台审核等功能。
 
+## 在线体验与下载
+
+快速入口（建议放在手机上打开）：
+
+- H5 在线体验：[https://dog-project-git-prod-wensons-projects-bb20578e.vercel.app](https://dog-project-git-prod-wensons-projects-bb20578e.vercel.app)
+- Android APK 下载：[GitHub Releases（最新版）](https://github.com/tonybigdeals/dog_project/releases/latest)
+- iOS 扫码安装：[iOS 安装二维码（请替换为你的实际地址）](https://example.com/ios-install-qr)
+
+说明：
+- Android 用户可直接在 `Releases` 页面下载 `.apk` 安装包。
+- iOS 建议使用 TestFlight 或企业签名分发，并将安装二维码放到上述链接位置。
+
+iOS 安装扫码（示例二维码）：
+
+[![iOS 安装二维码](https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https%3A%2F%2Fexample.com%2Fios-install-qr)](https://example.com/ios-install-qr)
+
 ## 技术栈
 
 ### 设计
