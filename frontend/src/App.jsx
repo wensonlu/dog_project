@@ -35,6 +35,7 @@ import FollowingAuthors from './pages/FollowingAuthors';
 import ContentHub from './pages/ContentHub';
 import Shop from './pages/Shop';
 import ShopDetail from './pages/ShopDetail';
+import ShopOrder from './pages/ShopOrder';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -84,6 +85,7 @@ function AppContent() {
         {/* 商城路由 */}
         <Route path="/shop" element={<Shop />} />
         <Route path="/shop/:id" element={<ShopDetail />} />
+        <Route path="/shop/order" element={<ShopOrder />} />
 
         {/* 编辑资料 */}
           <Route path="/edit-profile" element={<PrivateRoute><EditProfile /></PrivateRoute>} />

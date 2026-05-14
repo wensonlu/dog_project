@@ -27,10 +27,11 @@ const SHOP_TASK_STEPS = [
   '解析购买需求',
   '进入商城页面',
   '选择目标商品',
-  '提交下单请求',
+  '进入订单页',
   '结果校验'
 ];
 const PROMPT_EXAMPLES = [
+  '帮我买一份主粮并下单',
   '帮我浏览论坛里关于“新手养狗”的热门帖子',
   '帮我给第一个帖子点赞',
   '帮我给当前帖子评论：谢谢分享，内容很有帮助',
@@ -358,7 +359,7 @@ export default function ChatAssistant() {
 
       setTaskStatusText('1/5 正在解析购买需求...');
       setStepStatus(0, 'running');
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 700));
       setStepStatus(0, 'ok');
 
       if (cancelTaskRef.current) throw new Error('任务已取消');
@@ -366,7 +367,7 @@ export default function ChatAssistant() {
       setTaskStatusText('2/5 正在进入商城页面...');
       setStepStatus(1, 'running');
       navigate('/shop');
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 900));
       setStepStatus(1, 'ok');
 
       if (cancelTaskRef.current) throw new Error('任务已取消');
@@ -374,71 +375,30 @@ export default function ChatAssistant() {
       setTaskStatusText('3/5 正在选择目标商品...');
       setStepStatus(2, 'running');
       navigate(`/shop/${productId}`);
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       setStepStatus(2, 'ok');
 
       if (cancelTaskRef.current) throw new Error('任务已取消');
 
-      setTaskStatusText('4/5 正在提交下单请求...');
+      setTaskStatusText('4/5 正在进入订单页...');
       setStepStatus(3, 'running');
-      const clientRequestId = `ai-shop-${Date.now()}`;
-      let createdOrder = null;
-      try {
-        const createResp = await fetch(SHOP_API.CREATE_ORDER, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.id,
-            productId,
-            quantity: Number(quantity) || 1,
-            source: 'ai-assistant',
-            clientRequestId
-          })
-        });
-        const createData = await createResp.json();
-        if (!createResp.ok || !createData?.order?.id) {
-          throw new Error(createData?.error || '下单请求失败');
-        }
-        createdOrder = createData.order;
-      } catch (apiError) {
-        // Fallback to local record in case backend is unavailable during development.
-        const fallbackKey = 'shop_orders';
-        const existing = JSON.parse(localStorage.getItem(fallbackKey) || '[]');
-        createdOrder = {
-          id: `local_order_${Date.now()}`,
-          productId,
-          quantity: Number(quantity) || 1,
-          userId: user.id,
-          createdAt: new Date().toISOString(),
-          source: 'ai-assistant'
-        };
-        existing.unshift(createdOrder);
-        localStorage.setItem(fallbackKey, JSON.stringify(existing));
-        console.warn('Create order via API failed, using local fallback:', apiError);
-      }
+      navigate(`/shop/order?productId=${encodeURIComponent(productId)}&quantity=${Number(quantity) || 1}`);
+      await new Promise((resolve) => setTimeout(resolve, 900));
       setStepStatus(3, 'ok');
 
       if (cancelTaskRef.current) throw new Error('任务已取消');
 
       setTaskStatusText('5/5 正在校验下单结果...');
       setStepStatus(4, 'running');
-      let pass = false;
-      if (createdOrder?.id?.startsWith('local_order_')) {
-        const verifyOrders = JSON.parse(localStorage.getItem('shop_orders') || '[]');
-        pass = verifyOrders.some((item) => item.id === createdOrder.id);
-      } else {
-        const verifyResp = await fetch(SHOP_API.GET_ORDER(createdOrder.id));
-        const verifyData = await verifyResp.json();
-        pass = Boolean(verifyResp.ok && verifyData?.order?.id === createdOrder.id);
-      }
+      const currentPath = `${window.location.pathname}${window.location.search}`;
+      const pass = currentPath.startsWith('/shop/order');
       if (!pass) throw new Error('校验失败：未检测到下单记录');
       setStepStatus(4, 'ok');
 
-      setTaskStatusText('已完成：已创建商城订单');
+      setTaskStatusText('已完成：已进入订单页，请确认地址并支付');
       setTaskContext((prev) => ({
         ...(prev || {}),
         taskType: 'shop',
-        orderId: createdOrder?.id || null,
         productId,
         quantity: Number(quantity) || 1,
         command,
@@ -600,7 +560,7 @@ export default function ChatAssistant() {
                   <div className="chat-welcome-icon">🐾</div>
                   <div className="chat-welcome-text">欢迎！你可以这样用我：</div>
                   <ul className="chat-welcome-examples">
-                    <li>• 商城智能下单：一句话触发选品、跳转详情、提交下单与校验</li>
+                    <li>• 商城智能下单：输入“帮我买主粮”可自动选品、下单并校验结果</li>
                     <li>• 浏览帖子：按主题检索热门/相关帖子，快速定位讨论</li>
                     <li>• 点赞帖子：支持对第 N 个帖子或当前帖子执行点赞</li>
                     <li>• 评论帖子：可直接指定评论内容，助手自动执行评论流程</li>
