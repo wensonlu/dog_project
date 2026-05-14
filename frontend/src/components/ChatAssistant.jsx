@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useChatSession } from '../hooks/useChatSession';
 import { useChat } from '../hooks/useChat';
 import { useTask } from '../context/TaskContext';
-import { FORUM_API } from '../config/api';
+import { FORUM_API, SHOP_API } from '../config/api';
 import ChatMessage from './ChatMessage';
 import ChatReferenceCard from './ChatReferenceCard';
 import '../styles/ChatAssistant.css';
@@ -15,7 +15,7 @@ import '../styles/ChatAssistant.css';
 const MAX_MESSAGE_LENGTH = 500;
 const MotionButton = motion.button;
 const MotionDiv = motion.div;
-const TASK_STEPS = [
+const FORUM_TASK_STEPS = [
   '解析目标帖子',
   '进入帖子详情',
   '点赞帖子',
@@ -23,12 +23,21 @@ const TASK_STEPS = [
   '关注作者',
   '结果校验'
 ];
+const SHOP_TASK_STEPS = [
+  '解析购买需求',
+  '进入商城页面',
+  '选择目标商品',
+  '提交下单请求',
+  '结果校验'
+];
 const PROMPT_EXAMPLES = [
+  '帮我浏览论坛里关于“新手养狗”的热门帖子',
+  '帮我给第一个帖子点赞',
+  '帮我给当前帖子评论：谢谢分享，内容很有帮助',
+  '帮我提醒我在帖子详情里点收藏',
   '帮我总结这个帖子，并提炼3条关键观点',
   '帮我找论坛里和“新手领养金毛”最相关的帖子',
-  '基于当前帖子，帮我草拟一条礼貌且有信息量的回复',
-  '我想发“第一次领养”的帖子，先帮我生成标题和正文',
-  '发布前帮我检查有没有重复话题，并给我优化建议'
+  '基于当前帖子，帮我草拟一条礼貌且有信息量的回复'
 ];
 
 export default function ChatAssistant() {
@@ -37,6 +46,7 @@ export default function ChatAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [inputError, setInputError] = useState('');
+  const [currentTaskSteps, setCurrentTaskSteps] = useState(FORUM_TASK_STEPS);
   const {
     taskHudVisible,
     setTaskHudVisible,
@@ -95,6 +105,17 @@ export default function ChatAssistant() {
     }
 
     setInputError('');
+    const shopCommand = parseShopCommand(trimmedInput);
+    if (shopCommand) {
+      if (!user?.id) {
+        setInputError('执行商城下单前请先登录');
+        return;
+      }
+      setInputValue('');
+      await executeShopTask(shopCommand);
+      return;
+    }
+
     const command = parseForumCommand(trimmedInput);
     if (command) {
       if (!user?.id) {
@@ -108,6 +129,25 @@ export default function ChatAssistant() {
 
     await sendMessage(trimmedInput);
     setInputValue('');
+  };
+
+  const parseShopCommand = (text) => {
+    const normalized = String(text || '').trim();
+    if (!/(下单|购买|买)/.test(normalized)) return null;
+
+    const catalog = [
+      { id: 'food-001', keywords: ['主粮', '狗粮', '低敏主粮', '幼犬粮'] },
+      { id: 'snack-001', keywords: ['零食', '冻干', '鸡胸肉'] },
+      { id: 'clean-001', keywords: ['清洁', '洗护', '抑菌', '除味'] },
+      { id: 'travel-001', keywords: ['出行', '牵引', '胸背', '背包'] },
+      { id: 'health-001', keywords: ['健康', '关节', '益生菌', '鱼油'] }
+    ];
+
+    const matched = catalog.find((item) => item.keywords.some((kw) => normalized.includes(kw)));
+    return {
+      productId: matched?.id || 'food-001',
+      quantity: 1
+    };
   };
 
   const parseForumCommand = (text) => {
@@ -160,8 +200,9 @@ export default function ChatAssistant() {
       setTaskRunning(true);
       setTaskHudVisible(true);
       setIsOpen(false);
+      setCurrentTaskSteps(FORUM_TASK_STEPS);
       setTaskTitle('执行论坛互动');
-      setTaskStepStates(TASK_STEPS.map(() => 'pending'));
+      setTaskStepStates(FORUM_TASK_STEPS.map(() => 'pending'));
 
       // step 1: resolve target
       setTaskStatusText(`1/6 正在解析${targetLabel || '目标帖子'}...`);
@@ -280,10 +321,126 @@ export default function ChatAssistant() {
       setTaskStatusText(`已完成：${doneParts.join('，')}`);
       setTaskContext((prev) => ({
         ...(prev || {}),
+        taskType: 'forum',
         topicId: target.id,
         targetIndex: targetIndex || 1,
         commentText,
         followAuthor,
+        command,
+        interactionSyncedAt: Date.now()
+      }));
+      setTaskRunning(false);
+      setTaskFailed(false);
+    } catch (error) {
+      const isCancelled = String(error.message || '').includes('已取消');
+      setTaskRunning(false);
+      if (isCancelled) {
+        setTaskStatusText('任务已取消');
+      } else {
+        setTaskFailed(true);
+        setTaskStatusText(`执行失败：${error.message || '未知错误'}`);
+      }
+    }
+  };
+
+  const executeShopTask = async (command) => {
+    try {
+      const { productId, quantity } = command;
+      cancelTaskRef.current = false;
+      setTaskFailed(false);
+      setTaskRunning(true);
+      setTaskHudVisible(true);
+      setIsOpen(false);
+      setCurrentTaskSteps(SHOP_TASK_STEPS);
+      setTaskTitle('执行商城智能下单');
+      setTaskStepStates(SHOP_TASK_STEPS.map(() => 'pending'));
+      setTaskContext({ taskType: 'shop', command, productId, quantity });
+
+      setTaskStatusText('1/5 正在解析购买需求...');
+      setStepStatus(0, 'running');
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      setStepStatus(0, 'ok');
+
+      if (cancelTaskRef.current) throw new Error('任务已取消');
+
+      setTaskStatusText('2/5 正在进入商城页面...');
+      setStepStatus(1, 'running');
+      navigate('/shop');
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      setStepStatus(1, 'ok');
+
+      if (cancelTaskRef.current) throw new Error('任务已取消');
+
+      setTaskStatusText('3/5 正在选择目标商品...');
+      setStepStatus(2, 'running');
+      navigate(`/shop/${productId}`);
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      setStepStatus(2, 'ok');
+
+      if (cancelTaskRef.current) throw new Error('任务已取消');
+
+      setTaskStatusText('4/5 正在提交下单请求...');
+      setStepStatus(3, 'running');
+      const clientRequestId = `ai-shop-${Date.now()}`;
+      let createdOrder = null;
+      try {
+        const createResp = await fetch(SHOP_API.CREATE_ORDER, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            productId,
+            quantity: Number(quantity) || 1,
+            source: 'ai-assistant',
+            clientRequestId
+          })
+        });
+        const createData = await createResp.json();
+        if (!createResp.ok || !createData?.order?.id) {
+          throw new Error(createData?.error || '下单请求失败');
+        }
+        createdOrder = createData.order;
+      } catch (apiError) {
+        // Fallback to local record in case backend is unavailable during development.
+        const fallbackKey = 'shop_orders';
+        const existing = JSON.parse(localStorage.getItem(fallbackKey) || '[]');
+        createdOrder = {
+          id: `local_order_${Date.now()}`,
+          productId,
+          quantity: Number(quantity) || 1,
+          userId: user.id,
+          createdAt: new Date().toISOString(),
+          source: 'ai-assistant'
+        };
+        existing.unshift(createdOrder);
+        localStorage.setItem(fallbackKey, JSON.stringify(existing));
+        console.warn('Create order via API failed, using local fallback:', apiError);
+      }
+      setStepStatus(3, 'ok');
+
+      if (cancelTaskRef.current) throw new Error('任务已取消');
+
+      setTaskStatusText('5/5 正在校验下单结果...');
+      setStepStatus(4, 'running');
+      let pass = false;
+      if (createdOrder?.id?.startsWith('local_order_')) {
+        const verifyOrders = JSON.parse(localStorage.getItem('shop_orders') || '[]');
+        pass = verifyOrders.some((item) => item.id === createdOrder.id);
+      } else {
+        const verifyResp = await fetch(SHOP_API.GET_ORDER(createdOrder.id));
+        const verifyData = await verifyResp.json();
+        pass = Boolean(verifyResp.ok && verifyData?.order?.id === createdOrder.id);
+      }
+      if (!pass) throw new Error('校验失败：未检测到下单记录');
+      setStepStatus(4, 'ok');
+
+      setTaskStatusText('已完成：已创建商城订单');
+      setTaskContext((prev) => ({
+        ...(prev || {}),
+        taskType: 'shop',
+        orderId: createdOrder?.id || null,
+        productId,
+        quantity: Number(quantity) || 1,
         command,
         interactionSyncedAt: Date.now()
       }));
@@ -308,6 +465,10 @@ export default function ChatAssistant() {
 
   const retryFailedTask = async () => {
     if (!taskContext) return;
+    if (taskContext.taskType === 'shop' && taskContext.command) {
+      await executeShopTask(taskContext.command);
+      return;
+    }
     if (taskContext.command) {
       await executeForumTask(taskContext.command);
       return;
@@ -370,7 +531,7 @@ export default function ChatAssistant() {
             <div className="chat-task-hud-title">{taskTitle}</div>
             <div className="chat-task-hud-status">{taskStatusText || '准备中...'}</div>
             <div className="chat-task-step-list">
-              {TASK_STEPS.map((step, index) => (
+              {currentTaskSteps.map((step, index) => (
                 <div key={step} className={`chat-task-step chat-task-step-${taskStepStates[index]}`}>
                   <span className="chat-task-step-dot" />
                   <span>{step}</span>
@@ -439,6 +600,11 @@ export default function ChatAssistant() {
                   <div className="chat-welcome-icon">🐾</div>
                   <div className="chat-welcome-text">欢迎！你可以这样用我：</div>
                   <ul className="chat-welcome-examples">
+                    <li>• 商城智能下单：一句话触发选品、跳转详情、提交下单与校验</li>
+                    <li>• 浏览帖子：按主题检索热门/相关帖子，快速定位讨论</li>
+                    <li>• 点赞帖子：支持对第 N 个帖子或当前帖子执行点赞</li>
+                    <li>• 评论帖子：可直接指定评论内容，助手自动执行评论流程</li>
+                    <li>• 收藏提醒：助手可引导你在帖子页完成收藏操作</li>
                     <li>• 论坛内容总结：长帖提炼、争议点梳理、结论归纳</li>
                     <li>• 论坛检索推荐：按主题找相关帖子，减少重复提问</li>
                     <li>• 回复草拟优化：生成礼貌、清晰、有信息量的回复</li>

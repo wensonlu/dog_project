@@ -17,6 +17,7 @@ const permissionsRoutes = require('./routes/permissions');
 const storiesRoutes = require('./routes/stories');
 const wikiRoutes = require('./routes/wiki');
 const chatRoutes = require('./routes/chat');
+const shopRoutes = require('./routes/shop');
 
 const app = express();
 
@@ -69,6 +70,7 @@ mountRoute('/permissions', permissionsRoutes);
 mountRoute('/stories', storiesRoutes);
 mountRoute('/wiki', wikiRoutes);
 mountRoute('/chat', chatRoutes);
+mountRoute('/shop', shopRoutes);
 mountOptionalRoute('/agent', './routes/agent');
 mountOptionalRoute('/health', './routes/health');
 
