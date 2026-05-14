@@ -76,9 +76,10 @@ function AppContent() {
         <Route path="/wiki/search" element={<WikiSearch />} />
 
         {/* 编辑资料 */}
-        <Route path="/edit-profile" element={<PrivateRoute><EditProfile /></PrivateRoute>} />
+          <Route path="/edit-profile" element={<PrivateRoute><EditProfile /></PrivateRoute>} />
         
           </Routes>
+          <ChatAssistant />
         </ForumListProvider>
       </TaskProvider>
     </DogProvider>
@@ -90,7 +91,6 @@ function App() {
     <AuthProvider>
       <Router>
         <AppContent />
-        <ChatAssistant />
       </Router>
     </AuthProvider>
   );
