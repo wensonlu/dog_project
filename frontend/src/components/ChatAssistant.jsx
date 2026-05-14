@@ -20,6 +20,7 @@ const TASK_STEPS = [
   '进入帖子详情',
   '点赞帖子',
   '评论内容',
+  '关注作者',
   '结果校验'
 ];
 const PROMPT_EXAMPLES = [
@@ -101,7 +102,7 @@ export default function ChatAssistant() {
         return;
       }
       setInputValue('');
-      await executeForumTask(command.targetIndex, command.commentText);
+      await executeForumTask(command);
       return;
     }
 
@@ -111,28 +112,49 @@ export default function ChatAssistant() {
 
   const parseForumCommand = (text) => {
     const normalized = String(text || '').trim();
-    // 先匹配“第N个帖子”
-    const targetMatch = normalized.match(/第([一二三四五六七八九十\d]+)个帖子/);
-    if (!targetMatch) return null;
-    // 必须包含“点赞”
-    if (!/点赞/.test(normalized)) return null;
+    const hasLikeIntent = /点赞/.test(normalized);
+    if (!hasLikeIntent) return null;
 
-    const indexRaw = targetMatch[1];
+    const followAuthor = /关注作者/.test(normalized);
+    const targetMatch = normalized.match(/第([一二三四五六七八九十\d]+)个帖子/);
+    const indexRaw = targetMatch?.[1];
     const indexMap = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
-    const targetIndex = Number(indexRaw) || indexMap[indexRaw] || 1;
+    const targetIndex = indexRaw ? (Number(indexRaw) || indexMap[indexRaw] || 1) : null;
+
+    const currentTopicMatch = window.location.pathname.match(/^\/forum\/([^/]+)$/);
+    const currentTopicId = currentTopicMatch?.[1] || null;
+    const useCurrentTopic = /这个帖子|当前帖子/.test(normalized);
+    const useLastTopic = /刚才那个帖子|上一个帖子/.test(normalized);
+    const lastTopicId = taskContext?.topicId || null;
+
+    let targetTopicId = null;
+    let targetLabel = '';
+    if (targetIndex) {
+      targetLabel = `第${targetIndex}个帖子`;
+    } else if (useCurrentTopic && currentTopicId) {
+      targetTopicId = currentTopicId;
+      targetLabel = '当前帖子';
+    } else if (useLastTopic && lastTopicId) {
+      targetTopicId = lastTopicId;
+      targetLabel = '刚才那个帖子';
+    } else {
+      return null;
+    }
 
     // 可选评论内容：评论xxx / 并评论xxx / 再评论xxx
     const commentMatch = normalized.match(/评论[：:\s]*([\s\S]+)$/);
     const commentText = commentMatch?.[1]?.trim() || '';
-    return { targetIndex, commentText };
+    return { targetIndex, targetTopicId, targetLabel, commentText, followAuthor };
   };
 
   const setStepStatus = (stepIndex, status) => {
     setTaskStepStates((prev) => prev.map((item, idx) => (idx === stepIndex ? status : item)));
   };
 
-  const executeForumTask = async (targetIndex, commentText) => {
+  const executeForumTask = async (command) => {
     try {
+      const { targetIndex, targetTopicId, targetLabel, commentText, followAuthor } = command;
+      const hasComment = !!String(commentText || '').trim();
       cancelTaskRef.current = false;
       setTaskFailed(false);
       setTaskRunning(true);
@@ -142,29 +164,37 @@ export default function ChatAssistant() {
       setTaskStepStates(TASK_STEPS.map(() => 'pending'));
 
       // step 1: resolve target
-      setTaskStatusText(`1/5 正在解析第${targetIndex}个帖子...`);
+      setTaskStatusText(`1/6 正在解析${targetLabel || '目标帖子'}...`);
       setStepStatus(0, 'running');
-      const listResp = await fetch(`${FORUM_API.LIST}?format=mcp&limit=${Math.max(targetIndex, 10)}&cursor=0&userId=${user.id}`);
-      const listData = await listResp.json();
-      const items = listData.items || [];
-      const target = items[targetIndex - 1];
-      if (!target) throw new Error(`未找到第${targetIndex}个帖子`);
+      let target = null;
+      if (targetTopicId) {
+        const topicResp = await fetch(`${FORUM_API.LIST}/${targetTopicId}?userId=${encodeURIComponent(user.id)}`);
+        if (!topicResp.ok) throw new Error('未找到目标帖子');
+        const topicData = await topicResp.json();
+        target = topicData.topic;
+      } else {
+        const listResp = await fetch(`${FORUM_API.LIST}?format=mcp&limit=${Math.max(targetIndex || 1, 10)}&cursor=0&userId=${user.id}`);
+        const listData = await listResp.json();
+        const items = listData.items || [];
+        target = items[(targetIndex || 1) - 1];
+      }
+      if (!target) throw new Error(`未找到${targetLabel || '目标帖子'}`);
       setStepStatus(0, 'ok');
 
       if (cancelTaskRef.current) throw new Error('任务已取消');
 
       // step 2: navigate
-      setTaskStatusText('2/5 正在进入帖子详情...');
+      setTaskStatusText('2/6 正在进入帖子详情...');
       setStepStatus(1, 'running');
       navigate(`/forum/${target.id}`);
-      setTaskContext({ topicId: target.id, commentText, targetIndex });
+      setTaskContext({ topicId: target.id, commentText, targetIndex: targetIndex || 1, followAuthor, command });
       await new Promise((resolve) => setTimeout(resolve, 350));
       setStepStatus(1, 'ok');
 
       if (cancelTaskRef.current) throw new Error('任务已取消');
 
       // step 3: like
-      setTaskStatusText('3/5 正在点赞帖子...');
+      setTaskStatusText('3/6 正在点赞帖子...');
       setStepStatus(2, 'running');
       const likeResp = await fetch(`${FORUM_API.LIST}/${target.id}/like`, {
         method: 'POST',
@@ -176,17 +206,17 @@ export default function ChatAssistant() {
       setTaskContext((prev) => ({
         ...(prev || {}),
         topicId: target.id,
-        targetIndex,
+        targetIndex: targetIndex || 1,
         commentText,
+        followAuthor,
         likeSyncedAt: Date.now()
       }));
 
       if (cancelTaskRef.current) throw new Error('任务已取消');
 
       // step 4: reply via confirm flow (optional)
-      const hasComment = !!String(commentText || '').trim();
       if (hasComment) {
-        setTaskStatusText(`4/5 正在评论“${commentText}”...`);
+        setTaskStatusText(`4/6 正在评论“${commentText}”...`);
         setStepStatus(3, 'running');
         const precheckResp = await fetch(FORUM_API.PRECHECK_REPLY, {
           method: 'POST',
@@ -210,9 +240,26 @@ export default function ChatAssistant() {
 
       if (cancelTaskRef.current) throw new Error('任务已取消');
 
-      // step 5: verify by reloading detail
-      setTaskStatusText('5/5 正在校验结果...');
-      setStepStatus(4, 'running');
+      // step 5: follow author (optional)
+      if (followAuthor) {
+        setTaskStatusText('5/6 正在关注作者...');
+        setStepStatus(4, 'running');
+        const followResp = await fetch(`${FORUM_API.LIST}/${target.id}/follow`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id })
+        });
+        if (!followResp.ok) throw new Error('关注作者失败');
+        setStepStatus(4, 'ok');
+      } else {
+        setStepStatus(4, 'skipped');
+      }
+
+      if (cancelTaskRef.current) throw new Error('任务已取消');
+
+      // step 6: verify by reloading detail
+      setTaskStatusText('6/6 正在校验结果...');
+      setStepStatus(5, 'running');
       const verifyResp = await fetch(FORUM_API.VERIFY_INTERACTION, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -226,13 +273,18 @@ export default function ChatAssistant() {
       if (!verifyResp.ok || !verifyData.pass) {
         throw new Error(verifyData.error || '校验失败：未检测到点赞或评论结果');
       }
-      setStepStatus(4, 'ok');
-      setTaskStatusText(`已完成：已为第${targetIndex}个帖子点赞并评论“${commentText}”`);
+      setStepStatus(5, 'ok');
+      const doneParts = ['已点赞'];
+      if (hasComment) doneParts.push(`已评论“${commentText}”`);
+      if (followAuthor) doneParts.push('已关注作者');
+      setTaskStatusText(`已完成：${doneParts.join('，')}`);
       setTaskContext((prev) => ({
         ...(prev || {}),
         topicId: target.id,
-        targetIndex,
+        targetIndex: targetIndex || 1,
         commentText,
+        followAuthor,
+        command,
         interactionSyncedAt: Date.now()
       }));
       setTaskRunning(false);
@@ -256,7 +308,17 @@ export default function ChatAssistant() {
 
   const retryFailedTask = async () => {
     if (!taskContext) return;
-    await executeForumTask(taskContext.targetIndex || 1, taskContext.commentText);
+    if (taskContext.command) {
+      await executeForumTask(taskContext.command);
+      return;
+    }
+    await executeForumTask({
+      targetIndex: taskContext.targetIndex || 1,
+      targetTopicId: taskContext.topicId || null,
+      targetLabel: taskContext.topicId ? '目标帖子' : `第${taskContext.targetIndex || 1}个帖子`,
+      commentText: taskContext.commentText || '',
+      followAuthor: Boolean(taskContext.followAuthor)
+    });
   };
 
   const handleUsePromptExample = (text) => {
