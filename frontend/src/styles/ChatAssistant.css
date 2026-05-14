@@ -266,6 +266,96 @@
   cursor: not-allowed;
 }
 
+.chat-task-hud {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+  padding: 12px;
+  z-index: 1010;
+}
+
+.chat-task-hud-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.chat-task-hud-status {
+  margin-top: 3px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.chat-task-step-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.chat-task-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  border-radius: 9px;
+  padding: 6px 8px;
+}
+
+.chat-task-step-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.chat-task-step-pending {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.chat-task-step-running {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.chat-task-step-ok {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.chat-task-step-failed {
+  background: #fff1f2;
+  color: #b91c1c;
+}
+
+.chat-task-hud-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.chat-task-btn {
+  flex: 1;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chat-task-btn-primary {
+  border: none;
+  background: linear-gradient(135deg, #f43f5e, #ec4899);
+  color: #fff;
+}
+
 /* 深色模式 */
 @media (prefers-color-scheme: dark) {
   .chat-window {
@@ -331,6 +421,45 @@
 
   .chat-regenerate-btn:hover:not(:disabled) {
     background: #4b5563;
+  }
+
+  .chat-task-hud {
+    background: #111827;
+    border-color: #374151;
+  }
+
+  .chat-task-hud-title {
+    color: #f3f4f6;
+  }
+
+  .chat-task-hud-status {
+    color: #9ca3af;
+  }
+
+  .chat-task-step-pending {
+    background: #1f2937;
+    color: #9ca3af;
+  }
+
+  .chat-task-step-running {
+    background: #1e3a8a;
+    color: #bfdbfe;
+  }
+
+  .chat-task-step-ok {
+    background: #14532d;
+    color: #bbf7d0;
+  }
+
+  .chat-task-step-failed {
+    background: #7f1d1d;
+    color: #fecaca;
+  }
+
+  .chat-task-btn {
+    background: #1f2937;
+    border-color: #374151;
+    color: #e5e7eb;
   }
 }
 

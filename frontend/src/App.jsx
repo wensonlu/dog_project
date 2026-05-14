@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { DogProvider } from './context/DogContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ForumListProvider } from './context/ForumListContext';
+import { TaskProvider } from './context/TaskContext';
 import PermissionRoute from './components/PermissionRoute';
 import { PERMISSIONS } from './constants/permissions';
 import ChatAssistant from './components/ChatAssistant';
@@ -41,8 +42,9 @@ const PrivateRoute = ({ children }) => {
 function AppContent() {
   return (
     <DogProvider>
-      <ForumListProvider>
-        <Routes>
+      <TaskProvider>
+        <ForumListProvider>
+          <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/" element={<Home />} />
@@ -76,8 +78,9 @@ function AppContent() {
         {/* 编辑资料 */}
         <Route path="/edit-profile" element={<PrivateRoute><EditProfile /></PrivateRoute>} />
         
-        </Routes>
-      </ForumListProvider>
+          </Routes>
+        </ForumListProvider>
+      </TaskProvider>
     </DogProvider>
   );
 }

@@ -38,4 +38,5 @@ export const FORUM_API = {
   CONFIRM_TOPIC: `${API_BASE_URL}/forum/confirm/topic`,
   PRECHECK_REPLY: `${API_BASE_URL}/forum/precheck/reply`,
   CONFIRM_REPLY: `${API_BASE_URL}/forum/confirm/reply`,
+  VERIFY_INTERACTION: `${API_BASE_URL}/forum/verify-interaction`,
 };

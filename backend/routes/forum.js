@@ -19,6 +19,7 @@ const {
   confirmCreateTopic,
   precheckCreateReply,
   confirmCreateReply,
+  verifyTopicInteraction,
   toggleTopicAuthorFollow,
   getMyFollowingAuthors,
   getForumContext
@@ -81,6 +82,7 @@ router.post('/precheck/topic', checkSupabase, precheckCreateTopic);
 router.post('/confirm/topic', checkSupabase, confirmCreateTopic);
 router.post('/precheck/reply', checkSupabase, precheckCreateReply);
 router.post('/confirm/reply', checkSupabase, confirmCreateReply);
+router.post('/verify-interaction', checkSupabase, verifyTopicInteraction);
 
 // Get my following authors
 router.get('/follows/me', checkSupabase, getMyFollowingAuthors);

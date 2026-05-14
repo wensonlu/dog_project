@@ -1464,6 +1464,59 @@ async function confirmCreateReply(req, res) {
   }
 }
 
+async function verifyTopicInteraction(req, res) {
+  const client = getSupabaseClient(req);
+  const { topicId, userId, commentContains } = req.body;
+
+  if (!topicId || !userId) {
+    return res.status(400).json({ error: 'topicId and userId are required' });
+  }
+
+  try {
+    const { data: like } = await client
+      .from('forum_topic_likes')
+      .select('id')
+      .eq('topic_id', topicId)
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle();
+
+    let commentMatched = true;
+    let matchedComment = null;
+    if (commentContains && String(commentContains).trim()) {
+      const keyword = String(commentContains).trim();
+      const { data: comment } = await client
+        .from('forum_comments')
+        .select('id, content, created_at')
+        .eq('topic_id', topicId)
+        .eq('user_id', userId)
+        .ilike('content', `%${keyword}%`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      commentMatched = !!comment;
+      matchedComment = comment || null;
+    }
+
+    const liked = !!like;
+    const pass = liked && commentMatched;
+    const result = {
+      pass,
+      evidence: {
+        liked,
+        commentMatched,
+        commentId: matchedComment?.id || null,
+        commentCreatedAt: matchedComment?.created_at || null
+      }
+    };
+    await logForumMcpAction(client, 'verify_topic_interaction', userId, { topicId, commentContains }, result, true);
+    res.json(result);
+  } catch (error) {
+    console.error('Error verifying topic interaction:', error);
+    res.status(500).json({ error: 'Failed to verify topic interaction' });
+  }
+}
+
 module.exports = {
   getAllTopics,
   getTopicById,
@@ -1483,6 +1536,7 @@ module.exports = {
   confirmCreateTopic,
   precheckCreateReply,
   confirmCreateReply,
+  verifyTopicInteraction,
   toggleTopicAuthorFollow,
   getMyFollowingAuthors,
   getForumContext

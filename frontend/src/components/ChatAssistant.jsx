@@ -2,9 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useChatSession } from '../hooks/useChatSession';
 import { useChat } from '../hooks/useChat';
+import { useTask } from '../context/TaskContext';
+import { FORUM_API } from '../config/api';
 import ChatMessage from './ChatMessage';
 import ChatReferenceCard from './ChatReferenceCard';
 import '../styles/ChatAssistant.css';
@@ -12,6 +15,13 @@ import '../styles/ChatAssistant.css';
 const MAX_MESSAGE_LENGTH = 500;
 const MotionButton = motion.button;
 const MotionDiv = motion.div;
+const TASK_STEPS = [
+  '解析目标帖子',
+  '进入帖子详情',
+  '点赞帖子',
+  '评论内容',
+  '结果校验'
+];
 const PROMPT_EXAMPLES = [
   '帮我总结这个帖子，并提炼3条关键观点',
   '帮我找论坛里和“新手领养金毛”最相关的帖子',
@@ -22,10 +32,28 @@ const PROMPT_EXAMPLES = [
 
 export default function ChatAssistant() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [inputError, setInputError] = useState('');
+  const {
+    taskHudVisible,
+    setTaskHudVisible,
+    taskTitle,
+    setTaskTitle,
+    taskStatusText,
+    setTaskStatusText,
+    taskRunning,
+    setTaskRunning,
+    taskFailed,
+    setTaskFailed,
+    taskContext,
+    setTaskContext,
+    taskStepStates,
+    setTaskStepStates,
+  } = useTask();
   const messagesEndRef = useRef(null);
+  const cancelTaskRef = useRef(false);
 
   const { sessionId, loading: sessionLoading } = useChatSession();
   const {
@@ -66,8 +94,136 @@ export default function ChatAssistant() {
     }
 
     setInputError('');
+    const match = trimmedInput.match(/帮我给第([一二三四五六七八九十\\d]+)个帖子点赞评论(.+)/);
+    if (match) {
+      if (!user?.id) {
+        setInputError('执行互动任务前请先登录');
+        return;
+      }
+      const indexRaw = match[1];
+      const commentText = match[2]?.trim();
+      const indexMap = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+      const targetIndex = Number(indexRaw) || indexMap[indexRaw] || 1;
+      setInputValue('');
+      await executeForumTask(targetIndex, commentText);
+      return;
+    }
+
     await sendMessage(trimmedInput);
     setInputValue('');
+  };
+
+  const setStepStatus = (stepIndex, status) => {
+    setTaskStepStates((prev) => prev.map((item, idx) => (idx === stepIndex ? status : item)));
+  };
+
+  const executeForumTask = async (targetIndex, commentText) => {
+    try {
+      cancelTaskRef.current = false;
+      setTaskFailed(false);
+      setTaskRunning(true);
+      setTaskHudVisible(true);
+      setIsOpen(false);
+      setTaskTitle('执行论坛互动');
+      setTaskStepStates(TASK_STEPS.map(() => 'pending'));
+
+      // step 1: resolve target
+      setTaskStatusText(`1/5 正在解析第${targetIndex}个帖子...`);
+      setStepStatus(0, 'running');
+      const listResp = await fetch(`${FORUM_API.LIST}?format=mcp&limit=${Math.max(targetIndex, 10)}&cursor=0&userId=${user.id}`);
+      const listData = await listResp.json();
+      const items = listData.items || [];
+      const target = items[targetIndex - 1];
+      if (!target) throw new Error(`未找到第${targetIndex}个帖子`);
+      setStepStatus(0, 'ok');
+
+      if (cancelTaskRef.current) throw new Error('任务已取消');
+
+      // step 2: navigate
+      setTaskStatusText('2/5 正在进入帖子详情...');
+      setStepStatus(1, 'running');
+      navigate(`/forum/${target.id}`);
+      setTaskContext({ topicId: target.id, commentText, targetIndex });
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      setStepStatus(1, 'ok');
+
+      if (cancelTaskRef.current) throw new Error('任务已取消');
+
+      // step 3: like
+      setTaskStatusText('3/5 正在点赞帖子...');
+      setStepStatus(2, 'running');
+      const likeResp = await fetch(`${FORUM_API.LIST}/${target.id}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id })
+      });
+      if (!likeResp.ok) throw new Error('点赞失败');
+      setStepStatus(2, 'ok');
+
+      if (cancelTaskRef.current) throw new Error('任务已取消');
+
+      // step 4: reply via confirm flow
+      setTaskStatusText(`4/5 正在评论“${commentText}”...`);
+      setStepStatus(3, 'running');
+      const precheckResp = await fetch(FORUM_API.PRECHECK_REPLY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topicId: target.id, content: commentText, userId: user.id })
+      });
+      const precheckData = await precheckResp.json();
+      if (!precheckResp.ok) throw new Error(precheckData.error || '评论预检查失败');
+
+      const confirmResp = await fetch(FORUM_API.CONFIRM_REPLY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmToken: precheckData.confirmToken, userId: user.id })
+      });
+      const confirmData = await confirmResp.json();
+      if (!confirmResp.ok || !confirmData.ok) throw new Error(confirmData.error || '评论确认失败');
+      setStepStatus(3, 'ok');
+
+      if (cancelTaskRef.current) throw new Error('任务已取消');
+
+      // step 5: verify by reloading detail
+      setTaskStatusText('5/5 正在校验结果...');
+      setStepStatus(4, 'running');
+      const verifyResp = await fetch(FORUM_API.VERIFY_INTERACTION, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topicId: target.id,
+          userId: user.id,
+          commentContains: commentText
+        })
+      });
+      const verifyData = await verifyResp.json();
+      if (!verifyResp.ok || !verifyData.pass) {
+        throw new Error(verifyData.error || '校验失败：未检测到点赞或评论结果');
+      }
+      setStepStatus(4, 'ok');
+      setTaskStatusText(`已完成：已为第${targetIndex}个帖子点赞并评论“${commentText}”`);
+      setTaskRunning(false);
+      setTaskFailed(false);
+    } catch (error) {
+      const isCancelled = String(error.message || '').includes('已取消');
+      setTaskRunning(false);
+      if (isCancelled) {
+        setTaskStatusText('任务已取消');
+      } else {
+        setTaskFailed(true);
+        setTaskStatusText(`执行失败：${error.message || '未知错误'}`);
+      }
+    }
+  };
+
+  const handleCancelTask = () => {
+    cancelTaskRef.current = true;
+    setTaskRunning(false);
+  };
+
+  const retryFailedTask = async () => {
+    if (!taskContext) return;
+    await executeForumTask(taskContext.targetIndex || 1, taskContext.commentText);
   };
 
   const handleUsePromptExample = (text) => {
@@ -104,6 +260,44 @@ export default function ChatAssistant() {
               <div className="chat-bubble-badge">{unreadCount > 9 ? '9+' : unreadCount}</div>
             )}
           </MotionButton>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {taskHudVisible && (
+          <MotionDiv
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ duration: 0.22 }}
+            className="chat-task-hud"
+          >
+            <div className="chat-task-hud-title">{taskTitle}</div>
+            <div className="chat-task-hud-status">{taskStatusText || '准备中...'}</div>
+            <div className="chat-task-step-list">
+              {TASK_STEPS.map((step, index) => (
+                <div key={step} className={`chat-task-step chat-task-step-${taskStepStates[index]}`}>
+                  <span className="chat-task-step-dot" />
+                  <span>{step}</span>
+                </div>
+              ))}
+            </div>
+            <div className="chat-task-hud-actions">
+              {taskRunning ? (
+                <button type="button" className="chat-task-btn" onClick={handleCancelTask}>取消任务</button>
+              ) : taskFailed ? (
+                <>
+                  <button type="button" className="chat-task-btn chat-task-btn-primary" onClick={retryFailedTask}>重试任务</button>
+                  <button type="button" className="chat-task-btn" onClick={() => setTaskHudVisible(false)}>关闭</button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="chat-task-btn chat-task-btn-primary" onClick={() => setTaskHudVisible(false)}>完成</button>
+                  <button type="button" className="chat-task-btn" onClick={() => setIsOpen(true)}>打开助手</button>
+                </>
+              )}
+            </div>
+          </MotionDiv>
         )}
       </AnimatePresence>
 
