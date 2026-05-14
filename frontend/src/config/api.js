@@ -27,3 +27,15 @@ export const CHAT_API = {
   GET_SESSION: (sessionId) => `${API_BASE_URL}/chat/sessions/${sessionId}`,
   DELETE_SESSION: (sessionId) => `${API_BASE_URL}/chat/sessions/${sessionId}`
 };
+
+export const FORUM_API = {
+  LIST: `${API_BASE_URL}/forum`,
+  CONTEXT: `${API_BASE_URL}/forum/context`,
+  RELATED_TOPICS: `${API_BASE_URL}/forum/related-topics`,
+  DRAFT_REPLY: `${API_BASE_URL}/forum/draft-reply`,
+  DRAFT_TOPIC: `${API_BASE_URL}/forum/draft-topic`,
+  PRECHECK_TOPIC: `${API_BASE_URL}/forum/precheck/topic`,
+  CONFIRM_TOPIC: `${API_BASE_URL}/forum/confirm/topic`,
+  PRECHECK_REPLY: `${API_BASE_URL}/forum/precheck/reply`,
+  CONFIRM_REPLY: `${API_BASE_URL}/forum/confirm/reply`,
+};

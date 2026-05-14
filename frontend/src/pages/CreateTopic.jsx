@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import BottomNav from '../components/BottomNav';
 import { categories } from '../data/mockForum';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, FORUM_API } from '../config/api';
 
 const CreateTopic = () => {
   const navigate = useNavigate();
@@ -28,8 +28,9 @@ const CreateTopic = () => {
   const [imagePreviews, setImagePreviews] = useState([]);
   const [imageUrls, setImageUrls] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
+  const [relatedTopics, setRelatedTopics] = useState([]);
+  const [checkingRelated, setCheckingRelated] = useState(false);
 
   const categoryOptions = categories.filter(cat => cat.id !== 'all');
 
@@ -49,24 +50,30 @@ const CreateTopic = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/forum/ai-generate`, {
+      const response = await fetch(FORUM_API.DRAFT_TOPIC, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keywords: keywords.trim() })
+        body: JSON.stringify({
+          prompt: keywords.trim(),
+          category: selectedCategory,
+          tone: 'warm',
+          length: 'medium',
+          userId: user?.id || null
+        })
       });
 
       const data = await response.json();
 
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
         throw new Error(data.error || '生成失败，请重试');
       }
 
       // 设置生成的内容
-      setTitle(data.data.title);
-      setContent(data.data.content);
-      setSelectedCategory(data.data.category);
-      setTags(data.data.tags.join(', '));
-      setGeneratedContent(data.data);
+      setTitle(data.title);
+      setContent(data.content);
+      setTags((data.tags || []).join(', '));
+      setRelatedTopics(data.relatedTopics || []);
+      setGeneratedContent(data);
       setRetryCount(prev => prev + 1);
     } catch (err) {
       console.error('AI生成失败:', err);
@@ -106,7 +113,6 @@ const CreateTopic = () => {
         };
         reader.readAsDataURL(file);
 
-        setIsUploading(true);
         try {
           const uploadFormData = new FormData();
           uploadFormData.append('image', file);
@@ -128,7 +134,7 @@ const CreateTopic = () => {
           console.error('Error uploading image:', error);
           setError('图片上传失败，请重试');
         } finally {
-          setIsUploading(false);
+          // noop
         }
       }
     }
@@ -158,7 +164,7 @@ const CreateTopic = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/forum`, {
+      const precheckResponse = await fetch(FORUM_API.PRECHECK_TOPIC, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -171,12 +177,27 @@ const CreateTopic = () => {
         })
       });
 
-      const data = await response.json();
+      const precheckData = await precheckResponse.json();
 
-      if (response.ok) {
+      if (!precheckResponse.ok) {
+        setError(precheckData.error || '预检查失败，请重试');
+        return;
+      }
+
+      const confirmResponse = await fetch(FORUM_API.CONFIRM_TOPIC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          confirmToken: precheckData.confirmToken,
+          userId: user.id
+        })
+      });
+      const confirmData = await confirmResponse.json().catch(() => ({}));
+
+      if (confirmResponse.ok) {
         navigate('/forum');
       } else {
-        setError(data.error || '发布失败，请重试');
+        setError(confirmData.error || '发布失败，请重试');
       }
     } catch (error) {
       console.error('Error creating topic:', error);
@@ -185,6 +206,36 @@ const CreateTopic = () => {
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    const run = async () => {
+      const normalizedTitle = title.trim();
+      const normalizedContent = content.trim();
+      if (normalizedTitle.length < 6 && normalizedContent.length < 20) {
+        setRelatedTopics([]);
+        return;
+      }
+      try {
+        setCheckingRelated(true);
+        const params = new URLSearchParams({
+          title: normalizedTitle,
+          content: normalizedContent,
+          topK: '3'
+        });
+        const response = await fetch(`${FORUM_API.RELATED_TOPICS}?${params.toString()}`);
+        const data = await response.json();
+        if (response.ok) {
+          setRelatedTopics(data.items || []);
+        }
+      } catch {
+        // 忽略相似帖提醒失败
+      } finally {
+        setCheckingRelated(false);
+      }
+    };
+    const timer = setTimeout(run, 500);
+    return () => clearTimeout(timer);
+  }, [title, content]);
 
   return (
     <div className="max-w-[430px] mx-auto min-h-screen flex flex-col bg-background-light dark:bg-background-dark pb-24">
@@ -414,6 +465,19 @@ const CreateTopic = () => {
                 本次生成成本：约${generatedContent.cost || 0.03}
               </p>
 
+              {relatedTopics.length > 0 && (
+                <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+                  <p className="text-xs font-bold text-amber-700 dark:text-amber-300 mb-2">相似话题提醒</p>
+                  <ul className="space-y-1">
+                    {relatedTopics.map((item) => (
+                      <li key={item.topicId} className="text-xs text-amber-700 dark:text-amber-300">
+                        • {item.title}（相似度 {Math.round((item.similarity || 0) * 100)}%）
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* 操作按钮 */}
               <div className="flex gap-3">
                 <button
@@ -507,6 +571,23 @@ const CreateTopic = () => {
                 required
               />
             </div>
+
+            {(checkingRelated || relatedTopics.length > 0) && (
+              <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+                <p className="text-xs font-bold text-amber-700 dark:text-amber-300 mb-2">
+                  {checkingRelated ? '正在检查相似话题...' : '相似话题提醒'}
+                </p>
+                {!checkingRelated && relatedTopics.length > 0 && (
+                  <ul className="space-y-1">
+                    {relatedTopics.map((item) => (
+                      <li key={item.topicId} className="text-xs text-amber-700 dark:text-amber-300">
+                        • {item.title}（相似度 {Math.round((item.similarity || 0) * 100)}%）
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             {/* 标签 */}
             <div>

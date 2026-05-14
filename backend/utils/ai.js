@@ -257,8 +257,66 @@ async function generateTopicContent(keywords) {
   }
 }
 
+/**
+ * 生成论坛回复草稿
+ * @param {Object} params
+ * @param {string} params.topicTitle
+ * @param {string} params.topicContent
+ * @param {string} [params.replyToContent]
+ * @param {string} [params.userIntent]
+ * @param {string} [params.tone]
+ * @param {string} [params.length]
+ * @returns {Promise<{draft: string, duration: number, model: string}>}
+ */
+async function generateReplyDraft({
+  topicTitle,
+  topicContent,
+  replyToContent,
+  userIntent,
+  tone = 'friendly',
+  length = 'medium',
+}) {
+  const startTime = Date.now();
+  const prompt = `你是宠物论坛助手，请生成一段中文回复草稿。
+
+主贴标题：${topicTitle || ''}
+主贴内容：${topicContent || ''}
+${replyToContent ? `回复对象内容：${replyToContent}` : ''}
+用户意图：${userIntent || '补充经验并给建议'}
+语气：${tone}
+长度：${length}
+
+要求：
+1. 有礼貌、有信息密度、避免攻击性表达
+2. 与主贴内容相关，优先给可执行建议
+3. 直接输出回复正文，不要解释
+4. 长度控制在 ${length === 'short' ? '60-120' : '120-220'} 字`;
+
+  try {
+    if (isAiEnabled()) {
+      const { generateText, model } = getAiRuntime();
+      const { text } = await generateText({ model, prompt });
+      return {
+        draft: text.trim(),
+        duration: Date.now() - startTime,
+        model: 'glm-5',
+      };
+    }
+
+    return {
+      draft: '感谢分享，这个经验很有价值。结合你的情况，建议先把日常作息、饮食和基础训练节奏稳定下来，再根据宠物反应逐步调整。遇到具体行为问题时可以记录触发场景和频率，这样更容易定位原因并持续优化。',
+      duration: Date.now() - startTime,
+      model: 'mock-disabled',
+    };
+  } catch (error) {
+    console.error('生成回复草稿失败:', error);
+    throw new Error(`生成回复草稿失败: ${error.message}`);
+  }
+}
+
 module.exports = {
   generatePetBio,
   generateHealthAdvice,
   generateTopicContent,
+  generateReplyDraft,
 };

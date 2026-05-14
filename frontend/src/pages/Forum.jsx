@@ -8,7 +8,7 @@ import SortSelector from '../components/Forum/SortSelector';
 import { categories, sortOptions } from '../data/mockForum';
 import { useAuth } from '../context/AuthContext';
 import { useForumListContext } from '../context/ForumListContext';
-import { API_BASE_URL } from '../config/api';
+import { FORUM_API } from '../config/api';
 
 const Forum = () => {
   const navigate = useNavigate();
@@ -21,6 +21,7 @@ const Forum = () => {
   const [localTopics, setLocalTopics] = useState([]);
   const [localLoading, setLocalLoading] = useState(true);
   const [localError, setLocalError] = useState(null);
+  const [contextSummary, setContextSummary] = useState(null);
 
   const searchQuery = ctx ? ctx.searchQuery : localSearchQuery;
   const setSearchQuery = ctx ? ctx.setSearchQuery : setLocalSearchQuery;
@@ -62,18 +63,21 @@ const Forum = () => {
           params.append('sort', selectedSort);
         }
         if (searchQuery.trim()) {
-          params.append('search', searchQuery.trim());
+          params.append('query', searchQuery.trim());
         }
+        params.append('format', 'mcp');
+        params.append('limit', '30');
+        params.append('cursor', '0');
         if (user?.id) {
           params.append('userId', user.id);
         }
 
-        const response = await fetch(`${API_BASE_URL}/forum?${params.toString()}`);
+        const response = await fetch(`${FORUM_API.LIST}?${params.toString()}`);
         if (!response.ok) {
           throw new Error('Failed to fetch topics');
         }
         const data = await response.json();
-        setTopics(Array.isArray(data) ? data : []);
+        setTopics(Array.isArray(data) ? data : (data.items || []));
       } catch (err) {
         console.error('Error fetching topics:', err);
         setError(err.message);
@@ -86,6 +90,31 @@ const Forum = () => {
     fetchTopics();
     // 返回列表时用缓存不 refetch，故不把 scrollPosition/topics 加入 deps
   }, [selectedCategory, selectedSort, searchQuery, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const syncForumContext = async () => {
+      try {
+        const params = new URLSearchParams({
+          pageType: 'topic_list',
+          route: '/forum',
+          sort: selectedSort,
+          category: selectedCategory,
+          query: searchQuery.trim(),
+        });
+        if (user?.id) params.append('userId', user.id);
+        const response = await fetch(`${FORUM_API.CONTEXT}?${params.toString()}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        setContextSummary({
+          pageType: data?.page?.type,
+          totalVisible: data?.data?.visibleTopics?.length || 0
+        });
+      } catch {
+        // context 同步失败不影响主流程
+      }
+    };
+    syncForumContext();
+  }, [selectedSort, selectedCategory, searchQuery, user?.id]);
 
   useEffect(() => {
     if (scrollPosition == null) return;
@@ -191,6 +220,11 @@ const Forum = () => {
             onSelect={setSelectedSort}
           />
         </div>
+        {contextSummary && (
+          <div className="mt-2 text-xs text-teal-600 dark:text-teal-400">
+            AI上下文已同步：{contextSummary.pageType} · 可见话题 {contextSummary.totalVisible}
+          </div>
+        )}
       </motion.header>
 
       {/* 话题列表 - ref 供列表缓存恢复滚动 */}

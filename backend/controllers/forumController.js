@@ -1,5 +1,72 @@
 const { getSupabaseClient } = require('../utils/supabaseClient');
-const { generateTopicContent } = require('../utils/ai');
+const { generateTopicContent, generateReplyDraft } = require('../utils/ai');
+
+const confirmTokenStore = new Map();
+const CONFIRM_TOKEN_TTL_MS = 60 * 1000;
+
+function cleanupExpiredConfirmTokens() {
+  const now = Date.now();
+  for (const [token, payload] of confirmTokenStore.entries()) {
+    if (payload.expiresAt <= now) {
+      confirmTokenStore.delete(token);
+    }
+  }
+}
+
+function createConfirmToken(payload) {
+  cleanupExpiredConfirmTokens();
+  const token = `confirm_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  confirmTokenStore.set(token, {
+    ...payload,
+    expiresAt: Date.now() + CONFIRM_TOKEN_TTL_MS
+  });
+  return token;
+}
+
+function consumeConfirmToken(token, expectedType, expectedUserId) {
+  cleanupExpiredConfirmTokens();
+  const payload = confirmTokenStore.get(token);
+  if (!payload) return { ok: false, reason: 'Confirm token invalid or expired' };
+  if (payload.type !== expectedType) return { ok: false, reason: 'Confirm token type mismatch' };
+  if (payload.userId !== expectedUserId) return { ok: false, reason: 'Confirm token user mismatch' };
+  confirmTokenStore.delete(token);
+  return { ok: true, payload };
+}
+
+async function logForumMcpAction(client, action, userId, requestPayload, resultPayload, success = true) {
+  try {
+    await client.from('forum_mcp_audit').insert([{
+      action,
+      user_id: userId || null,
+      request_payload: requestPayload || {},
+      result_payload: resultPayload || {},
+      success,
+      created_at: new Date().toISOString()
+    }]);
+  } catch (error) {
+    // 审计写入失败不阻断主流程
+    console.error('Failed to log forum MCP action:', error.message);
+  }
+}
+
+function normalizeTextForSimilarity(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[^\w\u4e00-\u9fa5\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function calcSimpleSimilarity(a, b) {
+  const sa = new Set(normalizeTextForSimilarity(a).split(' ').filter(Boolean));
+  const sb = new Set(normalizeTextForSimilarity(b).split(' ').filter(Boolean));
+  if (sa.size === 0 || sb.size === 0) return 0;
+  let inter = 0;
+  for (const token of sa) {
+    if (sb.has(token)) inter += 1;
+  }
+  return inter / (sa.size + sb.size - inter);
+}
 
 /**
  * Helper function to fetch user profiles in batch
@@ -39,14 +106,17 @@ async function fetchUserProfiles(client, userIds) {
  */
 async function getAllTopics(req, res) {
   const client = getSupabaseClient(req);
-  const { category, sort = 'latest', search } = req.query;
+  const { category, sort = 'latest', search, query, cursor, limit, userId, format } = req.query;
 
   try {
+    const normalizedLimit = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 50);
+    const offset = Math.max(parseInt(cursor, 10) || 0, 0);
+    const normalizedQuery = (query || search || '').trim();
+
     // Query topics without profiles relation
-    let query = client
+    let topicsQuery = client
       .from('forum_topics')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*');
 
     // Category filter
     if (category && category !== 'all') {
@@ -56,28 +126,36 @@ async function getAllTopics(req, res) {
         help: '求助问答'
       };
       if (categoryMap[category]) {
-        query = query.eq('category', categoryMap[category]);
+        topicsQuery = topicsQuery.eq('category', categoryMap[category]);
       }
     }
 
     // Search filter
-    if (search && search.trim()) {
-      query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
+    if (normalizedQuery) {
+      topicsQuery = topicsQuery.or(`title.ilike.%${normalizedQuery}%,content.ilike.%${normalizedQuery}%`);
     }
 
-    const { data: topics, error } = await query;
+    if (sort === 'hot') {
+      topicsQuery = topicsQuery
+        .order('likes_count', { ascending: false })
+        .order('created_at', { ascending: false });
+    } else if (sort === 'comments') {
+      topicsQuery = topicsQuery
+        .order('comments_count', { ascending: false })
+        .order('created_at', { ascending: false });
+    } else {
+      topicsQuery = topicsQuery.order('created_at', { ascending: false });
+    }
+
+    topicsQuery = topicsQuery.range(offset, offset + normalizedLimit - 1);
+
+    const { data: topics, error } = await topicsQuery;
 
     if (error) {
       return res.status(500).json({ error: error.message });
     }
 
-    // Sort topics
-    let sortedTopics = topics || [];
-    if (sort === 'hot') {
-      sortedTopics.sort((a, b) => b.likes_count - a.likes_count);
-    } else if (sort === 'comments') {
-      sortedTopics.sort((a, b) => b.comments_count - a.comments_count);
-    }
+    const sortedTopics = topics || [];
 
     // Collect all unique user IDs
     const userIds = [...new Set(sortedTopics.map(topic => topic.user_id))];
@@ -109,7 +187,6 @@ async function getAllTopics(req, res) {
     });
 
     // Check if user has liked topics (if userId provided in query)
-    const userId = req.query.userId;
     if (userId) {
       const topicIds = formattedTopics.map(t => t.id);
       const { data: likes } = await client
@@ -141,10 +218,107 @@ async function getAllTopics(req, res) {
       });
     }
 
+    const nextCursor = formattedTopics.length === normalizedLimit ? String(offset + normalizedLimit) : null;
+
+    if (format === 'mcp') {
+      return res.json({
+        items: formattedTopics,
+        nextCursor
+      });
+    }
+
     res.json(formattedTopics);
   } catch (error) {
     console.error('Error fetching topics:', error);
     res.status(500).json({ error: 'Failed to fetch topics' });
+  }
+}
+
+/**
+ * MCP-like forum context aggregation for AI assistant
+ */
+async function getForumContext(req, res) {
+  const client = getSupabaseClient(req);
+  const { pageType = 'topic_list', route = '/forum', topicId = null, sort = 'latest', category = 'all', query = '', userId } = req.query;
+
+  try {
+    let topicsQuery = client
+      .from('forum_topics')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (category && category !== 'all') {
+      const categoryMap = {
+        adoption: '领养经验',
+        daily: '日常分享',
+        help: '求助问答'
+      };
+      if (categoryMap[category]) {
+        topicsQuery = topicsQuery.eq('category', categoryMap[category]);
+      }
+    }
+
+    if (String(query).trim()) {
+      const q = String(query).trim();
+      topicsQuery = topicsQuery.or(`title.ilike.%${q}%,content.ilike.%${q}%`);
+    }
+
+    const { data: topics, error } = await topicsQuery;
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    const userIds = [...new Set((topics || []).map((topic) => topic.user_id).filter(Boolean))];
+    const profileMap = await fetchUserProfiles(client, userIds);
+
+    const visibleTopics = (topics || []).map((topic) => {
+      const profile = profileMap[topic.user_id];
+      return {
+        id: topic.id,
+        title: topic.title,
+        tags: topic.tags || [],
+        author: {
+          id: profile?.id || topic.user_id,
+          name: profile?.full_name || profile?.email?.split('@')[0] || '匿名用户'
+        },
+        stats: {
+          replies: topic.comments_count || 0,
+          likes: topic.likes_count || 0,
+          views: topic.views_count || 0
+        },
+        createdAt: topic.created_at
+      };
+    });
+
+    res.json({
+      page: {
+        type: pageType,
+        route,
+        title: '论坛',
+        topicId
+      },
+      state: {
+        loading: false,
+        error: null,
+        filters: {
+          sort,
+          category,
+          query: String(query || '')
+        }
+      },
+      data: {
+        viewer: {
+          isLoggedIn: !!userId,
+          userId: userId || null,
+          permissions: []
+        },
+        visibleTopics
+      }
+    });
+  } catch (error) {
+    console.error('Error building forum context:', error);
+    res.status(500).json({ error: 'Failed to build forum context' });
   }
 }
 
@@ -209,8 +383,13 @@ async function getMyFollowingAuthors(req, res) {
 async function getTopicById(req, res) {
   const client = getSupabaseClient(req);
   const { id } = req.params;
+  const { cursor, limit, format } = req.query;
 
   try {
+    const hasPaginationInput = cursor !== undefined || limit !== undefined || format === 'mcp';
+    const normalizedLimit = Math.min(Math.max(parseInt(limit, 10) || 30, 1), 50);
+    const offset = Math.max(parseInt(cursor, 10) || 0, 0);
+
     // Get topic without profiles relation
     const { data: topic, error: topicError } = await client
       .from('forum_topics')
@@ -229,18 +408,29 @@ async function getTopicById(req, res) {
       .eq('id', id);
 
     // Get comments without profiles relation
-    const { data: comments, error: commentsError } = await client
+    let commentsQuery = client
       .from('forum_comments')
       .select('*')
       .eq('topic_id', id)
       .order('created_at', { ascending: true });
 
+    if (hasPaginationInput) {
+      commentsQuery = commentsQuery.range(offset, offset + normalizedLimit);
+    }
+
+    const { data: commentsRaw, error: commentsError } = await commentsQuery;
+
     if (commentsError) {
       console.error('Error fetching comments:', commentsError);
     }
 
+    const comments = commentsRaw || [];
+    const hasMoreComments = hasPaginationInput ? comments.length > normalizedLimit : false;
+    const pagedComments = hasPaginationInput ? comments.slice(0, normalizedLimit) : comments;
+    const nextCursor = hasMoreComments ? String(offset + normalizedLimit) : null;
+
     // Get replies for each comment without profiles relation
-    const allCommentIds = comments?.map(c => c.id) || [];
+    const allCommentIds = pagedComments.map(c => c.id);
     let replies = [];
     if (allCommentIds.length > 0) {
       const { data: repliesData } = await client
@@ -255,7 +445,7 @@ async function getTopicById(req, res) {
     // Collect all user IDs (topic author, comment authors, reply authors)
     const userIds = new Set();
     if (topic.user_id) userIds.add(topic.user_id);
-    (comments || []).forEach(comment => {
+    pagedComments.forEach(comment => {
       if (comment.user_id) userIds.add(comment.user_id);
     });
     (replies || []).forEach(reply => {
@@ -346,7 +536,7 @@ async function getTopicById(req, res) {
     const likedReplyIds = new Set(replyLikes.map(l => l.reply_id));
 
     // Format comments with replies
-    const formattedComments = (comments || []).map(comment => {
+    const formattedComments = pagedComments.map(comment => {
       const commentReplies = replies.filter(r => r.comment_id === comment.id);
       const commentProfile = profileMap[comment.user_id];
       
@@ -385,10 +575,24 @@ async function getTopicById(req, res) {
       };
     });
 
-    res.json({
+    const response = {
       topic: formattedTopic,
       comments: formattedComments
-    });
+    };
+
+    if (hasPaginationInput) {
+      response.nextCursor = nextCursor;
+    }
+
+    if (format === 'mcp') {
+      return res.json({
+        topic: formattedTopic,
+        replies: formattedComments,
+        nextCursor
+      });
+    }
+
+    res.json(response);
   } catch (error) {
     console.error('Error fetching topic:', error);
     res.status(500).json({ error: 'Failed to fetch topic' });
@@ -999,6 +1203,267 @@ async function generateTopicWithAI(req, res) {
   }
 }
 
+/**
+ * Find related topics by semantic-ish similarity (MVP)
+ */
+async function getRelatedTopicsByContent(req, res) {
+  const client = getSupabaseClient(req);
+  const { title = '', content = '', topK = 5 } = req.query;
+
+  try {
+    const q = `${title} ${content}`.trim();
+    if (!q) {
+      return res.status(400).json({ error: 'title or content is required' });
+    }
+
+    const { data: topics, error } = await client
+      .from('forum_topics')
+      .select('id, title, content, created_at')
+      .order('created_at', { ascending: false })
+      .limit(80);
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    const items = (topics || [])
+      .map((topic) => ({
+        topicId: topic.id,
+        title: topic.title,
+        similarity: Number(calcSimpleSimilarity(q, `${topic.title} ${topic.content}`).toFixed(4))
+      }))
+      .filter((item) => item.similarity > 0)
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, Math.min(Math.max(parseInt(topK, 10) || 5, 1), 10));
+
+    await logForumMcpAction(client, 'get_related_topics', req.query.userId, { title, content, topK }, { count: items.length }, true);
+    res.json({ items });
+  } catch (error) {
+    console.error('Error getting related topics:', error);
+    res.status(500).json({ error: 'Failed to get related topics' });
+  }
+}
+
+/**
+ * Draft reply by topic context
+ */
+async function draftReply(req, res) {
+  const client = getSupabaseClient(req);
+  const { topicId, replyToId, userIntent, tone, length, userId } = req.body;
+
+  if (!topicId) {
+    return res.status(400).json({ error: 'topicId is required' });
+  }
+
+  try {
+    const { data: topic, error: topicError } = await client
+      .from('forum_topics')
+      .select('id, title, content')
+      .eq('id', topicId)
+      .single();
+    if (topicError || !topic) {
+      return res.status(404).json({ error: 'Topic not found' });
+    }
+
+    let replyToContent = '';
+    if (replyToId) {
+      const { data: comment } = await client
+        .from('forum_comments')
+        .select('content')
+        .eq('id', replyToId)
+        .single();
+      replyToContent = comment?.content || '';
+    }
+
+    const result = await generateReplyDraft({
+      topicTitle: topic.title,
+      topicContent: topic.content,
+      replyToContent,
+      userIntent,
+      tone,
+      length
+    });
+
+    const payload = {
+      draft: result.draft,
+      riskHints: [],
+      citations: [{ type: 'topic', id: topic.id, title: topic.title }]
+    };
+    await logForumMcpAction(client, 'draft_reply', userId, { topicId, replyToId, tone, length }, payload, true);
+    res.json(payload);
+  } catch (error) {
+    console.error('Error drafting reply:', error);
+    res.status(500).json({ error: 'Failed to draft reply' });
+  }
+}
+
+/**
+ * Draft topic with AI
+ */
+async function draftTopic(req, res) {
+  const client = getSupabaseClient(req);
+  const { prompt, category, tone, length, userId } = req.body;
+
+  if (!prompt || String(prompt).trim().length < 3) {
+    return res.status(400).json({ error: 'prompt is required (>=3 chars)' });
+  }
+
+  try {
+    const result = await generateTopicContent(`${prompt} ${category || ''} ${tone || ''} ${length || ''}`.trim());
+
+    const { data: topics } = await client
+      .from('forum_topics')
+      .select('id, title, content')
+      .limit(60);
+
+    const relatedTopics = (topics || [])
+      .map((topic) => ({
+        topicId: topic.id,
+        title: topic.title,
+        similarity: Number(calcSimpleSimilarity(`${result.title} ${result.content}`, `${topic.title} ${topic.content}`).toFixed(4))
+      }))
+      .filter((item) => item.similarity > 0)
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, 5);
+
+    const payload = {
+      title: result.title,
+      content: result.content,
+      tags: result.tags,
+      relatedTopics
+    };
+    await logForumMcpAction(client, 'draft_topic', userId, { prompt, category, tone, length }, { title: result.title }, true);
+    res.json(payload);
+  } catch (error) {
+    console.error('Error drafting topic:', error);
+    res.status(500).json({ error: 'Failed to draft topic' });
+  }
+}
+
+async function precheckCreateTopic(req, res) {
+  const { title, content, category, tags, images, userId } = req.body;
+  if (!userId) return res.status(401).json({ error: 'userId is required' });
+  if (!title || !content) return res.status(400).json({ error: 'title and content are required' });
+
+  const token = createConfirmToken({
+    type: 'create_topic',
+    userId,
+    payload: { title, content, category, tags: tags || [], images: images || [] }
+  });
+  res.json({ confirmToken: token, expiresInMs: CONFIRM_TOKEN_TTL_MS });
+}
+
+async function confirmCreateTopic(req, res) {
+  const client = getSupabaseClient(req);
+  const { confirmToken, userId } = req.body;
+  if (!confirmToken || !userId) return res.status(400).json({ error: 'confirmToken and userId are required' });
+
+  const tokenResult = consumeConfirmToken(confirmToken, 'create_topic', userId);
+  if (!tokenResult.ok) return res.status(400).json({ error: tokenResult.reason });
+
+  try {
+    const { title, content, category, tags, images } = tokenResult.payload.payload;
+    const { data: topic, error } = await client
+      .from('forum_topics')
+      .insert({
+        user_id: userId,
+        title,
+        content,
+        category: category || '日常分享',
+        tags: tags || [],
+        images: images || []
+      })
+      .select('id, created_at')
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    await logForumMcpAction(client, 'confirm_create_topic', userId, { title }, { topicId: topic.id }, true);
+    res.status(201).json({ ok: true, topicId: topic.id, createdAt: topic.created_at });
+  } catch (error) {
+    console.error('Error confirming create topic:', error);
+    res.status(500).json({ error: 'Failed to create topic' });
+  }
+}
+
+async function precheckCreateReply(req, res) {
+  const { topicId, content, replyToCommentId, replyToUserName, userId } = req.body;
+  if (!userId) return res.status(401).json({ error: 'userId is required' });
+  if (!topicId || !content) return res.status(400).json({ error: 'topicId and content are required' });
+
+  const token = createConfirmToken({
+    type: 'create_reply',
+    userId,
+    payload: { topicId, content, replyToCommentId: replyToCommentId || null, replyToUserName: replyToUserName || null }
+  });
+  res.json({ confirmToken: token, expiresInMs: CONFIRM_TOKEN_TTL_MS });
+}
+
+async function confirmCreateReply(req, res) {
+  const client = getSupabaseClient(req);
+  const { confirmToken, userId } = req.body;
+  if (!confirmToken || !userId) return res.status(400).json({ error: 'confirmToken and userId are required' });
+
+  const tokenResult = consumeConfirmToken(confirmToken, 'create_reply', userId);
+  if (!tokenResult.ok) return res.status(400).json({ error: tokenResult.reason });
+
+  try {
+    const { topicId, content, replyToCommentId, replyToUserName } = tokenResult.payload.payload;
+    if (replyToCommentId) {
+      const { data: reply, error: replyError } = await client
+        .from('forum_replies')
+        .insert({
+          comment_id: replyToCommentId,
+          user_id: userId,
+          content: content.trim(),
+          reply_to_user_name: replyToUserName || null
+        })
+        .select('id, created_at')
+        .single();
+      if (replyError) return res.status(500).json({ error: replyError.message });
+
+      const { data: comment } = await client
+        .from('forum_comments')
+        .select('replies_count')
+        .eq('id', replyToCommentId)
+        .single();
+      await client
+        .from('forum_comments')
+        .update({ replies_count: (comment?.replies_count || 0) + 1 })
+        .eq('id', replyToCommentId);
+
+      await logForumMcpAction(client, 'confirm_create_reply', userId, { topicId, replyToCommentId }, { replyId: reply.id }, true);
+      return res.status(201).json({ ok: true, replyId: reply.id, createdAt: reply.created_at });
+    }
+
+    const { data: comment, error: commentError } = await client
+      .from('forum_comments')
+      .insert({
+        topic_id: topicId,
+        user_id: userId,
+        content: content.trim()
+      })
+      .select('id, created_at')
+      .single();
+    if (commentError) return res.status(500).json({ error: commentError.message });
+
+    const { data: topic } = await client
+      .from('forum_topics')
+      .select('comments_count')
+      .eq('id', topicId)
+      .single();
+    await client
+      .from('forum_topics')
+      .update({ comments_count: (topic?.comments_count || 0) + 1 })
+      .eq('id', topicId);
+
+    await logForumMcpAction(client, 'confirm_create_reply', userId, { topicId }, { commentId: comment.id }, true);
+    res.status(201).json({ ok: true, replyId: comment.id, createdAt: comment.created_at });
+  } catch (error) {
+    console.error('Error confirming create reply:', error);
+    res.status(500).json({ error: 'Failed to create reply' });
+  }
+}
+
 module.exports = {
   getAllTopics,
   getTopicById,
@@ -1011,6 +1476,14 @@ module.exports = {
   deleteReply,
   deleteTopic,
   generateTopicWithAI,
+  getRelatedTopicsByContent,
+  draftReply,
+  draftTopic,
+  precheckCreateTopic,
+  confirmCreateTopic,
+  precheckCreateReply,
+  confirmCreateReply,
   toggleTopicAuthorFollow,
-  getMyFollowingAuthors
+  getMyFollowingAuthors,
+  getForumContext
 };

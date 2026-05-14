@@ -12,8 +12,16 @@ const {
   deleteReply,
   deleteTopic,
   generateTopicWithAI,
+  getRelatedTopicsByContent,
+  draftReply,
+  draftTopic,
+  precheckCreateTopic,
+  confirmCreateTopic,
+  precheckCreateReply,
+  confirmCreateReply,
   toggleTopicAuthorFollow,
-  getMyFollowingAuthors
+  getMyFollowingAuthors,
+  getForumContext
 } = require('../controllers/forumController');
 const checkSupabase = require('../middleware/supabaseCheck');
 const supabase = require('../config/supabase');
@@ -62,9 +70,17 @@ router.get('/related/:dogId', checkSupabase, async (req, res) => {
 
 // Get all topics with filters
 router.get('/', checkSupabase, getAllTopics);
+router.get('/context', checkSupabase, getForumContext);
+router.get('/related-topics', checkSupabase, getRelatedTopicsByContent);
 
 // AI generate topic content
 router.post('/ai-generate', checkSupabase, generateTopicWithAI);
+router.post('/draft-reply', checkSupabase, draftReply);
+router.post('/draft-topic', checkSupabase, draftTopic);
+router.post('/precheck/topic', checkSupabase, precheckCreateTopic);
+router.post('/confirm/topic', checkSupabase, confirmCreateTopic);
+router.post('/precheck/reply', checkSupabase, precheckCreateReply);
+router.post('/confirm/reply', checkSupabase, confirmCreateReply);
 
 // Get my following authors
 router.get('/follows/me', checkSupabase, getMyFollowingAuthors);

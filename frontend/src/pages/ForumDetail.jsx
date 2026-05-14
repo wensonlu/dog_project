@@ -6,9 +6,8 @@ import CommentActionSheet from '../components/Forum/CommentActionSheet';
 import ConfirmModal from '../components/ConfirmModal';
 import { formatTime } from '../data/mockForum';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, FORUM_API } from '../config/api';
 import { addForumBrowseHistory } from '../utils/forumHistory';
-import { getCurrentCityName } from '../utils/geolocation';
 
 const ForumDetail = () => {
   const { id } = useParams();
@@ -22,9 +21,9 @@ const ForumDetail = () => {
   const [authorFollowers, setAuthorFollowers] = useState(0);
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
-  const [replyCity, setReplyCity] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [draftingReply, setDraftingReply] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [tipOpen, setTipOpen] = useState(false);
@@ -42,6 +41,20 @@ const ForumDetail = () => {
   const barInputRef = useRef(null);
 
   // 获取话题详情
+  const refreshTopicData = async () => {
+    const params = new URLSearchParams();
+    if (user?.id) {
+      params.append('userId', user.id);
+    }
+    const refreshResponse = await fetch(`${API_BASE_URL}/forum/${id}?${params.toString()}`);
+    if (refreshResponse.ok) {
+      const data = await refreshResponse.json();
+      setTopic(data.topic);
+      setComments(data.comments || []);
+      setLikeCount(data.topic?.likes || 0);
+    }
+  };
+
   useEffect(() => {
     const fetchTopic = async () => {
       setLoading(true);
@@ -221,17 +234,9 @@ const ForumDetail = () => {
       return;
     }
     setReplyingTo(target);
-    setReplyCity(null);
     setIsBarInputMode(true);
     commentSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
     setTimeout(() => barInputRef.current?.focus(), 300);
-    getCurrentCityName()
-      .then((city) => {
-        setReplyCity(city ?? null);
-      })
-      .catch(() => {
-        setReplyCity(null);
-      });
   };
 
   const handleSubmitComment = async () => {
@@ -244,49 +249,41 @@ const ForumDetail = () => {
 
     setSubmitting(true);
     try {
-      // 点击发送时统一带上定位：已有则用，没有则请求一次（直接评论或回复都覆盖）
-      let locationCity = replyCity ?? undefined;
-      if (locationCity == null) {
-        try {
-          const city = await getCurrentCityName();
-          locationCity = city ?? undefined;
-          if (city) setReplyCity(city);
-        } catch {
-          // 定位失败仍可发送，不阻塞
-        }
-      }
-      const response = await fetch(`${API_BASE_URL}/forum/${id}/comments`, {
+      const precheckResponse = await fetch(FORUM_API.PRECHECK_REPLY, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          topicId: id,
           content: commentText.trim(),
           userId: user.id,
           replyToCommentId: replyingTo?.commentId ?? replyingTo?.id ?? null,
-          locationCity,
           replyToUserName: replyingTo?.author?.name ?? undefined
         })
       });
 
-      if (response.ok) {
-        // Refresh topic data
-        const params = new URLSearchParams();
-        if (user.id) {
-          params.append('userId', user.id);
+      if (precheckResponse.ok) {
+        const precheckData = await precheckResponse.json();
+        const confirmResponse = await fetch(FORUM_API.CONFIRM_REPLY, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            confirmToken: precheckData.confirmToken,
+            userId: user.id
+          })
+        });
+
+        if (!confirmResponse.ok) {
+          const confirmError = await confirmResponse.json().catch(() => ({}));
+          throw new Error(confirmError.error || '确认发布失败');
         }
-        const refreshResponse = await fetch(`${API_BASE_URL}/forum/${id}?${params.toString()}`);
-        if (refreshResponse.ok) {
-          const data = await refreshResponse.json();
-          setTopic(data.topic);
-          setComments(data.comments || []);
-          setLikeCount(data.topic?.likes || 0);
-        }
-        
+
+        await refreshTopicData();
+
         setCommentText('');
         setReplyingTo(null);
-        setReplyCity(null);
         setIsBarInputMode(false);
       } else {
-        const error = await response.json();
+        const error = await precheckResponse.json();
         setTipMessage(error.error || '提交失败，请重试');
         setTipOpen(true);
       }
@@ -299,9 +296,46 @@ const ForumDetail = () => {
     }
   };
 
+  const handleDraftReply = async () => {
+    if (!user?.id) {
+      setTipMessage('请先登录');
+      setTipOpen(true);
+      return;
+    }
+    if (!topic?.id) return;
+
+    try {
+      setDraftingReply(true);
+      const response = await fetch(FORUM_API.DRAFT_REPLY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topicId: topic.id,
+          replyToId: replyingTo?.commentId ?? replyingTo?.id ?? null,
+          userIntent: replyingTo ? '礼貌回复并补充建议' : '补充经验并给建议',
+          tone: 'friendly',
+          length: 'medium',
+          userId: user.id
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || '生成草稿失败');
+      }
+      setCommentText(data.draft || '');
+      setIsBarInputMode(true);
+      setTimeout(() => barInputRef.current?.focus(), 100);
+    } catch (error) {
+      console.error('Error drafting reply:', error);
+      setTipMessage(error.message || '生成草稿失败');
+      setTipOpen(true);
+    } finally {
+      setDraftingReply(false);
+    }
+  };
+
   const handleCancelReply = () => {
     setReplyingTo(null);
-    setReplyCity(null);
     setIsBarInputMode(false);
     barInputRef.current?.blur();
   };
@@ -757,23 +791,33 @@ const ForumDetail = () => {
               </div>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={() => {
-                if (!user?.id) {
-                  setTipMessage('请先登录');
-                  setTipOpen(true);
-                  return;
-                }
-                setIsBarInputMode(true);
-                commentSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-                setTimeout(() => barInputRef.current?.focus(), 300);
-              }}
-              className="flex-1 flex items-center gap-2 text-left text-sm text-zinc-500 dark:text-zinc-400 min-w-0 rounded-full bg-zinc-100 dark:bg-zinc-800 pl-4 pr-4 py-2.5"
-            >
-              <span className="material-symbols-outlined text-xl">edit_note</span>
-              说点什么...
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!user?.id) {
+                    setTipMessage('请先登录');
+                    setTipOpen(true);
+                    return;
+                  }
+                  setIsBarInputMode(true);
+                  commentSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+                  setTimeout(() => barInputRef.current?.focus(), 300);
+                }}
+                className="flex-1 flex items-center gap-2 text-left text-sm text-zinc-500 dark:text-zinc-400 min-w-0 rounded-full bg-zinc-100 dark:bg-zinc-800 pl-4 pr-4 py-2.5"
+              >
+                <span className="material-symbols-outlined text-xl">edit_note</span>
+                说点什么...
+              </button>
+              <button
+                type="button"
+                onClick={handleDraftReply}
+                disabled={draftingReply || !user?.id}
+                className="px-3 py-2 rounded-full bg-primary/10 text-primary text-xs font-bold disabled:opacity-50"
+              >
+                {draftingReply ? '生成中' : 'AI草拟'}
+              </button>
+            </>
           )}
           <div className="flex items-center gap-4 flex-shrink-0">
             <button
