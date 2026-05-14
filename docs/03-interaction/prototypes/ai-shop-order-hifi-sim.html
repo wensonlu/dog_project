@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 商城智能下单状态模拟</title>
+  <style>
+    :root{--bg:#f4f2eb;--card:#fff;--line:#ece6d7;--ok:#10b981;--err:#ef4444;--brand:#e11d48}
+    *{box-sizing:border-box;font-family:"PingFang SC","Noto Sans SC",sans-serif}
+    body{margin:0;background:radial-gradient(circle at 20% 10%,#fff,#efe8d8)}
+    .wrap{max-width:400px;min-height:100vh;margin:0 auto;padding:14px 14px 90px}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-top:12px}
+    .btns{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    button{padding:10px;border:0;border-radius:12px;font-weight:700;cursor:pointer}
+    .b1{background:#ffe4e6;color:#9f1239}.b2{background:#fef3c7;color:#92400e}.b3{background:#dcfce7;color:#166534}.b4{background:#f3f4f6;color:#374151}
+    .step{display:flex;gap:8px;padding:6px 0;font-size:14px}.dot{width:8px;height:8px;border-radius:50%;margin-top:7px;background:#cbd5e1}
+    .ok .dot{background:var(--ok)}.run .dot{background:#f59e0b}.fail .dot{background:var(--err)}
+    .log{margin-top:10px;background:#111827;color:#e5e7eb;padding:10px;border-radius:12px;min-height:90px;font-size:12px;white-space:pre-line}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2 style="margin:0">执行商城智能下单</h2>
+    <p style="margin:6px 0 10px;color:#6b7280">模拟任务流：开始、失败、重试、取消</p>
+
+    <div class="panel">
+      <div class="btns">
+        <button class="b1" data-ui="btn-start" id="start">开始执行</button>
+        <button class="b2" data-ui="btn-fail" id="fail">失败注入</button>
+        <button class="b3" data-ui="btn-retry" id="retry">重试</button>
+        <button class="b4" data-ui="btn-cancel" id="cancel">取消</button>
+      </div>
+
+      <div id="s1" class="step"><span class="dot"></span>解析购买需求</div>
+      <div id="s2" class="step"><span class="dot"></span>进入商城页面</div>
+      <div id="s3" class="step"><span class="dot"></span>选择目标商品</div>
+      <div id="s4" class="step"><span class="dot"></span>提交下单请求</div>
+      <div id="s5" class="step"><span class="dot"></span>结果校验</div>
+
+      <div class="log" data-ui="event-log" id="log">[idle] 等待触发</div>
+    </div>
+  </div>
+
+  <script>
+    const ids = ['s1','s2','s3','s4','s5'];
+    const log = document.getElementById('log');
+    const clear = () => ids.forEach((id) => document.getElementById(id).className = 'step');
+    const w = (t) => log.textContent = `${new Date().toLocaleTimeString()} ${t}\n` + log.textContent;
+    const run = async () => {
+      clear();
+      for (let i = 0; i < ids.length; i++) {
+        const el = document.getElementById(ids[i]);
+        el.className = 'step run';
+        w(`shop.ai_order.step.${i + 1}.running`);
+        await new Promise((r) => setTimeout(r, 280));
+        el.className = 'step ok';
+      }
+      w('shop.ai_order.success');
+    };
+    document.getElementById('start').onclick = run;
+    document.getElementById('fail').onclick = () => { clear(); document.getElementById('s4').className='step fail'; w('shop.ai_order.failed'); };
+    document.getElementById('retry').onclick = run;
+    document.getElementById('cancel').onclick = () => { clear(); w('shop.ai_order.cancelled'); };
+  </script>
+</body>
+</html>

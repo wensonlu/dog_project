@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 商城智能下单高保真稿</title>
+  <style>
+    :root{--bg:#f5f2ea;--card:#fff;--line:#ece6d7;--text:#1f1f1f;--muted:#7a7a7a;--brand:#ef4444}
+    *{box-sizing:border-box;font-family:"PingFang SC","Noto Sans SC",sans-serif}
+    body{margin:0;background:linear-gradient(160deg,#f9f8f3,#f0eadc)}
+    .phone{max-width:390px;min-height:100vh;margin:0 auto;padding:14px 14px 90px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0}
+    .title{font-size:22px;font-weight:800;margin:8px 0}
+    .muted{color:var(--muted);font-size:13px}
+    .step{display:flex;gap:8px;padding:6px 0;font-size:14px}
+    .dot{width:8px;height:8px;border-radius:50%;background:#10b981;margin-top:7px}
+    .bottom{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.95);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:10px 0 20px}
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="title">AI 助手 · 商城智能下单</div>
+    <div class="muted">输入“帮我买主粮”，自动执行选品与下单流程</div>
+
+    <div class="card">
+      <div style="font-weight:700">执行商城智能下单</div>
+      <div class="muted" style="margin:6px 0 10px">已完成：已创建商城订单</div>
+      <div class="step"><span class="dot"></span>解析购买需求</div>
+      <div class="step"><span class="dot"></span>进入商城页面</div>
+      <div class="step"><span class="dot"></span>选择目标商品</div>
+      <div class="step"><span class="dot"></span>提交下单请求</div>
+      <div class="step"><span class="dot"></span>结果校验</div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700">推荐命令</div>
+      <div class="muted" style="margin-top:6px">帮我买主粮</div>
+      <div class="muted">帮我下单一份健康用品</div>
+      <div class="muted">帮我购买牵引胸背</div>
+    </div>
+  </div>
+  <nav class="bottom"><span>探索</span><span>论坛</span><span>商城</span><span>故事</span><span>我的</span></nav>
+</body>
+</html>
