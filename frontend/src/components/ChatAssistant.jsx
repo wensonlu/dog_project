@@ -94,23 +94,37 @@ export default function ChatAssistant() {
     }
 
     setInputError('');
-    const match = trimmedInput.match(/帮我给第([一二三四五六七八九十\\d]+)个帖子点赞评论(.+)/);
-    if (match) {
+    const command = parseForumCommand(trimmedInput);
+    if (command) {
       if (!user?.id) {
         setInputError('执行互动任务前请先登录');
         return;
       }
-      const indexRaw = match[1];
-      const commentText = match[2]?.trim();
-      const indexMap = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
-      const targetIndex = Number(indexRaw) || indexMap[indexRaw] || 1;
       setInputValue('');
-      await executeForumTask(targetIndex, commentText);
+      await executeForumTask(command.targetIndex, command.commentText);
       return;
     }
 
     await sendMessage(trimmedInput);
     setInputValue('');
+  };
+
+  const parseForumCommand = (text) => {
+    const normalized = String(text || '').trim();
+    // 先匹配“第N个帖子”
+    const targetMatch = normalized.match(/第([一二三四五六七八九十\d]+)个帖子/);
+    if (!targetMatch) return null;
+    // 必须包含“点赞”
+    if (!/点赞/.test(normalized)) return null;
+
+    const indexRaw = targetMatch[1];
+    const indexMap = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+    const targetIndex = Number(indexRaw) || indexMap[indexRaw] || 1;
+
+    // 可选评论内容：评论xxx / 并评论xxx / 再评论xxx
+    const commentMatch = normalized.match(/评论[：:\s]*([\s\S]+)$/);
+    const commentText = commentMatch?.[1]?.trim() || '';
+    return { targetIndex, commentText };
   };
 
   const setStepStatus = (stepIndex, status) => {
@@ -159,28 +173,40 @@ export default function ChatAssistant() {
       });
       if (!likeResp.ok) throw new Error('点赞失败');
       setStepStatus(2, 'ok');
+      setTaskContext((prev) => ({
+        ...(prev || {}),
+        topicId: target.id,
+        targetIndex,
+        commentText,
+        likeSyncedAt: Date.now()
+      }));
 
       if (cancelTaskRef.current) throw new Error('任务已取消');
 
-      // step 4: reply via confirm flow
-      setTaskStatusText(`4/5 正在评论“${commentText}”...`);
-      setStepStatus(3, 'running');
-      const precheckResp = await fetch(FORUM_API.PRECHECK_REPLY, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topicId: target.id, content: commentText, userId: user.id })
-      });
-      const precheckData = await precheckResp.json();
-      if (!precheckResp.ok) throw new Error(precheckData.error || '评论预检查失败');
+      // step 4: reply via confirm flow (optional)
+      const hasComment = !!String(commentText || '').trim();
+      if (hasComment) {
+        setTaskStatusText(`4/5 正在评论“${commentText}”...`);
+        setStepStatus(3, 'running');
+        const precheckResp = await fetch(FORUM_API.PRECHECK_REPLY, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topicId: target.id, content: commentText, userId: user.id })
+        });
+        const precheckData = await precheckResp.json();
+        if (!precheckResp.ok) throw new Error(precheckData.error || '评论预检查失败');
 
-      const confirmResp = await fetch(FORUM_API.CONFIRM_REPLY, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirmToken: precheckData.confirmToken, userId: user.id })
-      });
-      const confirmData = await confirmResp.json();
-      if (!confirmResp.ok || !confirmData.ok) throw new Error(confirmData.error || '评论确认失败');
-      setStepStatus(3, 'ok');
+        const confirmResp = await fetch(FORUM_API.CONFIRM_REPLY, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirmToken: precheckData.confirmToken, userId: user.id })
+        });
+        const confirmData = await confirmResp.json();
+        if (!confirmResp.ok || !confirmData.ok) throw new Error(confirmData.error || '评论确认失败');
+        setStepStatus(3, 'ok');
+      } else {
+        setStepStatus(3, 'skipped');
+      }
 
       if (cancelTaskRef.current) throw new Error('任务已取消');
 
@@ -193,7 +219,7 @@ export default function ChatAssistant() {
         body: JSON.stringify({
           topicId: target.id,
           userId: user.id,
-          commentContains: commentText
+          commentContains: hasComment ? commentText : ''
         })
       });
       const verifyData = await verifyResp.json();
@@ -202,6 +228,13 @@ export default function ChatAssistant() {
       }
       setStepStatus(4, 'ok');
       setTaskStatusText(`已完成：已为第${targetIndex}个帖子点赞并评论“${commentText}”`);
+      setTaskContext((prev) => ({
+        ...(prev || {}),
+        topicId: target.id,
+        targetIndex,
+        commentText,
+        interactionSyncedAt: Date.now()
+      }));
       setTaskRunning(false);
       setTaskFailed(false);
     } catch (error) {

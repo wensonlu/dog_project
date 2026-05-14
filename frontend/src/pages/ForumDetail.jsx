@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 import CommentItem from '../components/Forum/CommentItem';
@@ -6,6 +6,7 @@ import CommentActionSheet from '../components/Forum/CommentActionSheet';
 import ConfirmModal from '../components/ConfirmModal';
 import { formatTime } from '../data/mockForum';
 import { useAuth } from '../context/AuthContext';
+import { useTask } from '../context/TaskContext';
 import { API_BASE_URL, FORUM_API } from '../config/api';
 import { addForumBrowseHistory } from '../utils/forumHistory';
 
@@ -13,6 +14,7 @@ const ForumDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { taskContext } = useTask();
   const [topic, setTopic] = useState(null);
   const [comments, setComments] = useState([]);
   const [isLiked, setIsLiked] = useState(false);
@@ -41,7 +43,7 @@ const ForumDetail = () => {
   const barInputRef = useRef(null);
 
   // 获取话题详情
-  const refreshTopicData = async () => {
+  const refreshTopicData = useCallback(async () => {
     const params = new URLSearchParams();
     if (user?.id) {
       params.append('userId', user.id);
@@ -51,9 +53,12 @@ const ForumDetail = () => {
       const data = await refreshResponse.json();
       setTopic(data.topic);
       setComments(data.comments || []);
+      setIsLiked(data.topic?.isLiked || false);
       setLikeCount(data.topic?.likes || 0);
+      setIsFollowingAuthor(data.topic?.isFollowingAuthor || false);
+      setAuthorFollowers(data.topic?.authorFollowers || 0);
     }
-  };
+  }, [id, user?.id]);
 
   useEffect(() => {
     const fetchTopic = async () => {
@@ -88,6 +93,16 @@ const ForumDetail = () => {
       fetchTopic();
     }
   }, [id, user?.id]);
+
+  useEffect(() => {
+    const targetTopicId = taskContext?.topicId;
+    const syncKey = taskContext?.interactionSyncedAt || taskContext?.likeSyncedAt;
+    if (!targetTopicId || !syncKey) return;
+    if (String(targetTopicId) !== String(id)) return;
+    refreshTopicData().catch((error) => {
+      console.error('Error refreshing topic after assistant task:', error);
+    });
+  }, [taskContext?.interactionSyncedAt, taskContext?.likeSyncedAt, taskContext?.topicId, id, refreshTopicData]);
 
   // 键盘弹起时底部栏吸附在键盘上方（visualViewport）
   useEffect(() => {
