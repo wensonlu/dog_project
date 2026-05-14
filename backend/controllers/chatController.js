@@ -108,11 +108,13 @@ async function generateAssistantReply({
 
   writeSSE(res, {
     type: 'message_stop',
-    message: assistantMessage || {
-      id: 'error',
-      content: fullText,
-      ...references
-    }
+    message: assistantMessage
+      ? { ...assistantMessage, ...references }
+      : {
+          id: 'error',
+          content: fullText,
+          ...references
+        }
   });
 }
 

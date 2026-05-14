@@ -12,6 +12,13 @@ import '../styles/ChatAssistant.css';
 const MAX_MESSAGE_LENGTH = 500;
 const MotionButton = motion.button;
 const MotionDiv = motion.div;
+const PROMPT_EXAMPLES = [
+  '帮我总结这个帖子，并提炼3条关键观点',
+  '帮我找论坛里和“新手领养金毛”最相关的帖子',
+  '基于当前帖子，帮我草拟一条礼貌且有信息量的回复',
+  '我想发“第一次领养”的帖子，先帮我生成标题和正文',
+  '发布前帮我检查有没有重复话题，并给我优化建议'
+];
 
 export default function ChatAssistant() {
   const { user } = useAuth();
@@ -61,6 +68,11 @@ export default function ChatAssistant() {
     setInputError('');
     await sendMessage(trimmedInput);
     setInputValue('');
+  };
+
+  const handleUsePromptExample = (text) => {
+    setInputValue(text);
+    setInputError('');
   };
 
   const handleKeyPress = (e) => {
@@ -134,16 +146,30 @@ export default function ChatAssistant() {
               {/* 消息区域 */}
               <div className="chat-messages">
                 {messages.length === 0 ? (
-                  <div className="chat-welcome">
-                    <div className="chat-welcome-icon">🐾</div>
-                    <div className="chat-welcome-text">欢迎！我可以帮你回答：</div>
-                    <ul className="chat-welcome-examples">
-                      <li>• 宠物品种和特征</li>
-                      <li>• 养护知识和健康问题</li>
-                      <li>• 领养流程指导</li>
-                    </ul>
+                <div className="chat-welcome">
+                  <div className="chat-welcome-icon">🐾</div>
+                  <div className="chat-welcome-text">欢迎！你可以这样用我：</div>
+                  <ul className="chat-welcome-examples">
+                    <li>• 论坛内容总结：长帖提炼、争议点梳理、结论归纳</li>
+                    <li>• 论坛检索推荐：按主题找相关帖子，减少重复提问</li>
+                    <li>• 回复草拟优化：生成礼貌、清晰、有信息量的回复</li>
+                    <li>• 发帖辅助：生成标题/正文，并提示相似话题</li>
+                  </ul>
+                  <div className="chat-prompt-title">试试这样提问：</div>
+                  <div className="chat-prompt-grid">
+                    {PROMPT_EXAMPLES.map((example) => (
+                      <button
+                        key={example}
+                        type="button"
+                        className="chat-prompt-chip"
+                        onClick={() => handleUsePromptExample(example)}
+                      >
+                        {example}
+                      </button>
+                    ))}
                   </div>
-                ) : (
+                </div>
+              ) : (
                   messages.map((msg) => (
                     <div key={msg.id || msg.created_at}>
                       <ChatMessage

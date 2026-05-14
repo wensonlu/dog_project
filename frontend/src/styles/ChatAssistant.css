@@ -157,6 +157,35 @@
   margin-left: 0;
 }
 
+.chat-prompt-title {
+  margin-top: 12px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.chat-prompt-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-prompt-chip {
+  text-align: left;
+  font-size: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.chat-prompt-chip:hover {
+  border-color: #f43f5e;
+  background: #fff1f5;
+}
+
 .chat-login-hint {
   background: #fef3c7;
   border-left: 4px solid #f59e0b;
@@ -264,6 +293,21 @@
 
   .chat-welcome-examples {
     color: #6b7280;
+  }
+
+  .chat-prompt-title {
+    color: #9ca3af;
+  }
+
+  .chat-prompt-chip {
+    background: #1f2937;
+    border-color: #374151;
+    color: #e5e7eb;
+  }
+
+  .chat-prompt-chip:hover {
+    border-color: #f43f5e;
+    background: #2b3342;
   }
 
   .chat-input-area {
