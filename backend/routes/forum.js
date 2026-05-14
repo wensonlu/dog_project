@@ -22,7 +22,8 @@ const {
   verifyTopicInteraction,
   toggleTopicAuthorFollow,
   getMyFollowingAuthors,
-  getForumContext
+  getForumContext,
+  getSearchAiSummary
 } = require('../controllers/forumController');
 const checkSupabase = require('../middleware/supabaseCheck');
 const supabase = require('../config/supabase');
@@ -72,6 +73,7 @@ router.get('/related/:dogId', checkSupabase, async (req, res) => {
 // Get all topics with filters
 router.get('/', checkSupabase, getAllTopics);
 router.get('/context', checkSupabase, getForumContext);
+router.get('/search/ai-summary', checkSupabase, getSearchAiSummary);
 router.get('/related-topics', checkSupabase, getRelatedTopicsByContent);
 
 // AI generate topic content

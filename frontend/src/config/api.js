@@ -31,6 +31,7 @@ export const CHAT_API = {
 export const FORUM_API = {
   LIST: `${API_BASE_URL}/forum`,
   CONTEXT: `${API_BASE_URL}/forum/context`,
+  SEARCH_AI_SUMMARY: `${API_BASE_URL}/forum/search/ai-summary`,
   RELATED_TOPICS: `${API_BASE_URL}/forum/related-topics`,
   DRAFT_REPLY: `${API_BASE_URL}/forum/draft-reply`,
   DRAFT_TOPIC: `${API_BASE_URL}/forum/draft-topic`,

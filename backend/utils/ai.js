@@ -314,9 +314,104 @@ ${replyToContent ? `回复对象内容：${replyToContent}` : ''}
   }
 }
 
+function extractJsonObject(text, requiredKeys = []) {
+  let candidate = text;
+  const match = String(text || '').match(/\{[\s\S]*\}/);
+  if (match) {
+    candidate = match[0];
+  }
+  const parsed = JSON.parse(candidate);
+  for (const key of requiredKeys) {
+    if (!(key in parsed)) {
+      throw new Error(`AI 返回数据缺少字段: ${key}`);
+    }
+  }
+  return parsed;
+}
+
+async function generateForumSearchSummary({ query, documents, timeRange = '180d' }) {
+  const startTime = Date.now();
+  if (!query || !String(query).trim()) {
+    throw new Error('query is required');
+  }
+
+  const safeDocs = Array.isArray(documents) ? documents.slice(0, 12) : [];
+  const documentsPayload = safeDocs.map((doc) => ({
+    postId: doc.postId,
+    title: doc.title,
+    createdAt: doc.createdAt,
+    snippet: doc.snippet,
+  }));
+
+  const prompt = `你是宠物论坛搜索总结助手。你只能基于给定证据输出，禁止编造。
+
+用户查询：${String(query).trim()}
+时间范围：${timeRange}
+帖子证据（JSON）：
+${JSON.stringify(documentsPayload, null, 2)}
+
+请输出 JSON，结构如下：
+{
+  "keyFindings": ["..."],
+  "commonCauses": ["..."],
+  "suggestionsTryFirst": ["..."],
+  "seeVetSignals": ["..."],
+  "disclaimer": "..."
+}
+
+要求：
+1) 每个数组 3-5 条，中文简洁可执行。
+2) 证据不足时明确写“不确定/证据不足”。
+3) 出现持续不进食、呕吐、便血、精神沉郁、脱水等信号时，seeVetSignals 必须提醒及时就医。
+4) 不提供人用药剂量，不推荐危险偏方。
+5) 只返回 JSON。`;
+
+  try {
+    if (isAiEnabled()) {
+      const { generateText, model } = getAiRuntime();
+      const { text } = await generateText({ model, prompt });
+      const parsed = extractJsonObject(text, [
+        'keyFindings',
+        'commonCauses',
+        'suggestionsTryFirst',
+        'seeVetSignals',
+        'disclaimer',
+      ]);
+
+      return {
+        summary: {
+          keyFindings: Array.isArray(parsed.keyFindings) ? parsed.keyFindings : [],
+          commonCauses: Array.isArray(parsed.commonCauses) ? parsed.commonCauses : [],
+          suggestionsTryFirst: Array.isArray(parsed.suggestionsTryFirst) ? parsed.suggestionsTryFirst : [],
+          seeVetSignals: Array.isArray(parsed.seeVetSignals) ? parsed.seeVetSignals : [],
+          disclaimer: parsed.disclaimer || 'AI总结仅供参考，不能替代专业诊断。',
+        },
+        duration: Date.now() - startTime,
+        model: 'glm-5',
+      };
+    }
+
+    return {
+      summary: {
+        keyFindings: ['多数帖子建议先排除环境应激和换粮过快问题。', '短期食欲下降常见，但持续恶化要警惕。', '高频建议是先观察 12-24 小时并记录状态。'],
+        commonCauses: ['新环境应激', '突然换粮或喂食节奏变化', '口腔不适或潜在肠胃问题'],
+        suggestionsTryFirst: ['提供安静环境和温水，减少打扰。', '尝试少量多餐与原粮过渡。', '记录精神状态、饮水和排便变化。'],
+        seeVetSignals: ['超过24小时几乎不进食', '伴随频繁呕吐、便血或明显脱水', '精神沉郁、持续躲藏或体温异常'],
+        disclaimer: 'AI总结仅供参考，不能替代专业诊断。',
+      },
+      duration: Date.now() - startTime,
+      model: 'mock-disabled',
+    };
+  } catch (error) {
+    console.error('生成论坛搜索总结失败:', error);
+    throw new Error(`生成论坛搜索总结失败: ${error.message}`);
+  }
+}
+
 module.exports = {
   generatePetBio,
   generateHealthAdvice,
   generateTopicContent,
   generateReplyDraft,
+  generateForumSearchSummary,
 };

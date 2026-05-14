@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars -- used as motion.header, motion.div, etc.
 import BottomNav from '../components/BottomNav';
 import TopicCard from '../components/Forum/TopicCard';
+import AISummaryCard from '../components/Forum/AISummaryCard';
 import CategoryFilter from '../components/Forum/CategoryFilter';
-import SortSelector from '../components/Forum/SortSelector';
 import { categories, sortOptions } from '../data/mockForum';
 import { useAuth } from '../context/AuthContext';
 import { useForumListContext } from '../context/ForumListContext';
 import { FORUM_API } from '../config/api';
 
 const Forum = () => {
+  const FORUM_PREFS_KEY = 'forum_view_prefs_v1';
   const navigate = useNavigate();
   const { user } = useAuth();
   const ctx = useForumListContext();
@@ -22,6 +23,10 @@ const Forum = () => {
   const [localLoading, setLocalLoading] = useState(true);
   const [localError, setLocalError] = useState(null);
   const [contextSummary, setContextSummary] = useState(null);
+  const [aiSummary, setAiSummary] = useState(null);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [aiSummaryError, setAiSummaryError] = useState(null);
+  const [aiSummaryNonce, setAiSummaryNonce] = useState(0);
 
   const searchQuery = ctx ? ctx.searchQuery : localSearchQuery;
   const setSearchQuery = ctx ? ctx.setSearchQuery : setLocalSearchQuery;
@@ -39,6 +44,32 @@ const Forum = () => {
   const setScrollPosition = ctx ? ctx.setScrollPosition : () => {};
   const listScrollRef = ctx ? ctx.listScrollRef : { current: null };
   const skipNextFetchRef = ctx ? ctx.skipNextFetchRef : { current: false };
+  const topSortTabs = sortOptions.filter((item) => ['latest', 'hot', 'comments'].includes(item.id));
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(FORUM_PREFS_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved?.selectedSort) setSelectedSort(saved.selectedSort);
+      if (saved?.selectedCategory) setSelectedCategory(saved.selectedCategory);
+    } catch {
+      // ignore corrupted local storage
+    }
+    // 仅初始化时恢复一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(FORUM_PREFS_KEY, JSON.stringify({
+        selectedSort,
+        selectedCategory
+      }));
+    } catch {
+      // ignore write failures
+    }
+  }, [selectedSort, selectedCategory]);
 
   useEffect(() => {
     if (skipNextFetchRef?.current && topics.length > 0) {
@@ -115,6 +146,44 @@ const Forum = () => {
     };
     syncForumContext();
   }, [selectedSort, selectedCategory, searchQuery, user?.id]);
+
+  useEffect(() => {
+    const normalizedQuery = searchQuery.trim();
+    if (normalizedQuery.length < 2) {
+      setAiSummary(null);
+      setAiSummaryError(null);
+      setAiSummaryLoading(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setAiSummaryLoading(true);
+      setAiSummaryError(null);
+      try {
+        const params = new URLSearchParams({
+          q: normalizedQuery,
+          timeRange: '180d',
+        });
+        if (aiSummaryNonce > 0) {
+          params.append('_refresh', String(Date.now()));
+        }
+        const response = await fetch(`${FORUM_API.SEARCH_AI_SUMMARY}?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch AI summary');
+        }
+        const data = await response.json();
+        setAiSummary(data);
+      } catch (err) {
+        console.error('Error fetching AI summary:', err);
+        setAiSummaryError(err.message);
+        setAiSummary(null);
+      } finally {
+        setAiSummaryLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, aiSummaryNonce]);
 
   useEffect(() => {
     if (scrollPosition == null) return;
@@ -205,8 +274,27 @@ const Forum = () => {
           )}
         </div>
 
-        {/* 分类和排序 */}
-        <div className="flex items-center justify-between gap-2">
+        {/* 一级：高频排序 Tab */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
+          {topSortTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setSelectedSort(tab.id)}
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
+                selectedSort === tab.id
+                  ? 'bg-teal-500 text-white'
+                  : 'bg-white/90 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 text-gray-700 dark:text-gray-200'
+              }`}
+            >
+              {tab.name}
+            </button>
+          ))}
+        </div>
+
+        {/* 二级：分类筛选 */}
+        <div className="mt-1">
+          <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1 px-1">按话题分类筛选</div>
           <div className="flex-1 overflow-hidden">
             <CategoryFilter
               categories={categories}
@@ -214,11 +302,6 @@ const Forum = () => {
               onSelect={setSelectedCategory}
             />
           </div>
-          <SortSelector
-            sortOptions={sortOptions}
-            selectedSort={selectedSort}
-            onSelect={setSelectedSort}
-          />
         </div>
         {contextSummary && (
           <div className="mt-2 text-xs text-teal-600 dark:text-teal-400">
@@ -229,6 +312,14 @@ const Forum = () => {
 
       {/* 话题列表 - ref 供列表缓存恢复滚动 */}
       <main ref={listScrollRef} className="flex-1 px-2 pt-4 overflow-y-auto relative z-10">
+        <AISummaryCard
+          data={aiSummary}
+          loading={aiSummaryLoading}
+          error={aiSummaryError}
+          onRefresh={() => setAiSummaryNonce((v) => v + 1)}
+          onFollowUp={() => navigate(`/chat?q=${encodeURIComponent(searchQuery.trim())}`)}
+        />
+
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <motion.div 

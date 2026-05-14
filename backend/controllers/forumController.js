@@ -1,8 +1,10 @@
 const { getSupabaseClient } = require('../utils/supabaseClient');
-const { generateTopicContent, generateReplyDraft } = require('../utils/ai');
+const { generateTopicContent, generateReplyDraft, generateForumSearchSummary } = require('../utils/ai');
 
 const confirmTokenStore = new Map();
 const CONFIRM_TOKEN_TTL_MS = 60 * 1000;
+const searchSummaryCache = new Map();
+const SEARCH_SUMMARY_CACHE_TTL_MS = 30 * 60 * 1000;
 
 function cleanupExpiredConfirmTokens() {
   const now = Date.now();
@@ -66,6 +68,39 @@ function calcSimpleSimilarity(a, b) {
     if (sb.has(token)) inter += 1;
   }
   return inter / (sa.size + sb.size - inter);
+}
+
+function cleanupSearchSummaryCache() {
+  const now = Date.now();
+  for (const [key, value] of searchSummaryCache.entries()) {
+    if (value.expiresAt <= now) {
+      searchSummaryCache.delete(key);
+    }
+  }
+}
+
+function buildForumSearchTerms(query) {
+  const base = String(query || '').trim();
+  const terms = new Set();
+  if (!base) return [];
+
+  terms.add(base);
+  const normalized = base.toLowerCase();
+
+  if (normalized.includes('不吃饭') || normalized.includes('厌食') || normalized.includes('食欲')) {
+    ['不吃饭', '厌食', '没胃口', '食欲差', '不进食', '挑食', '食欲下降'].forEach((item) => terms.add(item));
+  }
+  if (normalized.includes('宠物')) {
+    ['狗狗', '猫咪', '犬猫'].forEach((item) => terms.add(item));
+  }
+  if (normalized.includes('狗')) {
+    ['狗狗', '幼犬', '老年犬'].forEach((item) => terms.add(item));
+  }
+  if (normalized.includes('猫')) {
+    ['猫咪', '幼猫'].forEach((item) => terms.add(item));
+  }
+
+  return Array.from(terms).slice(0, 10);
 }
 
 /**
@@ -319,6 +354,123 @@ async function getForumContext(req, res) {
   } catch (error) {
     console.error('Error building forum context:', error);
     res.status(500).json({ error: 'Failed to build forum context' });
+  }
+}
+
+async function getSearchAiSummary(req, res) {
+  const client = getSupabaseClient(req);
+  const query = String(req.query.q || '').trim();
+  const timeRange = String(req.query.timeRange || '180d').trim();
+  const forceRefresh = !!req.query._refresh;
+
+  if (query.length < 2) {
+    return res.status(400).json({ error: 'q is required and must be at least 2 characters' });
+  }
+
+  const cacheKey = `${query.toLowerCase()}::${timeRange}`;
+  cleanupSearchSummaryCache();
+  const cached = searchSummaryCache.get(cacheKey);
+  if (!forceRefresh && cached && cached.expiresAt > Date.now()) {
+    return res.json({
+      ...cached.value,
+      meta: {
+        ...cached.value.meta,
+        cacheHit: true,
+      }
+    });
+  }
+
+  const startedAt = Date.now();
+
+  try {
+    const searchTerms = buildForumSearchTerms(query);
+    const orClauses = searchTerms
+      .map((term) => `title.ilike.%${term}%,content.ilike.%${term}%`)
+      .join(',');
+
+    const { data: topics, error } = await client
+      .from('forum_topics')
+      .select('id, title, content, created_at, likes_count, comments_count')
+      .or(orClauses || `title.ilike.%${query}%,content.ilike.%${query}%`)
+      .order('created_at', { ascending: false })
+      .limit(120);
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    const raw = topics || [];
+    const ranked = raw
+      .map((topic) => {
+        const similarity = calcSimpleSimilarity(query, `${topic.title || ''} ${topic.content || ''}`);
+        const engagement = (topic.likes_count || 0) * 0.3 + (topic.comments_count || 0) * 0.7;
+        return {
+          topic,
+          score: similarity + Math.min(engagement / 100, 0.3),
+        };
+      })
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    const topItems = ranked.slice(0, 10).map(({ topic }) => ({
+      postId: topic.id,
+      title: topic.title || '无标题',
+      url: `/forum/post/${topic.id}`,
+      createdAt: topic.created_at,
+      snippet: String(topic.content || '').replace(/\s+/g, ' ').slice(0, 180),
+    }));
+
+    if (topItems.length < 3) {
+      return res.json({
+        query,
+        confidence: 'low',
+        timeRange,
+        generatedAt: new Date().toISOString(),
+        summary: {
+          keyFindings: ['相关帖子较少，暂时无法形成稳定结论。可尝试更具体关键词，如“幼犬不吃饭+呕吐”。'],
+          commonCauses: [],
+          suggestionsTryFirst: [],
+          seeVetSignals: [],
+          disclaimer: 'AI总结仅供参考，不能替代专业诊断。'
+        },
+        citations: topItems,
+        meta: {
+          sourceCount: topItems.length,
+          cacheHit: false,
+          latencyMs: Date.now() - startedAt,
+        }
+      });
+    }
+
+    const aiResult = await generateForumSearchSummary({
+      query,
+      documents: topItems,
+      timeRange,
+    });
+
+    const response = {
+      query,
+      confidence: topItems.length >= 8 ? 'high' : 'medium',
+      timeRange,
+      generatedAt: new Date().toISOString(),
+      summary: aiResult.summary,
+      citations: topItems,
+      meta: {
+        sourceCount: topItems.length,
+        cacheHit: false,
+        latencyMs: Date.now() - startedAt,
+      }
+    };
+
+    searchSummaryCache.set(cacheKey, {
+      value: response,
+      expiresAt: Date.now() + SEARCH_SUMMARY_CACHE_TTL_MS,
+    });
+
+    return res.json(response);
+  } catch (error) {
+    console.error('Error building search AI summary:', error);
+    return res.status(500).json({ error: 'Failed to build search AI summary' });
   }
 }
 
@@ -1539,5 +1691,6 @@ module.exports = {
   verifyTopicInteraction,
   toggleTopicAuthorFollow,
   getMyFollowingAuthors,
-  getForumContext
+  getForumContext,
+  getSearchAiSummary
 };

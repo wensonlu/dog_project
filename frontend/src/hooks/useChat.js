@@ -10,6 +10,7 @@ export function useChat(sessionId) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const abortControllerRef = useRef(null);
+  const authToken = user?.session?.access_token || user?.token || null;
 
   // 从服务器加载历史消息（已登录用户）
   useEffect(() => {
@@ -19,12 +20,13 @@ export function useChat(sessionId) {
       try {
         const response = await fetch(CHAT_API.GET_SESSION(sessionId), {
           headers: {
-            'Authorization': `Bearer ${user.token}`
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
           }
         });
 
         if (!response.ok) {
-          throw new Error('Failed to load history');
+          const errText = await response.text().catch(() => '');
+          throw new Error(`Failed to load history (${response.status}): ${errText || response.statusText}`);
         }
 
         const data = await response.json();
@@ -36,7 +38,7 @@ export function useChat(sessionId) {
     };
 
     loadHistory();
-  }, [sessionId, user?.id, user?.token]);
+  }, [sessionId, user?.id, authToken]);
 
   const consumeStreamResponse = useCallback(async (response) => {
     if (!response.ok) {
@@ -134,7 +136,7 @@ export function useChat(sessionId) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(user?.token && { 'Authorization': `Bearer ${user.token}` })
+          ...(authToken && { Authorization: `Bearer ${authToken}` })
         },
         body: JSON.stringify({
           session_id: sessionId,
@@ -155,7 +157,7 @@ export function useChat(sessionId) {
     } finally {
       setLoading(false);
     }
-  }, [sessionId, user?.token, user?.id, consumeStreamResponse]);
+  }, [sessionId, authToken, user?.id, consumeStreamResponse]);
 
   const regenerateLastReply = useCallback(async () => {
     if (!sessionId || loading) return;
@@ -184,7 +186,7 @@ export function useChat(sessionId) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(user?.token && { Authorization: `Bearer ${user.token}` })
+          ...(authToken && { Authorization: `Bearer ${authToken}` })
         },
         body: JSON.stringify({
           session_id: sessionId
@@ -201,7 +203,7 @@ export function useChat(sessionId) {
     } finally {
       setLoading(false);
     }
-  }, [sessionId, loading, messages, user?.token, consumeStreamResponse]);
+  }, [sessionId, loading, messages, authToken, consumeStreamResponse]);
 
   // 停止生成
   const stopGeneration = useCallback(() => {
