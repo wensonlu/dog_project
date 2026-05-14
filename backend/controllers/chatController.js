@@ -3,7 +3,7 @@
 const { getSupabaseClient } = require('../utils/supabaseClient');
 const { searchContext, constructSystemPrompt, formatReferences } = require('../utils/chatUtils');
 const { streamText } = require('ai');
-const { anthropic } = require('@ai-sdk/anthropic');
+const { createAnthropic } = require('@ai-sdk/anthropic');
 
 function canAccessSession(sessionUserId, authUserId) {
   if (!sessionUserId) return true;
@@ -12,6 +12,25 @@ function canAccessSession(sessionUserId, authUserId) {
 
 function writeSSE(res, payload) {
   res.write(`data: ${JSON.stringify(payload)}\n\n`);
+}
+
+function getAiRuntime() {
+  const baseURL = process.env.AI_BASE_URL;
+  const apiKey = process.env.AI_API_KEY;
+  const model = process.env.AI_MODEL;
+
+  if (!baseURL || !apiKey || !model) {
+    throw new Error('AI config missing: require AI_BASE_URL, AI_API_KEY, AI_MODEL');
+  }
+
+  const anthropic = createAnthropic({
+    baseURL: baseURL.replace(/\/+$/, ''),
+    apiKey
+  });
+
+  return {
+    model: anthropic(model)
+  };
 }
 
 async function generateAssistantReply({
@@ -49,8 +68,9 @@ async function generateAssistantReply({
     .reverse()
     .map(m => ({ role: m.role, content: m.content }));
 
+  const { model } = getAiRuntime();
   const stream = await streamText({
-    model: anthropic('claude-3-5-sonnet-20241022'),
+    model,
     system: systemPrompt,
     messages
   });

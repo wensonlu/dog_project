@@ -98,25 +98,30 @@ export default function ChatAssistant() {
       {/* 聊天窗口 */}
       <AnimatePresence>
         {isOpen && (
-          <MotionDiv
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            className="chat-window"
-          >
-            {/* 头部 */}
-            <div className="chat-header">
-              <div className="chat-header-title">
-                <span>🐕 宠物小助手</span>
+          <>
+            <MotionDiv
+              className="chat-sheet-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+            />
+            <MotionDiv
+              initial={{ opacity: 0, y: 80 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 80 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 260 }}
+              className="chat-window"
+            >
+              <div className="chat-sheet-handle-wrap">
+                <div className="chat-sheet-handle" />
               </div>
-              <div className="chat-header-actions">
-                <button
-                  className="chat-header-btn"
-                  onClick={() => setIsOpen(false)}
-                  title="最小化"
-                >
-                  ⎕
-                </button>
+
+              {/* 头部 */}
+              <div className="chat-header">
+                <div className="chat-header-title">
+                  <span>🐕 宠物小助手</span>
+                </div>
                 <button
                   className="chat-header-btn"
                   onClick={() => setIsOpen(false)}
@@ -125,111 +130,111 @@ export default function ChatAssistant() {
                   ✕
                 </button>
               </div>
-            </div>
 
-            {/* 消息区域 */}
-            <div className="chat-messages">
-              {messages.length === 0 ? (
-                <div className="chat-welcome">
-                  <div className="chat-welcome-icon">🐾</div>
-                  <div className="chat-welcome-text">欢迎！我可以帮你回答：</div>
-                  <ul className="chat-welcome-examples">
-                    <li>• 宠物品种和特征</li>
-                    <li>• 养护知识和健康问题</li>
-                    <li>• 领养流程指导</li>
-                  </ul>
-                </div>
-              ) : (
-                messages.map((msg) => (
-                  <div key={msg.id || msg.created_at}>
-                    <ChatMessage
-                      message={msg}
-                      isUser={msg.role === 'user'}
-                    />
-                    {msg.role === 'assistant' && (
-                      <div className="px-2 mb-3 space-y-1">
-                        {msg.referenced_articles && msg.referenced_articles.length > 0 && (
-                          msg.referenced_articles.map((article) => (
-                            <ChatReferenceCard
-                              key={`article-${article.id}`}
-                              type="article"
-                              item={article}
-                            />
-                          ))
-                        )}
-                        {msg.referenced_dogs && msg.referenced_dogs.length > 0 && (
-                          msg.referenced_dogs.map((dog) => (
-                            <ChatReferenceCard
-                              key={`dog-${dog.id}`}
-                              type="dog"
-                              item={dog}
-                            />
-                          ))
-                        )}
-                        {msg.referenced_stories && msg.referenced_stories.length > 0 && (
-                          msg.referenced_stories.map((story) => (
-                            <ChatReferenceCard
-                              key={`story-${story.id}`}
-                              type="story"
-                              item={story}
-                            />
-                          ))
-                        )}
-                      </div>
-                    )}
+              {/* 消息区域 */}
+              <div className="chat-messages">
+                {messages.length === 0 ? (
+                  <div className="chat-welcome">
+                    <div className="chat-welcome-icon">🐾</div>
+                    <div className="chat-welcome-text">欢迎！我可以帮你回答：</div>
+                    <ul className="chat-welcome-examples">
+                      <li>• 宠物品种和特征</li>
+                      <li>• 养护知识和健康问题</li>
+                      <li>• 领养流程指导</li>
+                    </ul>
                   </div>
-                ))
-              )}
-              {chatError && (
-                <div className="text-red-600 text-sm p-2 bg-red-50 rounded">
-                  错误：{chatError}
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* 登录提示 */}
-            {!user?.id && messages.length > 0 && (
-              <div className="chat-login-hint">
-                🔓 登录后可保存对话
+                ) : (
+                  messages.map((msg) => (
+                    <div key={msg.id || msg.created_at}>
+                      <ChatMessage
+                        message={msg}
+                        isUser={msg.role === 'user'}
+                      />
+                      {msg.role === 'assistant' && (
+                        <div className="px-2 mb-3 space-y-1">
+                          {msg.referenced_articles && msg.referenced_articles.length > 0 && (
+                            msg.referenced_articles.map((article) => (
+                              <ChatReferenceCard
+                                key={`article-${article.id}`}
+                                type="article"
+                                item={article}
+                              />
+                            ))
+                          )}
+                          {msg.referenced_dogs && msg.referenced_dogs.length > 0 && (
+                            msg.referenced_dogs.map((dog) => (
+                              <ChatReferenceCard
+                                key={`dog-${dog.id}`}
+                                type="dog"
+                                item={dog}
+                              />
+                            ))
+                          )}
+                          {msg.referenced_stories && msg.referenced_stories.length > 0 && (
+                            msg.referenced_stories.map((story) => (
+                              <ChatReferenceCard
+                                key={`story-${story.id}`}
+                                type="story"
+                                item={story}
+                              />
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+                {chatError && (
+                  <div className="text-red-600 text-sm p-2 bg-red-50 rounded">
+                    错误：{chatError}
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
-            )}
 
-            {/* 输入区域 */}
-            <div className="chat-input-area">
-              <button
-                className="chat-regenerate-btn"
-                onClick={regenerateLastReply}
-                disabled={!isInitialized || chatLoading || messages.filter(m => m.role === 'user').length === 0}
-                title="重新生成上一条回复"
-              >
-                重试
-              </button>
-              <textarea
-                className="chat-input"
-                placeholder="问我任何宠物相关的问题..."
-                value={inputValue}
-                onChange={handleInputChange}
-                onKeyPress={handleKeyPress}
-                disabled={!isInitialized || chatLoading}
-                rows="1"
-                maxLength={MAX_MESSAGE_LENGTH}
-              />
-              {inputError && (
-                <div className="text-red-600 text-xs p-1 mt-1">
-                  {inputError}
+              {/* 登录提示 */}
+              {!user?.id && messages.length > 0 && (
+                <div className="chat-login-hint">
+                  🔓 登录后可保存对话
                 </div>
               )}
-              <button
-                className="chat-send-btn"
-                onClick={chatLoading ? stopGeneration : handleSendMessage}
-                disabled={!isInitialized || (!!inputError) || (!chatLoading && !inputValue.trim())}
-                title={chatLoading ? '停止生成' : (inputError ? inputError : '发送')}
-              >
-                {chatLoading ? '■' : '→'}
-              </button>
-            </div>
-          </MotionDiv>
+
+              {/* 输入区域 */}
+              <div className="chat-input-area">
+                <button
+                  className="chat-regenerate-btn"
+                  onClick={regenerateLastReply}
+                  disabled={!isInitialized || chatLoading || messages.filter(m => m.role === 'user').length === 0}
+                  title="重新生成上一条回复"
+                >
+                  重试
+                </button>
+                <textarea
+                  className="chat-input"
+                  placeholder="问我任何宠物相关的问题..."
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  onKeyPress={handleKeyPress}
+                  disabled={!isInitialized || chatLoading}
+                  rows="1"
+                  maxLength={MAX_MESSAGE_LENGTH}
+                />
+                {inputError && (
+                  <div className="text-red-600 text-xs p-1 mt-1">
+                    {inputError}
+                  </div>
+                )}
+                <button
+                  className="chat-send-btn"
+                  onClick={chatLoading ? stopGeneration : handleSendMessage}
+                  disabled={!isInitialized || (!!inputError) || (!chatLoading && !inputValue.trim())}
+                  title={chatLoading ? '停止生成' : (inputError ? inputError : '发送')}
+                >
+                  {chatLoading ? '■' : '→'}
+                </button>
+              </div>
+            </MotionDiv>
+          </>
         )}
       </AnimatePresence>
     </>
