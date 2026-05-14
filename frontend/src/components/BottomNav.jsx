@@ -9,8 +9,8 @@ const BottomNav = () => {
     const navItems = [
         { label: '探索', icon: 'style', path: '/' },
         { label: '论坛', icon: 'forum', path: '/forum' },
-        { label: '内容', icon: 'menu_book', path: '/content' },
         { label: '商城', icon: 'storefront', path: '/shop' },
+        { label: '故事', icon: 'auto_stories', path: '/content' },
         { label: '我的', icon: 'person', path: '/profile' },
     ];
 
