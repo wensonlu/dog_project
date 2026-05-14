@@ -32,6 +32,9 @@ import WikiCategory from './pages/WikiCategory';
 import WikiSearch from './pages/WikiSearch';
 import EditProfile from './pages/EditProfile';
 import FollowingAuthors from './pages/FollowingAuthors';
+import ContentHub from './pages/ContentHub';
+import Shop from './pages/Shop';
+import ShopDetail from './pages/ShopDetail';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -68,12 +71,19 @@ function AppContent() {
         {/* 故事墙路由 */}
         <Route path="/stories" element={<Stories />} />
         <Route path="/stories/:id" element={<StoryDetail />} />
+
+        {/* 内容合并入口 */}
+        <Route path="/content" element={<ContentHub />} />
         
         {/* 百科路由 */}
         <Route path="/wiki" element={<Wiki />} />
         <Route path="/wiki/category/:slug" element={<WikiCategory />} />
         <Route path="/wiki/article/:slug" element={<WikiArticle />} />
         <Route path="/wiki/search" element={<WikiSearch />} />
+
+        {/* 商城路由 */}
+        <Route path="/shop" element={<Shop />} />
+        <Route path="/shop/:id" element={<ShopDetail />} />
 
         {/* 编辑资料 */}
           <Route path="/edit-profile" element={<PrivateRoute><EditProfile /></PrivateRoute>} />
