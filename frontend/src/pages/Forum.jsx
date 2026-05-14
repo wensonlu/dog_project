@@ -17,6 +17,7 @@ const Forum = () => {
   const ctx = useForumListContext();
 
   const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [localSelectedCategory, setLocalSelectedCategory] = useState('all');
   const [localSelectedSort, setLocalSelectedSort] = useState('latest');
   const [localTopics, setLocalTopics] = useState([]);
@@ -27,6 +28,7 @@ const Forum = () => {
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [aiSummaryError, setAiSummaryError] = useState(null);
   const [aiSummaryNonce, setAiSummaryNonce] = useState(0);
+  const [aiSummaryVisible, setAiSummaryVisible] = useState(false);
 
   const searchQuery = ctx ? ctx.searchQuery : localSearchQuery;
   const setSearchQuery = ctx ? ctx.setSearchQuery : setLocalSearchQuery;
@@ -70,6 +72,24 @@ const Forum = () => {
       // ignore write failures
     }
   }, [selectedSort, selectedCategory]);
+
+  useEffect(() => {
+    setSearchInput(searchQuery || '');
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const nextQuery = searchInput.trim();
+      setSearchQuery(nextQuery);
+      setAiSummaryVisible(nextQuery.length >= 2);
+      setAiSummary(null);
+      setAiSummaryError(null);
+      setAiSummaryLoading(false);
+      setAiSummaryNonce(0);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [searchInput, setSearchQuery]);
 
   useEffect(() => {
     if (skipNextFetchRef?.current && topics.length > 0) {
@@ -149,14 +169,9 @@ const Forum = () => {
 
   useEffect(() => {
     const normalizedQuery = searchQuery.trim();
-    if (normalizedQuery.length < 2) {
-      setAiSummary(null);
-      setAiSummaryError(null);
-      setAiSummaryLoading(false);
-      return;
-    }
+    if (!aiSummaryVisible || normalizedQuery.length < 2) return;
 
-    const timer = setTimeout(async () => {
+    const fetchSummary = async () => {
       setAiSummaryLoading(true);
       setAiSummaryError(null);
       try {
@@ -180,10 +195,10 @@ const Forum = () => {
       } finally {
         setAiSummaryLoading(false);
       }
-    }, 300);
+    };
 
-    return () => clearTimeout(timer);
-  }, [searchQuery, aiSummaryNonce]);
+    fetchSummary();
+  }, [searchQuery, aiSummaryNonce, aiSummaryVisible]);
 
   useEffect(() => {
     if (scrollPosition == null) return;
@@ -256,17 +271,24 @@ const Forum = () => {
         <div className="relative mb-3">
           <input
             type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="搜索暖心话题..."
             className="w-full h-11 px-4 pl-11 rounded-2xl border border-rose-100 dark:border-zinc-700 bg-white/90 dark:bg-zinc-800/90 text-sm text-gray-800 dark:text-white placeholder-rose-300/70 focus:outline-none focus:ring-2 focus:ring-rose-200/50"
           />
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-rose-300 text-lg">
             search
           </span>
-          {searchQuery && (
+          {searchInput && (
             <button
-              onClick={() => setSearchQuery('')}
+              onClick={() => {
+                setSearchInput('');
+                setSearchQuery('');
+                setAiSummaryVisible(false);
+                setAiSummary(null);
+                setAiSummaryError(null);
+                setAiSummaryLoading(false);
+              }}
               className="absolute right-3 top-1/2 -translate-y-1/2 size-6 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center"
             >
               <span className="material-symbols-outlined text-xs text-rose-500">close</span>
@@ -312,13 +334,15 @@ const Forum = () => {
 
       {/* 话题列表 - ref 供列表缓存恢复滚动 */}
       <main ref={listScrollRef} className="flex-1 px-2 pt-4 overflow-y-auto relative z-10">
-        <AISummaryCard
-          data={aiSummary}
-          loading={aiSummaryLoading}
-          error={aiSummaryError}
-          onRefresh={() => setAiSummaryNonce((v) => v + 1)}
-          onFollowUp={() => navigate(`/chat?q=${encodeURIComponent(searchQuery.trim())}`)}
-        />
+        {aiSummaryVisible && (
+          <AISummaryCard
+            data={aiSummary}
+            loading={aiSummaryLoading}
+            error={aiSummaryError}
+            onRefresh={() => setAiSummaryNonce((v) => v + 1)}
+            onFollowUp={() => navigate(`/chat?q=${encodeURIComponent(searchQuery.trim())}`)}
+          />
+        )}
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">

@@ -1,5 +1,31 @@
 import React, { useState } from 'react';
 
+const TypewriterText = ({ text, speed = 16 }) => {
+  const [displayed, setDisplayed] = React.useState('');
+
+  React.useEffect(() => {
+    const fullText = String(text || '');
+    if (!fullText) {
+      setDisplayed('');
+      return;
+    }
+
+    let index = 0;
+    setDisplayed('');
+    const timer = setInterval(() => {
+      index += 1;
+      setDisplayed(fullText.slice(0, index));
+      if (index >= fullText.length) {
+        clearInterval(timer);
+      }
+    }, speed);
+
+    return () => clearInterval(timer);
+  }, [text, speed]);
+
+  return <>{displayed}</>;
+};
+
 const Section = ({ title, items, tone = 'slate' }) => {
   if (!Array.isArray(items) || items.length === 0) return null;
 
@@ -15,7 +41,7 @@ const Section = ({ title, items, tone = 'slate' }) => {
       <ul className="space-y-1.5">
         {items.map((item, index) => (
           <li key={`${title}-${index}`} className="text-xs leading-5">
-            {index + 1}. {item}
+            {index + 1}. <TypewriterText text={item} />
           </li>
         ))}
       </ul>
@@ -25,6 +51,7 @@ const Section = ({ title, items, tone = 'slate' }) => {
 
 const AISummaryCard = ({ data, loading, error, onRefresh, onFollowUp }) => {
   const [showCitations, setShowCitations] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   if (!loading && !data && !error) return null;
 
@@ -51,12 +78,27 @@ const AISummaryCard = ({ data, loading, error, onRefresh, onFollowUp }) => {
 
       {data && (
         <div className="space-y-2">
+          <div className={`relative ${expanded ? '' : 'max-h-72 overflow-hidden'}`}>
+            <div className="space-y-2">
           <Section title="核心结论" items={data.summary?.keyFindings} />
           <Section title="常见原因" items={data.summary?.commonCauses} tone="amber" />
           <Section title="可先尝试" items={data.summary?.suggestionsTryFirst} />
           <Section title="何时就医" items={data.summary?.seeVetSignals} tone="rose" />
 
           <p className="text-[11px] text-slate-500 leading-4">{data.summary?.disclaimer}</p>
+            </div>
+            {!expanded && (
+              <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-cyan-50/95 to-transparent pointer-events-none" />
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            className="w-full px-3 py-2 text-xs rounded-xl bg-white/90 text-slate-700 border border-slate-200"
+          >
+            {expanded ? '收起内容' : '查看更多'}
+          </button>
 
           <div className="flex gap-2">
             <button
