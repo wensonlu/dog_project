@@ -38,6 +38,81 @@ export function useChat(sessionId) {
     loadHistory();
   }, [sessionId, user?.id, user?.token]);
 
+  const consumeStreamResponse = useCallback(async (response) => {
+    if (!response.ok) {
+      throw new Error(`Failed to send message: ${response.statusText}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let assistantContent = '';
+    let references = null;
+    let streamError = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split('\n\n');
+      buffer = events.pop() || '';
+
+      for (const rawEvent of events) {
+        try {
+          const dataLines = rawEvent
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.startsWith('data:'))
+            .map(line => line.replace(/^data:\s*/, ''));
+
+          if (dataLines.length === 0) continue;
+          const event = JSON.parse(dataLines.join(''));
+
+          if (event.type === 'text_delta') {
+            assistantContent += event.text;
+            setMessages(prev => {
+              const last = prev[prev.length - 1];
+              if (last?.role === 'assistant') {
+                return [
+                  ...prev.slice(0, -1),
+                  { ...last, content: assistantContent }
+                ];
+              }
+              return [...prev, { role: 'assistant', content: event.text }];
+            });
+          } else if (event.type === 'message_stop') {
+            references = event.message;
+          } else if (event.type === 'error') {
+            streamError = event.error || 'Chat stream error';
+            break;
+          }
+        } catch (parseError) {
+          console.error('Parse stream error:', parseError);
+        }
+      }
+
+      if (streamError) break;
+    }
+
+    if (streamError) {
+      throw new Error(streamError);
+    }
+
+    if (references) {
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.role === 'assistant') {
+          return [
+            ...prev.slice(0, -1),
+            { ...last, ...references }
+          ];
+        }
+        return prev;
+      });
+    }
+  }, []);
+
   // 发送消息
   const sendMessage = useCallback(async (content) => {
     if (!sessionId || !content.trim()) {
@@ -69,62 +144,7 @@ export function useChat(sessionId) {
         signal: abortControllerRef.current.signal
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to send message: ${response.statusText}`);
-      }
-
-      // 处理流式响应
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let assistantContent = '';
-      let references = null;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n').filter(l => l.trim());
-
-        for (const line of lines) {
-          try {
-            const event = JSON.parse(line);
-
-            if (event.type === 'text_delta') {
-              assistantContent += event.text;
-              // 实时更新UI
-              setMessages(prev => {
-                const last = prev[prev.length - 1];
-                if (last?.role === 'assistant') {
-                  return [
-                    ...prev.slice(0, -1),
-                    { ...last, content: assistantContent }
-                  ];
-                }
-                return [...prev, { role: 'assistant', content: event.text }];
-              });
-            } else if (event.type === 'message_stop') {
-              references = event.message;
-            }
-          } catch (parseError) {
-            console.error('Parse stream error:', parseError);
-          }
-        }
-      }
-
-      // 最后一次更新（添加引用）
-      if (references) {
-        setMessages(prev => {
-          const last = prev[prev.length - 1];
-          if (last?.role === 'assistant') {
-            return [
-              ...prev.slice(0, -1),
-              { ...last, ...references }
-            ];
-          }
-          return prev;
-        });
-      }
+      await consumeStreamResponse(response);
     } catch (err) {
       if (err.name !== 'AbortError') {
         console.error('Send message error:', err);
@@ -135,7 +155,53 @@ export function useChat(sessionId) {
     } finally {
       setLoading(false);
     }
-  }, [sessionId, user?.token, user?.id]);
+  }, [sessionId, user?.token, user?.id, consumeStreamResponse]);
+
+  const regenerateLastReply = useCallback(async () => {
+    if (!sessionId || loading) return;
+
+    const hasUserMessage = messages.some((message) => message.role === 'user');
+    if (!hasUserMessage) {
+      setError('暂无可重新生成的问题');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      abortControllerRef.current = new AbortController();
+
+      // 先移除末尾助手消息，避免视觉上叠加两条答案
+      setMessages((prev) => {
+        const next = [...prev];
+        while (next.length > 0 && next[next.length - 1]?.role === 'assistant') {
+          next.pop();
+        }
+        return next;
+      });
+
+      const response = await fetch(CHAT_API.REGENERATE_MESSAGE, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(user?.token && { Authorization: `Bearer ${user.token}` })
+        },
+        body: JSON.stringify({
+          session_id: sessionId
+        }),
+        signal: abortControllerRef.current.signal
+      });
+
+      await consumeStreamResponse(response);
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error('Regenerate message error:', err);
+        setError(err.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId, loading, messages, user?.token, consumeStreamResponse]);
 
   // 停止生成
   const stopGeneration = useCallback(() => {
@@ -149,6 +215,7 @@ export function useChat(sessionId) {
     loading,
     error,
     sendMessage,
+    regenerateLastReply,
     stopGeneration,
     setMessages
   };

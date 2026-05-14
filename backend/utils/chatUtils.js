@@ -2,6 +2,23 @@
 
 const { getSupabaseClient } = require('./supabaseClient');
 
+function normalizeQuery(input) {
+  return String(input || '').trim().replace(/\s+/g, ' ');
+}
+
+function escapeLikeQuery(input) {
+  return input.replace(/[,%_]/g, ' ');
+}
+
+function dedupeById(items) {
+  const seen = new Set();
+  return (items || []).filter((item) => {
+    if (!item?.id || seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
 /**
  * 搜索相关上下文（Wiki文章 + 宠物 + 故事）
  * @param {string} userMessage - 用户输入的问题
@@ -11,24 +28,47 @@ const { getSupabaseClient } = require('./supabaseClient');
 async function searchContext(userMessage, req) {
   try {
     const supabase = getSupabaseClient(req);
+    const normalized = normalizeQuery(userMessage);
+    const likeKeyword = escapeLikeQuery(normalized);
+
+    if (!normalized) {
+      return { articles: [], dogs: [], stories: [] };
+    }
 
     // 1. 搜索 Wiki 文章 (3条)
-    const { data: articles, error: articlesError } = await supabase
+    let { data: articles, error: articlesError } = await supabase
       .from('wiki_articles')
       .select('id, title, summary, slug, content')
       .eq('is_published', true)
-      .textSearch('fts', userMessage)  // fts是全文搜索字段
+      .textSearch('fts', normalized)  // fts是全文搜索字段
       .limit(3);
 
     if (articlesError) {
       console.error('Search articles error:', articlesError);
+      articles = [];
+    }
+
+    // FTS无结果时，回退到ILike检索，避免因为分词导致完全找不到
+    if (!articles || articles.length === 0) {
+      const { data: fallbackArticles, error: fallbackArticlesError } = await supabase
+        .from('wiki_articles')
+        .select('id, title, summary, slug, content')
+        .eq('is_published', true)
+        .or(`title.ilike.%${likeKeyword}%,summary.ilike.%${likeKeyword}%,content.ilike.%${likeKeyword}%`)
+        .limit(3);
+
+      if (fallbackArticlesError) {
+        console.error('Fallback search articles error:', fallbackArticlesError);
+      } else {
+        articles = fallbackArticles || [];
+      }
     }
 
     // 2. 搜索宠物数据 (2条)
     const { data: dogs, error: dogsError } = await supabase
       .from('dogs')
       .select('id, name, breed, description, age, temperament')
-      .or(`breed.ilike.%${userMessage}%,temperament.ilike.%${userMessage}%,description.ilike.%${userMessage}%`)
+      .or(`breed.ilike.%${likeKeyword}%,temperament.ilike.%${likeKeyword}%,description.ilike.%${likeKeyword}%`)
       .limit(2);
 
     if (dogsError) {
@@ -40,7 +80,7 @@ async function searchContext(userMessage, req) {
       .from('stories')
       .select('id, title, content')
       .eq('is_published', true)
-      .or(`title.ilike.%${userMessage}%,content.ilike.%${userMessage}%`)
+      .or(`title.ilike.%${likeKeyword}%,content.ilike.%${likeKeyword}%`)
       .limit(2);
 
     if (storiesError) {
@@ -48,9 +88,9 @@ async function searchContext(userMessage, req) {
     }
 
     return {
-      articles: articles || [],
-      dogs: dogs || [],
-      stories: stories || []
+      articles: dedupeById(articles),
+      dogs: dedupeById(dogs),
+      stories: dedupeById(stories)
     };
   } catch (error) {
     console.error('Search context error:', error);

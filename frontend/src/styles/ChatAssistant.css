@@ -203,6 +203,27 @@
   cursor: not-allowed;
 }
 
+.chat-regenerate-btn {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.chat-regenerate-btn:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.chat-regenerate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* 深色模式 */
 @media (prefers-color-scheme: dark) {
   .chat-window {
@@ -235,5 +256,15 @@
   .chat-input-area {
     background: #1f2937;
     border-top-color: #374151;
+  }
+
+  .chat-regenerate-btn {
+    background: #374151;
+    color: #e5e7eb;
+    border-color: #4b5563;
+  }
+
+  .chat-regenerate-btn:hover:not(:disabled) {
+    background: #4b5563;
   }
 }

@@ -5,6 +5,97 @@ const { searchContext, constructSystemPrompt, formatReferences } = require('../u
 const { streamText } = require('ai');
 const { anthropic } = require('@ai-sdk/anthropic');
 
+function canAccessSession(sessionUserId, authUserId) {
+  if (!sessionUserId) return true;
+  return !!authUserId && sessionUserId === authUserId;
+}
+
+function writeSSE(res, payload) {
+  res.write(`data: ${JSON.stringify(payload)}\n\n`);
+}
+
+async function generateAssistantReply({
+  supabase,
+  req,
+  res,
+  sessionId,
+  content,
+  saveUserMessage
+}) {
+  if (saveUserMessage) {
+    const { error: userMsgError } = await supabase
+      .from('chat_messages')
+      .insert([{
+        session_id: sessionId,
+        role: 'user',
+        content
+      }]);
+
+    if (userMsgError) throw userMsgError;
+  }
+
+  const context = await searchContext(content, req);
+  const systemPrompt = constructSystemPrompt(context);
+
+  // 取最近10条历史，再反转成时间正序，避免拿到最早10条
+  const { data: history } = await supabase
+    .from('chat_messages')
+    .select('role, content')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  const messages = [...(history || [])]
+    .reverse()
+    .map(m => ({ role: m.role, content: m.content }));
+
+  const stream = await streamText({
+    model: anthropic('claude-3-5-sonnet-20241022'),
+    system: systemPrompt,
+    messages
+  });
+
+  let fullText = '';
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  for await (const chunk of stream.textStream) {
+    fullText += chunk;
+    writeSSE(res, {
+      type: 'text_delta',
+      text: chunk
+    });
+  }
+
+  const references = formatReferences(context);
+  const { data: assistantMessage, error: assistantMsgError } = await supabase
+    .from('chat_messages')
+    .insert([{
+      session_id: sessionId,
+      role: 'assistant',
+      content: fullText,
+      referenced_articles: references.referenced_articles,
+      referenced_dogs: references.referenced_dogs,
+      referenced_stories: references.referenced_stories
+    }])
+    .select()
+    .single();
+
+  if (assistantMsgError) {
+    console.error('Save assistant message error:', assistantMsgError);
+  }
+
+  writeSSE(res, {
+    type: 'message_stop',
+    message: assistantMessage || {
+      id: 'error',
+      content: fullText,
+      ...references
+    }
+  });
+}
+
 /**
  * 创建新的聊天会话
  */
@@ -35,8 +126,9 @@ async function createSession(req, res) {
  * 发送消息并获取AI回复（流式）
  */
 async function sendMessage(req, res) {
+  let streamStarted = false;
   try {
-    const { session_id, content, user_id } = req.body;
+    const { session_id, content } = req.body;
 
     if (!session_id || !content) {
       return res.status(400).json({ error: 'Missing session_id or content' });
@@ -59,92 +151,88 @@ async function sendMessage(req, res) {
       return res.status(404).json({ error: 'Session not found' });
     }
 
-    // 2. 保存用户消息
-    const { data: userMessage, error: userMsgError } = await supabase
-      .from('chat_messages')
-      .insert([{
-        session_id,
-        role: 'user',
-        content
-      }])
-      .select()
-      .single();
+    // 已登录会话不允许未登录或其他用户访问
+    const authUserId = req.user?.id;
+    if (!canAccessSession(session.user_id, authUserId)) {
+      return res.status(403).json({ error: 'Cannot access other user\'s session' });
+    }
 
-    if (userMsgError) throw userMsgError;
-
-    // 3. 搜索相关上下文
-    const context = await searchContext(content, req);
-
-    // 4. 构造系统提示词
-    const systemPrompt = constructSystemPrompt(context);
-
-    // 5. 获取对话历史（仅保留最近10条）
-    const { data: history } = await supabase
-      .from('chat_messages')
-      .select('role, content')
-      .eq('session_id', session_id)
-      .order('created_at', { ascending: true })
-      .limit(10);
-
-    // 6. 调用Claude API（流式）
-    const messages = [
-      ...(history || []).map(m => ({ role: m.role, content: m.content }))
-    ];
-
-    const stream = await streamText({
-      model: 'claude-3-5-sonnet-20241022',
-      system: systemPrompt,
-      messages: messages
+    await generateAssistantReply({
+      supabase,
+      req,
+      res,
+      sessionId: session_id,
+      content,
+      saveUserMessage: true
     });
-
-    let fullText = '';
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-
-    // 流式返回
-    for await (const chunk of stream.textStream) {
-      fullText += chunk;
-      res.write(JSON.stringify({
-        type: 'text_delta',
-        text: chunk
-      }) + '\n');
-    }
-
-    // 获取引用资源
-    const references = formatReferences(context);
-
-    // 7. 保存助手回复
-    const { data: assistantMessage, error: assistantMsgError } = await supabase
-      .from('chat_messages')
-      .insert([{
-        session_id,
-        role: 'assistant',
-        content: fullText,
-        referenced_articles: references.referenced_articles,
-        referenced_dogs: references.referenced_dogs,
-        referenced_stories: references.referenced_stories
-      }])
-      .select()
-      .single();
-
-    if (assistantMsgError) {
-      console.error('Save assistant message error:', assistantMsgError);
-    }
-
-    // 8. 返回完整消息对象
-    res.write(JSON.stringify({
-      type: 'message_stop',
-      message: assistantMessage || {
-        id: 'error',
-        content: fullText,
-        ...references
-      }
-    }) + '\n');
-
+    streamStarted = true;
     res.end();
   } catch (error) {
     console.error('Send message error:', error);
+    if (streamStarted || res.headersSent) {
+      writeSSE(res, { type: 'error', error: error.message || 'Internal server error' });
+      return res.end();
+    }
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * 基于上一条用户消息重新生成回复
+ */
+async function regenerateMessage(req, res) {
+  let streamStarted = false;
+  try {
+    const { session_id } = req.body;
+    if (!session_id) {
+      return res.status(400).json({ error: 'Missing session_id' });
+    }
+
+    const supabase = getSupabaseClient(req);
+    const { data: session, error: sessionError } = await supabase
+      .from('chat_sessions')
+      .select('id, user_id')
+      .eq('id', session_id)
+      .single();
+
+    if (sessionError || !session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const authUserId = req.user?.id;
+    if (!canAccessSession(session.user_id, authUserId)) {
+      return res.status(403).json({ error: 'Cannot access other user\'s session' });
+    }
+
+    const { data: lastUserMessage, error: lastUserMessageError } = await supabase
+      .from('chat_messages')
+      .select('content')
+      .eq('session_id', session_id)
+      .eq('role', 'user')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (lastUserMessageError || !lastUserMessage?.content) {
+      return res.status(400).json({ error: 'No user message to regenerate' });
+    }
+
+    await generateAssistantReply({
+      supabase,
+      req,
+      res,
+      sessionId: session_id,
+      content: lastUserMessage.content,
+      saveUserMessage: false
+    });
+    streamStarted = true;
+    res.end();
+  } catch (error) {
+    console.error('Regenerate message error:', error);
+    if (streamStarted || res.headersSent) {
+      writeSSE(res, { type: 'error', error: error.message || 'Internal server error' });
+      return res.end();
+    }
     res.status(500).json({ error: error.message });
   }
 }
@@ -169,7 +257,7 @@ async function getSessionHistory(req, res) {
 
     // 已登录用户只能查看自己的会话
     const authUserId = req.user?.id;
-    if (session.user_id && authUserId && session.user_id !== authUserId) {
+    if (!canAccessSession(session.user_id, authUserId)) {
       return res.status(403).json({ error: 'Cannot access other user\'s session' });
     }
 
@@ -212,7 +300,7 @@ async function deleteSession(req, res) {
 
     // 只有会话所有者能删除
     const authUserId = req.user?.id;
-    if (session.user_id && authUserId && session.user_id !== authUserId) {
+    if (!canAccessSession(session.user_id, authUserId)) {
       return res.status(403).json({ error: 'Cannot delete other user\'s session' });
     }
 
@@ -233,6 +321,7 @@ async function deleteSession(req, res) {
 module.exports = {
   createSession,
   sendMessage,
+  regenerateMessage,
   getSessionHistory,
   deleteSession
 };

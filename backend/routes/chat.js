@@ -8,6 +8,7 @@ const checkSupabase = require('../middleware/supabaseCheck');
 // 公开路由
 router.post('/sessions', checkSupabase, chatController.createSession);
 router.post('/messages', checkSupabase, chatController.sendMessage);
+router.post('/messages/regenerate', checkSupabase, chatController.regenerateMessage);
 router.get('/sessions/:session_id', checkSupabase, chatController.getSessionHistory);
 
 // 需要认证的路由

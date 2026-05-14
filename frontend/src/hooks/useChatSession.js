@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CHAT_API } from '../config';
 
-const SESSION_STORAGE_KEY = 'chat_session_id';
+function getSessionStorageKey(userId) {
+  return userId ? `chat_session_id_${userId}` : null;
+}
 
 export function useChatSession() {
   const { user } = useAuth();
@@ -19,7 +21,8 @@ export function useChatSession() {
         setLoading(true);
 
         // 1. 检查localStorage中是否有sessionId
-        const storedSessionId = localStorage.getItem(SESSION_STORAGE_KEY);
+        const storageKey = getSessionStorageKey(user?.id);
+        const storedSessionId = storageKey ? localStorage.getItem(storageKey) : null;
 
         if (storedSessionId) {
           setSessionId(storedSessionId);
@@ -45,8 +48,8 @@ export function useChatSession() {
         const data = await response.json();
 
         // 仅已登录用户保存sessionId
-        if (user?.id) {
-          localStorage.setItem(SESSION_STORAGE_KEY, data.session_id);
+        if (storageKey) {
+          localStorage.setItem(storageKey, data.session_id);
         }
 
         setSessionId(data.session_id);
@@ -59,12 +62,15 @@ export function useChatSession() {
     };
 
     initializeSession();
-  }, [user?.id]);
+  }, [user?.id, user?.token]);
 
   // 清空会话（未登录用户刷新页面时调用）
   const clearSession = useCallback(() => {
     if (!user?.id) {
-      localStorage.removeItem(SESSION_STORAGE_KEY);
+      const storageKey = getSessionStorageKey(user?.id);
+      if (storageKey) {
+        localStorage.removeItem(storageKey);
+      }
       setSessionId(null);
     }
   }, [user?.id]);
@@ -83,13 +89,16 @@ export function useChatSession() {
         throw new Error('Failed to delete session');
       }
 
-      localStorage.removeItem(SESSION_STORAGE_KEY);
+      const storageKey = getSessionStorageKey(user?.id);
+      if (storageKey) {
+        localStorage.removeItem(storageKey);
+      }
       setSessionId(null);
     } catch (err) {
       console.error('Delete session error:', err);
       setError(err.message);
     }
-  }, [user?.token]);
+  }, [user?.token, user?.id]);
 
   return {
     sessionId,

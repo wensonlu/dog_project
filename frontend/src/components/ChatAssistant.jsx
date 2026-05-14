@@ -10,6 +10,8 @@ import ChatReferenceCard from './ChatReferenceCard';
 import '../styles/ChatAssistant.css';
 
 const MAX_MESSAGE_LENGTH = 500;
+const MotionButton = motion.button;
+const MotionDiv = motion.div;
 
 export default function ChatAssistant() {
   const { user } = useAuth();
@@ -19,7 +21,14 @@ export default function ChatAssistant() {
   const messagesEndRef = useRef(null);
 
   const { sessionId, loading: sessionLoading } = useChatSession();
-  const { messages, loading: chatLoading, error: chatError, sendMessage } = useChat(sessionId);
+  const {
+    messages,
+    loading: chatLoading,
+    error: chatError,
+    sendMessage,
+    regenerateLastReply,
+    stopGeneration
+  } = useChat(sessionId);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -69,7 +78,7 @@ export default function ChatAssistant() {
       {/* 浮窗按钮 */}
       <AnimatePresence>
         {!isOpen && (
-          <motion.button
+          <MotionButton
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             exit={{ scale: 0 }}
@@ -82,14 +91,14 @@ export default function ChatAssistant() {
             {unreadCount > 0 && (
               <div className="chat-bubble-badge">{unreadCount > 9 ? '9+' : unreadCount}</div>
             )}
-          </motion.button>
+          </MotionButton>
         )}
       </AnimatePresence>
 
       {/* 聊天窗口 */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
+          <MotionDiv
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
@@ -188,6 +197,14 @@ export default function ChatAssistant() {
 
             {/* 输入区域 */}
             <div className="chat-input-area">
+              <button
+                className="chat-regenerate-btn"
+                onClick={regenerateLastReply}
+                disabled={!isInitialized || chatLoading || messages.filter(m => m.role === 'user').length === 0}
+                title="重新生成上一条回复"
+              >
+                重试
+              </button>
               <textarea
                 className="chat-input"
                 placeholder="问我任何宠物相关的问题..."
@@ -205,14 +222,14 @@ export default function ChatAssistant() {
               )}
               <button
                 className="chat-send-btn"
-                onClick={handleSendMessage}
-                disabled={!isInitialized || !inputValue.trim() || chatLoading || inputError}
-                title={chatLoading ? '回答中...' : (inputError ? inputError : '发送')}
+                onClick={chatLoading ? stopGeneration : handleSendMessage}
+                disabled={!isInitialized || (!!inputError) || (!chatLoading && !inputValue.trim())}
+                title={chatLoading ? '停止生成' : (inputError ? inputError : '发送')}
               >
-                {chatLoading ? '...' : '→'}
+                {chatLoading ? '■' : '→'}
               </button>
             </div>
-          </motion.div>
+          </MotionDiv>
         )}
       </AnimatePresence>
     </>
