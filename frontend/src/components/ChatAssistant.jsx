@@ -31,6 +31,7 @@ const SHOP_TASK_STEPS = [
   '结果校验'
 ];
 const PROMPT_EXAMPLES = [
+  '帮我给第4个帖子点赞并评论：支持你，写得很好，再关注作者',
   '帮我买一份主粮并下单',
   '帮我浏览论坛里关于“新手养狗”的热门帖子',
   '帮我给第一个帖子点赞',
@@ -561,6 +562,7 @@ export default function ChatAssistant() {
                   <div className="chat-welcome-text">欢迎！你可以这样用我：</div>
                   <ul className="chat-welcome-examples">
                     <li>• 商城智能下单：输入“帮我买主粮”可自动选品、下单并校验结果</li>
+                    <li>• 帖子互动执行：支持“给第4个帖子点赞+评论+关注作者”一键完成</li>
                     <li>• 浏览帖子：按主题检索热门/相关帖子，快速定位讨论</li>
                     <li>• 点赞帖子：支持对第 N 个帖子或当前帖子执行点赞</li>
                     <li>• 评论帖子：可直接指定评论内容，助手自动执行评论流程</li>
