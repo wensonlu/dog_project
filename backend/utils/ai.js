@@ -408,10 +408,83 @@ ${JSON.stringify(documentsPayload, null, 2)}
   }
 }
 
+function sanitizeMemeLine(text) {
+  const source = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!source) return '';
+
+  const banned = ['最低价', '包治', '歧视', '暴力', '仇恨', '成人'];
+  const hasBanned = banned.some((word) => source.includes(word));
+  if (hasBanned) return '';
+
+  return source.slice(0, 140);
+}
+
+function buildMockTalkingLine({ name, breed, age, location }) {
+  const safeName = name || '这位毛孩子';
+  const safeBreed = breed || '汪星人';
+  const safeAge = age || '小年轻';
+  const safeLocation = location || '你附近';
+
+  const candidates = [
+    `哈喽我是${safeName}，${safeBreed}在编，主打一个“嘴硬心软”。`,
+    `${safeAge}的我，白天装高冷，晚上是贴贴怪，这很合理吧？`,
+    `听说你会点赞？那我们在${safeLocation}见面这事，先浅约一下。`,
+    `我不拆家，我只是空间改造型选手，设计灵感来自你的拖鞋。`,
+    `你滑我一眼，我记你一天；你收藏一下，我记你一辈子。`,
+  ];
+
+  return {
+    hook: candidates[0],
+    mainLine: candidates[1],
+    ctaLine: candidates[2],
+  };
+}
+
+async function generatePetTalkingLine({ name, breed, age, location }) {
+  const startTime = Date.now();
+  const fallback = buildMockTalkingLine({ name, breed, age, location });
+
+  try {
+    if (!isAiEnabled()) {
+      return {
+        ...fallback,
+        model: 'mock-disabled',
+        duration: Date.now() - startTime,
+      };
+    }
+
+    const prompt = `你是宠物领养平台的“搞笑玩梗”文案助手。\n请基于真实宠物信息生成JSON，禁止编造健康/价格承诺，禁止低俗和攻击性内容。\n\n宠物信息：\n- 名称：${name || '未命名'}\n- 品种：${breed || '未知'}\n- 年龄：${age || '未知'}\n- 地点：${location || '未知'}\n\n返回JSON：\n{\n  "hook": "12-24字，短梗开场",\n  "mainLine": "40-90字，玩梗自我介绍",\n  "ctaLine": "12-24字，轻度行动引导"\n}\n只返回JSON。`;
+
+    const { generateText, model } = getAiRuntime();
+    const { text } = await generateText({ model, prompt });
+    const parsed = extractJsonObject(text, ['hook', 'mainLine', 'ctaLine']);
+
+    const hook = sanitizeMemeLine(parsed.hook) || fallback.hook;
+    const mainLine = sanitizeMemeLine(parsed.mainLine) || fallback.mainLine;
+    const ctaLine = sanitizeMemeLine(parsed.ctaLine) || fallback.ctaLine;
+
+    return {
+      hook,
+      mainLine,
+      ctaLine,
+      model: 'glm-5',
+      duration: Date.now() - startTime,
+    };
+  } catch (error) {
+    console.error('生成宠物会说话文案失败:', error);
+    return {
+      ...fallback,
+      model: 'mock-fallback',
+      duration: Date.now() - startTime,
+    };
+  }
+}
+
 module.exports = {
   generatePetBio,
   generateHealthAdvice,
   generateTopicContent,
   generateReplyDraft,
   generateForumSearchSummary,
+  generatePetTalkingLine,
 };

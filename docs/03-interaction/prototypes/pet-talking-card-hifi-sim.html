@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pet Talking Card HiFi Simulator</title>
+  <style>
+    :root {
+      --bg: #f3f7ff;
+      --panel: #ffffff;
+      --text: #17212f;
+      --muted: #708098;
+      --accent: #1f7aec;
+      --warn: #cf3030;
+      --ok: #1d9251;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "SF Pro Text", "PingFang SC", sans-serif; background: linear-gradient(180deg, #dceaff, var(--bg)); color: var(--text); }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 16px; display: grid; gap: 14px; }
+    .panel { background: var(--panel); border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.08); padding: 14px; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; }
+    button { border: 0; border-radius: 10px; padding: 9px 12px; font-weight: 600; cursor: pointer; }
+    .b1 { background: var(--accent); color: #fff; }
+    .b2 { background: #eef3fb; color: #24364f; }
+    .b3 { background: #ffe8e8; color: var(--warn); }
+    .card { border: 1px solid #e8edf7; border-radius: 12px; padding: 12px; }
+    .state { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; background: #e9f1ff; color: #2d5ca3; }
+    .bubble { margin-top: 10px; background: #f8fbff; border: 1px solid #e7efff; border-radius: 10px; padding: 8px 10px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .log { background: #0f1722; color: #d9e8ff; border-radius: 10px; padding: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; min-height: 140px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="panel" data-ui="control-panel">
+      <h3>宠物会说话卡片 - 状态模拟器</h3>
+      <div class="row">
+        <button class="b2" data-ui="state-input">输入态</button>
+        <button class="b2" data-ui="state-takeover">接管态</button>
+        <button class="b1" data-ui="state-running">执行中</button>
+        <button class="b3" data-ui="state-failed">失败</button>
+        <button class="b2" data-ui="state-done">完成</button>
+      </div>
+      <p class="muted">支持评审时手动切换状态，验证按钮与文案是否完整。</p>
+    </section>
+
+    <section class="panel card" data-ui="preview-card">
+      <span class="state" id="stateLabel" data-ui="state-label">接管态</span>
+      <div class="bubble" id="bubble" data-ui="dialog-bubble">“我表面高冷，实际是贴贴怪。你不信？点播放试试。”</div>
+      <p class="muted" id="subtitle" data-ui="subtitle">点击开始执行后进入语音播放与字幕同步。</p>
+      <div class="row">
+        <button class="b1" data-ui="start-execution">开始执行</button>
+        <button class="b3" data-ui="inject-failure">失败注入</button>
+        <button class="b2" data-ui="retry">重试</button>
+        <button class="b2" data-ui="cancel">取消</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h4>事件日志</h4>
+      <div class="log" id="log" data-ui="event-log">[init] simulator ready</div>
+    </section>
+  </div>
+
+  <script>
+    const map = {
+      input: { label: '输入态', bubble: '“点我一下，我再决定要不要营业。”', sub: '等待用户触发。' },
+      takeover: { label: '接管态', bubble: '“今天状态不错，先给你整一句。”', sub: '展示首句玩梗文案。' },
+      running: { label: '执行中', bubble: '“我会拆家？谣言！我只是空间重构艺术家。”', sub: '语音播放中，字幕同步。' },
+      failed: { label: '失败态', bubble: '“嘴瓢了，再来一次我能更稳。”', sub: '可重试或降级文字模式。' },
+      done: { label: '完成态', bubble: '“说完了，收藏一下不过分吧？”', sub: '引导收藏/申请动作。' }
+    };
+
+    const log = document.getElementById('log');
+    const label = document.getElementById('stateLabel');
+    const bubble = document.getElementById('bubble');
+    const subtitle = document.getElementById('subtitle');
+
+    function append(line) {
+      log.textContent += `\n${new Date().toLocaleTimeString()} ${line}`;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function setState(key) {
+      label.textContent = map[key].label;
+      bubble.textContent = map[key].bubble;
+      subtitle.textContent = map[key].sub;
+      append(`[state] -> ${map[key].label}`);
+    }
+
+    document.querySelector('[data-ui="state-input"]').onclick = () => setState('input');
+    document.querySelector('[data-ui="state-takeover"]').onclick = () => setState('takeover');
+    document.querySelector('[data-ui="state-running"]').onclick = () => setState('running');
+    document.querySelector('[data-ui="state-failed"]').onclick = () => setState('failed');
+    document.querySelector('[data-ui="state-done"]').onclick = () => setState('done');
+    document.querySelector('[data-ui="start-execution"]').onclick = () => { append('[event] start_execution'); setState('running'); };
+    document.querySelector('[data-ui="inject-failure"]').onclick = () => { append('[event] inject_failure'); setState('failed'); };
+    document.querySelector('[data-ui="retry"]').onclick = () => { append('[event] retry'); setState('running'); };
+    document.querySelector('[data-ui="cancel"]').onclick = () => { append('[event] cancel'); setState('input'); };
+  </script>
+</body>
+</html>

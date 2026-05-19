@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pet Talking Card HiFi</title>
+  <style>
+    :root {
+      --bg0: #fff8ef;
+      --bg1: #ffe2be;
+      --ink: #1f1f1f;
+      --muted: #6b6b6b;
+      --brand: #ff6f3c;
+      --ok: #0d8a47;
+      --bad: #c23333;
+      --panel: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "SF Pro Text", "PingFang SC", sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at top, var(--bg1), var(--bg0));
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+    .phone {
+      width: 375px;
+      border-radius: 28px;
+      background: var(--panel);
+      box-shadow: 0 20px 60px rgba(0,0,0,.18);
+      overflow: hidden;
+    }
+    .hero {
+      height: 260px;
+      background: linear-gradient(135deg, #ffd2a8, #ffb98f);
+      position: relative;
+      padding: 14px;
+    }
+    .tag { background: #fff; padding: 4px 10px; border-radius: 999px; font-size: 12px; display: inline-block; }
+    .bubble {
+      margin-top: 140px;
+      background: #fff;
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-size: 14px;
+      line-height: 1.45;
+      box-shadow: 0 6px 20px rgba(0,0,0,.08);
+    }
+    .content { padding: 14px; }
+    .title { font-size: 20px; font-weight: 700; }
+    .meta { margin-top: 6px; color: var(--muted); font-size: 13px; }
+    .tts { margin-top: 12px; padding: 12px; border-radius: 12px; background: #fff6ec; }
+    .wave { height: 8px; border-radius: 99px; background: linear-gradient(90deg, #ffd8bf, #ff9f73, #ffd8bf); background-size: 200% 100%; animation: move 1.2s linear infinite; }
+    @keyframes move { from { background-position: 0 0; } to { background-position: 200% 0; } }
+    .sub { margin-top: 8px; font-size: 13px; color: #4a4a4a; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .primary { background: var(--brand); color: #fff; }
+    .secondary { background: #f4f4f4; color: #222; }
+    .danger { background: #ffe9e9; color: var(--bad); }
+    .log { margin-top: 14px; border: 1px solid #eee; border-radius: 10px; padding: 8px; height: 110px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; background: #fcfcfc; }
+  </style>
+</head>
+<body>
+  <main class="phone" data-ui="pet-card-root">
+    <section class="hero" data-ui="pet-card-hero">
+      <span class="tag" data-ui="pet-card-ai-badge">AI 玩梗模式</span>
+      <div class="bubble" data-ui="pet-card-bubble">“你好，我是旺财，饭量不大，梦想很大：把你拖去晨跑。”</div>
+    </section>
+    <section class="content">
+      <div class="title" data-ui="pet-card-title">旺财 · 2岁 · 柴犬</div>
+      <div class="meta" data-ui="pet-card-meta">亲人度高｜可城市公寓｜已完成基础免疫</div>
+      <div class="tts" data-ui="pet-card-tts-panel">
+        <div class="wave" data-ui="pet-card-wave"></div>
+        <div class="sub" data-ui="pet-card-subtitle">“别看我嘴硬，我其实是撒娇型选手。你点个收藏，我就原地打滚给你看。”</div>
+      </div>
+      <div class="actions">
+        <button class="primary" data-ui="start-execution">开始执行</button>
+        <button class="danger" data-ui="inject-failure">失败注入</button>
+        <button class="secondary" data-ui="retry">重试</button>
+        <button class="secondary" data-ui="cancel">取消</button>
+      </div>
+      <div class="log" data-ui="event-log">[event] impression
+[event] bubble_ready
+[event] play_click
+[event] play_3s</div>
+    </section>
+  </main>
+</body>
+</html>

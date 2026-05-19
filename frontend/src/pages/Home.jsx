@@ -25,6 +25,11 @@ const Home = ({ isActive = true }) => {
 
     // 手势滑动状态
     const [dragX, setDragX] = useState(0);
+    const [talkingLine, setTalkingLine] = useState(null);
+    const [talkingLoading, setTalkingLoading] = useState(false);
+    const [talkingError, setTalkingError] = useState('');
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [isMuted, setIsMuted] = useState(false);
 
     // 智能显示/隐藏统计条
     useEffect(() => {
@@ -72,66 +77,90 @@ const Home = ({ isActive = true }) => {
         return () => clearInterval(interval);
     }, [user?.id, isActive]);
 
-    if (loading) {
-        return (
-            <div className="mx-auto max-w-[430px] h-screen flex flex-col items-center justify-center bg-gradient-to-b from-rose-50 to-cream-50 dark:from-zinc-900 dark:to-zinc-900 gap-4">
-                <motion.div
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ repeat: Infinity, duration: 1.5 }}
-                    className="text-4xl flex items-center justify-center"
-                >
-                    🐕
-                </motion.div>
-                <p className="text-gray-600 dark:text-gray-300">加载中...</p>
-            </div>
-        );
-    }
+    const hasDogs = Array.isArray(DOGS) && DOGS.length > 0;
+    const currentDog = hasDogs ? DOGS[currentIndex % DOGS.length] : null;
+    const nextDog = hasDogs ? DOGS[(currentIndex + 1) % DOGS.length] : null;
 
-    if (!DOGS || DOGS.length === 0) {
-        return (
-            <div className="relative mx-auto max-w-[430px] min-h-screen flex flex-col bg-gradient-to-b from-rose-50/50 via-cream-50 to-teal-50/30 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900 overflow-hidden pb-20">
-                {/* Header */}
-                <header className="relative z-30 ios-safe-top px-5 pt-6 pb-2">
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center justify-between"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="size-12 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center shadow-lg shadow-rose-200/50">
-                                <span className="material-symbols-outlined text-2xl text-white">home</span>
-                            </div>
-                            <div>
-                                <p className="text-xs text-rose-500 font-medium">发现小伙伴</p>
-                                <h1 className="text-xl font-bold text-gray-800 dark:text-white">汪星球</h1>
-                            </div>
-                        </div>
-                    </motion.div>
-                </header>
+    const stopSpeaking = () => {
+        if (typeof window !== 'undefined' && window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+        }
+        setIsSpeaking(false);
+    };
 
-                {/* 空状态 */}
-                <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
-                    <motion.span
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="text-6xl mb-4 flex items-center justify-center"
-                    >
-                        <span className="material-symbols-outlined text-6xl text-rose-400">pets</span>
-                    </motion.span>
-                    <p className="text-zinc-500 dark:text-zinc-400">
-                        暂无待领养的小可爱，稍后再来看看吧~
-                    </p>
-                </div>
+    const fetchTalkingLine = async (dogId) => {
+        setTalkingLoading(true);
+        setTalkingError('');
+        try {
+            const response = await fetch(`${API_BASE_URL}/dogs/${dogId}/talking-line`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
 
-                <BottomNav />
-            </div>
-        )
-    }
+            if (!response.ok) {
+                throw new Error('文案生成失败');
+            }
 
-    const currentDog = DOGS[currentIndex % DOGS.length];
-    const nextDog = DOGS[(currentIndex + 1) % DOGS.length];
+            const data = await response.json();
+            setTalkingLine(data);
+        } catch (error) {
+            console.error('获取会说话文案失败:', error);
+            setTalkingError('它刚刚嘴瓢了，点“换一句”再试试');
+            setTalkingLine(null);
+        } finally {
+            setTalkingLoading(false);
+        }
+    };
+
+    const playTalkingLine = async () => {
+        if (!talkingLine?.speechText || isMuted) return;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/dogs/${currentDog.id}/talking-voice`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lineId: talkingLine.lineId,
+                    speechText: talkingLine.speechText
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('语音准备失败');
+            }
+
+            const voicePayload = await response.json();
+            const utterance = new SpeechSynthesisUtterance(voicePayload.speechText);
+            utterance.lang = 'zh-CN';
+            utterance.rate = 1.02;
+            utterance.pitch = 1.08;
+            utterance.onend = () => setIsSpeaking(false);
+            utterance.onerror = () => {
+                setIsSpeaking(false);
+                setTalkingError('语音播放失败，请重试');
+            };
+
+            stopSpeaking();
+            setIsSpeaking(true);
+            window.speechSynthesis.speak(utterance);
+        } catch (error) {
+            console.error('播放语音失败:', error);
+            setIsSpeaking(false);
+            setTalkingError('语音播放失败，请稍后重试');
+        }
+    };
+
+    useEffect(() => {
+        if (!isActive || !currentDog?.id) return;
+        stopSpeaking();
+        fetchTalkingLine(currentDog.id);
+    }, [currentDog?.id, isActive]);
+
+    useEffect(() => () => stopSpeaking(), []);
 
     const handleNext = (isFavorite = false) => {
+        if (!currentDog) return;
+        stopSpeaking();
         setDirection(isFavorite ? 'right' : 'left');
 
         setTimeout(() => {
@@ -166,6 +195,58 @@ const Home = ({ isActive = true }) => {
             setRecommendations([]);
         }
     };
+
+    if (loading) {
+        return (
+            <div className="mx-auto max-w-[430px] h-screen flex flex-col items-center justify-center bg-gradient-to-b from-rose-50 to-cream-50 dark:from-zinc-900 dark:to-zinc-900 gap-4">
+                <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                    className="text-4xl flex items-center justify-center"
+                >
+                    🐕
+                </motion.div>
+                <p className="text-gray-600 dark:text-gray-300">加载中...</p>
+            </div>
+        );
+    }
+
+    if (!hasDogs) {
+        return (
+            <div className="relative mx-auto max-w-[430px] min-h-screen flex flex-col bg-gradient-to-b from-rose-50/50 via-cream-50 to-teal-50/30 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900 overflow-hidden pb-20">
+                <header className="relative z-30 ios-safe-top px-5 pt-6 pb-2">
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center justify-between"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="size-12 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center shadow-lg shadow-rose-200/50">
+                                <span className="material-symbols-outlined text-2xl text-white">home</span>
+                            </div>
+                            <div>
+                                <p className="text-xs text-rose-500 font-medium">发现小伙伴</p>
+                                <h1 className="text-xl font-bold text-gray-800 dark:text-white">汪星球</h1>
+                            </div>
+                        </div>
+                    </motion.div>
+                </header>
+
+                <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
+                    <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="text-6xl mb-4 flex items-center justify-center"
+                    >
+                        <span className="material-symbols-outlined text-6xl text-rose-400">pets</span>
+                    </motion.span>
+                    <p className="text-zinc-500 dark:text-zinc-400">暂无待领养的小可爱，稍后再来看看吧~</p>
+                </div>
+
+                <BottomNav />
+            </div>
+        );
+    }
 
     return (
         <div className="relative mx-auto max-w-[430px] min-h-screen flex flex-col bg-gradient-to-b from-rose-50/50 via-cream-50 to-teal-50/30 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900 overflow-hidden pb-20">
@@ -327,6 +408,53 @@ const Home = ({ isActive = true }) => {
                             <div className="flex items-center gap-1 mt-2 text-rose-300">
                                 <span className="material-symbols-outlined text-sm">location_on</span>
                                 <span className="text-sm font-medium">{currentDog.location}</span>
+                            </div>
+
+                            <div className="mt-3 rounded-2xl bg-black/35 backdrop-blur-md border border-white/20 p-3">
+                                <div className="text-[11px] font-semibold tracking-wide text-amber-200 mb-1">AI 玩梗开麦</div>
+                                <p className="text-sm leading-5 min-h-[40px]">
+                                    {talkingLoading ? '正在给它想梗...' : talkingLine?.bubbleText || talkingError || '点“换一句”让它营业'}
+                                </p>
+                                <div className="mt-2 flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (isSpeaking) {
+                                                stopSpeaking();
+                                            } else {
+                                                playTalkingLine();
+                                            }
+                                        }}
+                                        disabled={talkingLoading || isMuted || !talkingLine?.speechText}
+                                        className="px-3 py-1.5 rounded-full bg-rose-500/90 hover:bg-rose-500 text-white text-xs font-semibold disabled:opacity-50"
+                                    >
+                                        {isSpeaking ? '停止开麦' : '让它开口'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            fetchTalkingLine(currentDog.id);
+                                        }}
+                                        disabled={talkingLoading}
+                                        className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold disabled:opacity-50"
+                                    >
+                                        换一句
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const nextMuted = !isMuted;
+                                            setIsMuted(nextMuted);
+                                            if (nextMuted) stopSpeaking();
+                                        }}
+                                        className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold"
+                                    >
+                                        {isMuted ? '取消静音' : '静音全部'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
