@@ -9,7 +9,7 @@ import RecommendedDogsSection from '../components/RecommendedDogsSection';
 import { API_BASE_URL } from '../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const Home = () => {
+const Home = ({ isActive = true }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { DOGS, favoriteIds, toggleFavorite, loading } = useDogs();
@@ -28,6 +28,8 @@ const Home = () => {
 
     // 智能显示/隐藏统计条
     useEffect(() => {
+        if (!isActive) return undefined;
+
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
             
@@ -43,10 +45,12 @@ const Home = () => {
 
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
-    }, [lastScrollY]);
+    }, [lastScrollY, isActive]);
 
     // 获取未读消息数
     useEffect(() => {
+        if (!isActive) return undefined;
+
         const fetchUnreadCount = async () => {
             if (!user?.id) return;
             
@@ -66,7 +70,7 @@ const Home = () => {
         // 每30秒刷新一次
         const interval = setInterval(fetchUnreadCount, 30000);
         return () => clearInterval(interval);
-    }, [user?.id]);
+    }, [user?.id, isActive]);
 
     if (loading) {
         return (

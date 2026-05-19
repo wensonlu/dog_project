@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars -- used as motion.header, motion.div, etc.
+import { useQuery } from '@tanstack/react-query';
 import BottomNav from '../components/BottomNav';
 import TopicCard from '../components/Forum/TopicCard';
 import AISummaryCard from '../components/Forum/AISummaryCard';
@@ -10,7 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { useForumListContext } from '../context/ForumListContext';
 import { FORUM_API } from '../config/api';
 
-const Forum = () => {
+const Forum = ({ isActive = true }) => {
   const FORUM_PREFS_KEY = 'forum_view_prefs_v1';
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -91,58 +92,57 @@ const Forum = () => {
     return () => clearTimeout(timer);
   }, [searchInput, setSearchQuery]);
 
-  useEffect(() => {
-    if (skipNextFetchRef?.current && topics.length > 0) {
-      skipNextFetchRef.current = false;
-      setLoading(false);
-      return;
-    }
-    if (scrollPosition != null && topics.length > 0) {
-      setLoading(false);
-      return;
-    }
-    const fetchTopics = async () => {
-      setLoading(true);
-      setError(null);
-      setScrollPosition(null);
-      try {
-        const params = new URLSearchParams();
-        if (selectedCategory !== 'all') {
-          params.append('category', selectedCategory);
-        }
-        if (selectedSort) {
-          params.append('sort', selectedSort);
-        }
-        if (searchQuery.trim()) {
-          params.append('query', searchQuery.trim());
-        }
-        params.append('format', 'mcp');
-        params.append('limit', '30');
-        params.append('cursor', '0');
-        if (user?.id) {
-          params.append('userId', user.id);
-        }
-
-        const response = await fetch(`${FORUM_API.LIST}?${params.toString()}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch topics');
-        }
-        const data = await response.json();
-        setTopics(Array.isArray(data) ? data : (data.items || []));
-      } catch (err) {
-        console.error('Error fetching topics:', err);
-        setError(err.message);
-        setTopics([]);
-      } finally {
-        setLoading(false);
+  const {
+    data: forumTopics = [],
+    error: forumTopicsError,
+    isLoading: forumTopicsLoading,
+  } = useQuery({
+    queryKey: ['forum-topics', selectedCategory, selectedSort, searchQuery.trim(), user?.id || null],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedCategory !== 'all') {
+        params.append('category', selectedCategory);
       }
-    };
+      if (selectedSort) {
+        params.append('sort', selectedSort);
+      }
+      if (searchQuery.trim()) {
+        params.append('query', searchQuery.trim());
+      }
+      params.append('format', 'mcp');
+      params.append('limit', '30');
+      params.append('cursor', '0');
+      if (user?.id) {
+        params.append('userId', user.id);
+      }
 
-    fetchTopics();
-    // 返回列表时用缓存不 refetch，故不把 scrollPosition/topics 加入 deps
-  }, [selectedCategory, selectedSort, searchQuery, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+      const response = await fetch(`${FORUM_API.LIST}?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch topics');
+      }
+      const data = await response.json();
+      return Array.isArray(data) ? data : (data.items || []);
+    },
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    enabled: isActive,
+  });
 
   useEffect(() => {
+    if (skipNextFetchRef?.current) {
+      skipNextFetchRef.current = false;
+    }
+    setTopics(forumTopics);
+    setLoading(forumTopicsLoading);
+    setError(forumTopicsError?.message || null);
+    if (!forumTopicsLoading) {
+      setScrollPosition(null);
+    }
+  }, [forumTopics, forumTopicsLoading, forumTopicsError, setTopics, setLoading, setError, setScrollPosition, skipNextFetchRef]);
+
+  useEffect(() => {
+    if (!isActive) return;
+
     const syncForumContext = async () => {
       try {
         const params = new URLSearchParams({
@@ -165,9 +165,11 @@ const Forum = () => {
       }
     };
     syncForumContext();
-  }, [selectedSort, selectedCategory, searchQuery, user?.id]);
+  }, [selectedSort, selectedCategory, searchQuery, user?.id, isActive]);
 
   useEffect(() => {
+    if (!isActive) return;
+
     const normalizedQuery = searchQuery.trim();
     if (!aiSummaryVisible || normalizedQuery.length < 2) return;
 
@@ -198,7 +200,7 @@ const Forum = () => {
     };
 
     fetchSummary();
-  }, [searchQuery, aiSummaryNonce, aiSummaryVisible]);
+  }, [searchQuery, aiSummaryNonce, aiSummaryVisible, isActive]);
 
   useEffect(() => {
     if (scrollPosition == null) return;

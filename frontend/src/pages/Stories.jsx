@@ -1,45 +1,44 @@
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import BottomNav from '../components/BottomNav';
 import { API_BASE_URL } from '../config';
 
-function Stories() {
+function Stories({ isActive = true }) {
   const navigate = useNavigate();
-  const [stories, setStories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-
-  useEffect(() => {
-    fetchStories();
-  }, []);
-
-  const fetchStories = async (pageNum = 1) => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/stories?page=${pageNum}&limit=10`
-      );
-      const result = await response.json();
-      
-      if (pageNum === 1) {
-        setStories(result.data);
-      } else {
-        setStories(prev => [...prev, ...result.data]);
+  const {
+    data,
+    isLoading: loading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['stories-list'],
+    queryFn: async ({ pageParam = 1 }) => {
+      const response = await fetch(`${API_BASE_URL}/stories?page=${pageParam}&limit=10`);
+      if (!response.ok) {
+        throw new Error('Fetch stories failed');
       }
-      
-      setHasMore(result.data.length === 10);
-      setLoading(false);
-    } catch (error) {
-      console.error('Fetch stories error:', error);
-      setLoading(false);
-    }
-  };
+      const result = await response.json();
+      return {
+        list: result?.data || [],
+        page: pageParam,
+      };
+    },
+    getNextPageParam: (lastPage) => (
+      lastPage.list.length === 10 ? lastPage.page + 1 : undefined
+    ),
+    initialPageParam: 1,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    enabled: isActive,
+  });
+
+  const stories = data?.pages?.flatMap((pageItem) => pageItem.list) || [];
 
   const loadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchStories(nextPage);
+    if (!hasNextPage || isFetchingNextPage) return;
+    fetchNextPage();
   };
 
   return (
@@ -128,12 +127,12 @@ function Stories() {
             </div>
 
             {/* Load More */}
-            {hasMore && (
+            {hasNextPage && (
               <button
                 onClick={loadMore}
                 className="w-full py-4 mt-4 text-rose-500 font-medium"
               >
-                加载更多
+                {isFetchingNextPage ? '加载中...' : '加载更多'}
               </button>
             )}
 
