@@ -18,6 +18,7 @@ const storiesRoutes = require('./routes/stories');
 const wikiRoutes = require('./routes/wiki');
 const chatRoutes = require('./routes/chat');
 const shopRoutes = require('./routes/shop');
+const challengeRoutes = require('./routes/challenge');
 
 const app = express();
 
@@ -71,6 +72,7 @@ mountRoute('/stories', storiesRoutes);
 mountRoute('/wiki', wikiRoutes);
 mountRoute('/chat', chatRoutes);
 mountRoute('/shop', shopRoutes);
+mountRoute('/challenge', challengeRoutes);
 mountOptionalRoute('/agent', './routes/agent');
 mountOptionalRoute('/health', './routes/health');
 

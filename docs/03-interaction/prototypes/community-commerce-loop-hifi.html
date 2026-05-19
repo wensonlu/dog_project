@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>社区驱动商城闭环 - 高保真三屏稿</title>
+  <style>
+    :root{--bg:#f5f2ea;--card:#fff;--line:#e9e2d5;--text:#1f2937;--muted:#6b7280;--brand:#e11d48;--ok:#10b981}
+    *{box-sizing:border-box;font-family:"PingFang SC","Noto Sans SC",sans-serif}
+    body{margin:0;background:linear-gradient(160deg,#faf8f3,#efe9db);color:var(--text)}
+    .wrap{max-width:1240px;margin:0 auto;padding:20px;display:grid;grid-template-columns:repeat(3,minmax(280px,1fr));gap:18px}
+    .phone{background:#f7f4ed;border:1px solid #e7dece;border-radius:24px;padding:14px;box-shadow:0 12px 30px rgba(0,0,0,.06)}
+    .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .title{font-size:18px;font-weight:800}.sub{font-size:12px;color:var(--muted)}
+    .tag{font-size:11px;padding:2px 8px;border-radius:999px;background:#ffe4e6;color:#9f1239}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-top:10px}
+    .btn{display:inline-block;margin-top:8px;background:var(--brand);color:#fff;border-radius:10px;padding:8px 12px;font-size:13px;text-decoration:none;font-weight:700}
+    .switch{width:42px;height:24px;border-radius:999px;background:#fecdd3;position:relative;display:inline-block}
+    .switch:after{content:'';position:absolute;right:2px;top:2px;width:20px;height:20px;border-radius:50%;background:#fff}
+    .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .progress{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
+    .day{padding:6px 0;border-radius:10px;text-align:center;font-size:11px;background:#f3f4f6;color:#6b7280}
+    .day.done{background:#dcfce7;color:#166534}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="phone">
+      <div class="head">
+        <div>
+          <div class="title">帖子页</div>
+          <div class="sub">社区内容入口</div>
+        </div>
+        <span class="tag">STEP 1</span>
+      </div>
+
+      <div class="card">
+        <strong>帖子：狗狗换季肠胃不适怎么办？</strong>
+        <p class="sub">最近两周反复软便，精神还行，想先做家庭干预。</p>
+      </div>
+
+      <div class="card" data-ui="ai-kit-card">
+        <strong>AI提炼用品清单</strong>
+        <p class="sub">推荐：益生菌肠胃调理粉</p>
+        <p class="sub">为什么推荐：软便 + 食欲波动，优先肠道支持方案。</p>
+        <p class="sub">来自帖子："最近两周反复软便"</p>
+        <a class="btn" data-ui="btn-checkout">去下单</a>
+      </div>
+    </section>
+
+    <section class="phone">
+      <div class="head">
+        <div>
+          <div class="title">订单页</div>
+          <div class="sub">支付前承接页</div>
+        </div>
+        <span class="tag">STEP 2</span>
+      </div>
+
+      <div class="card">
+        <strong>商品：益生菌肠胃调理粉 x1</strong>
+        <p class="sub">地址：上海市浦东新区 xx 路 xx 号</p>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <div>
+            <strong>加入7天打卡计划</strong>
+            <p class="sub">默认开启，购买后自动创建任务</p>
+          </div>
+          <span class="switch" data-ui="switch-challenge"></span>
+        </div>
+        <a class="btn" data-ui="btn-create-task">创建任务并继续</a>
+      </div>
+    </section>
+
+    <section class="phone">
+      <div class="head">
+        <div>
+          <div class="title">打卡页</div>
+          <div class="sub">回流社区互动</div>
+        </div>
+        <span class="tag">STEP 3</span>
+      </div>
+
+      <div class="card">
+        <strong>7天打卡任务</strong>
+        <p class="sub">Day 1 已完成，今日记录：便便状态明显改善。</p>
+        <div class="progress">
+          <div class="day done">D1</div>
+          <div class="day">D2</div><div class="day">D3</div><div class="day">D4</div>
+          <div class="day">D5</div><div class="day">D6</div><div class="day">D7</div>
+        </div>
+        <a class="btn" data-ui="btn-checkin">今日打卡</a>
+      </div>
+
+      <div class="card" style="border-color:#bbf7d0;">
+        <strong style="color:#166534;">回流建议</strong>
+        <p class="sub">回到原帖分享进展，沉淀真实反馈，增强社区信任。</p>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

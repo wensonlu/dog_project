@@ -1669,6 +1669,55 @@ async function verifyTopicInteraction(req, res) {
   }
 }
 
+async function getTopicAiKit(req, res) {
+  const client = getSupabaseClient(req);
+  const { id } = req.params;
+  const { userId } = req.query;
+
+  try {
+    const { data: topic, error } = await client
+      .from('forum_topics')
+      .select('id, title, content, category, tags')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) return res.status(500).json({ error: error.message });
+    if (!topic) return res.status(404).json({ error: 'topic not found' });
+
+    const text = `${topic.title || ''} ${topic.content || ''}`.toLowerCase();
+    let productId = 'health-002';
+    let reason = '基于帖子语义，优先推荐基础健康维护品。';
+    if (/(软便|肠胃|拉稀|食欲)/.test(text)) {
+      productId = 'health-002';
+      reason = '帖子提到肠胃波动与软便，优先补充肠道支持。';
+    } else if (/(遛狗|爆冲|牵引|出门|外出)/.test(text)) {
+      productId = 'travel-001';
+      reason = '帖子涉及外出与牵引场景，优先推荐防爆冲胸背。';
+    } else if (/(洗澡|异味|清洁|掉毛)/.test(text)) {
+      productId = 'clean-002';
+      reason = '帖子提到清洁与气味问题，优先推荐除味抑菌喷雾。';
+    } else if (/(挑食|训练|奖励|零食)/.test(text)) {
+      productId = 'snack-001';
+      reason = '帖子场景适合训练激励，推荐高适口零食。';
+    } else if (/(幼犬|主粮|换粮|不吃饭)/.test(text)) {
+      productId = 'food-001';
+      reason = '帖子聚焦喂养与食欲，优先推荐低敏主粮。';
+    }
+
+    const evidence = String(topic.content || topic.title || '').slice(0, 40);
+    const items = [
+      { productId, quantity: 1, reason, evidenceExcerpt: evidence, confidence: 0.86 },
+      { productId: 'health-001', quantity: 1, reason: '作为可选补充方案，提供健康维持路径。', evidenceExcerpt: evidence, confidence: 0.68 }
+    ];
+
+    await logForumMcpAction(client, 'topic_ai_kit', userId || null, { topicId: id }, { count: items.length }, true);
+    return res.json({ ok: true, topicId: id, items });
+  } catch (err) {
+    console.error('Error generating topic ai kit:', err);
+    return res.status(500).json({ error: 'Failed to generate ai kit' });
+  }
+}
+
 module.exports = {
   getAllTopics,
   getTopicById,
@@ -1689,6 +1738,7 @@ module.exports = {
   precheckCreateReply,
   confirmCreateReply,
   verifyTopicInteraction,
+  getTopicAiKit,
   toggleTopicAuthorFollow,
   getMyFollowingAuthors,
   getForumContext,

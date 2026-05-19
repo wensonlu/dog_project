@@ -36,6 +36,7 @@ import ContentHub from './pages/ContentHub';
 import Shop from './pages/Shop';
 import ShopDetail from './pages/ShopDetail';
 import ShopOrder from './pages/ShopOrder';
+import ChallengeCheckin from './pages/ChallengeCheckin';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -86,6 +87,7 @@ function AppContent() {
         <Route path="/shop" element={<Shop />} />
         <Route path="/shop/:id" element={<ShopDetail />} />
         <Route path="/shop/order" element={<ShopOrder />} />
+        <Route path="/challenge/:id" element={<PrivateRoute><ChallengeCheckin /></PrivateRoute>} />
 
         {/* 编辑资料 */}
           <Route path="/edit-profile" element={<PrivateRoute><EditProfile /></PrivateRoute>} />

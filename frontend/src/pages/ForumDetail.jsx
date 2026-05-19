@@ -37,6 +37,8 @@ const ForumDetail = () => {
   const [imageIndex, setImageIndex] = useState(0);
   const [barBottomPx, setBarBottomPx] = useState(80);
   const [isBarInputMode, setIsBarInputMode] = useState(false);
+  const [aiKitLoading, setAiKitLoading] = useState(false);
+  const [aiKit, setAiKit] = useState([]);
   const imageScrollRef = useRef(null);
   const commentSectionRef = useRef(null);
   const commentInputRef = useRef(null);
@@ -93,6 +95,25 @@ const ForumDetail = () => {
       fetchTopic();
     }
   }, [id, user?.id]);
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchAiKit = async () => {
+      setAiKitLoading(true);
+      try {
+        const response = await fetch(FORUM_API.TOPIC_AI_KIT(id));
+        if (!response.ok) throw new Error('fetch ai kit failed');
+        const data = await response.json();
+        setAiKit(Array.isArray(data.items) ? data.items : []);
+      } catch (error) {
+        console.error('Error fetching ai kit:', error);
+        setAiKit([]);
+      } finally {
+        setAiKitLoading(false);
+      }
+    };
+    fetchAiKit();
+  }, [id]);
 
   useEffect(() => {
     const targetTopicId = taskContext?.topicId;
@@ -639,6 +660,44 @@ const ForumDetail = () => {
               ))}
             </div>
           )}
+
+          <section className="rounded-2xl border border-[#f1dfc5] bg-[#fff9ef] p-3 mt-3">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <h3 className="text-sm font-extrabold text-[#7a4f1d]">AI提炼用品清单</h3>
+              <span className="text-[11px] text-[#a36b2a]">基于帖子内容推荐</span>
+            </div>
+            {aiKitLoading ? (
+              <p className="text-xs text-[#8f6a43]">生成中...</p>
+            ) : aiKit.length === 0 ? (
+              <p className="text-xs text-[#8f6a43]">暂无推荐，可直接去商城挑选。</p>
+            ) : (
+              <div className="space-y-2">
+                {aiKit.slice(0, 3).map((item) => (
+                  <div key={`${item.productId}-${item.reason}`} className="bg-white/80 rounded-xl p-2 border border-[#f5e7d4]">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-bold text-[#5d3b1a]">{item.productId}</p>
+                      <span className="text-[11px] text-[#8f6a43]">x{item.quantity || 1}</span>
+                    </div>
+                    <p className="text-xs text-[#7a5a3d] mt-1">{item.reason}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                const first = aiKit?.[0];
+                const search = new URLSearchParams();
+                if (first?.productId) search.set('productId', first.productId);
+                if (first?.quantity) search.set('quantity', String(first.quantity));
+                if (id) search.set('topicId', String(id));
+                navigate(`/shop/order?${search.toString()}`);
+              }}
+              className="mt-3 w-full h-10 rounded-xl bg-[#e67e22] text-white text-sm font-bold"
+            >
+              去下单
+            </button>
+          </section>
         </div>
 
         {/* 日期和不喜欢 - 正文下、共 N 条评论上 */}

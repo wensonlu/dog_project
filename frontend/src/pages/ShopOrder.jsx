@@ -1,13 +1,17 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getShopProductById } from '../data/shopProducts';
+import { CHALLENGE_API, SHOP_API } from '../config/api';
+import { useAuth } from '../context/AuthContext';
 
 const ADDRESS_STORAGE_KEY = 'shop_checkout_address_v1';
 
 function ShopOrder() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const productId = searchParams.get('productId') || '';
+  const topicId = searchParams.get('topicId') || '';
   const quantityParam = Number.parseInt(searchParams.get('quantity') || '1', 10);
   const quantity = Number.isNaN(quantityParam) || quantityParam < 1 ? 1 : quantityParam;
 
@@ -34,6 +38,9 @@ function ShopOrder() {
     }
   });
   const [savedHint, setSavedHint] = useState('');
+  const [checkoutMode, setCheckoutMode] = useState(topicId ? 'challenge' : 'direct');
+  const [submitting, setSubmitting] = useState(false);
+  const [actionHint, setActionHint] = useState('');
 
   const totalPrice = (product?.price || 0) * quantity;
 
@@ -45,6 +52,77 @@ function ShopOrder() {
     localStorage.setItem(ADDRESS_STORAGE_KEY, JSON.stringify(address));
     setSavedHint('地址已保存');
     setTimeout(() => setSavedHint(''), 1200);
+  };
+
+  const handleGoChallenge = async () => {
+    if (!user?.id || !topicId) return;
+    setSubmitting(true);
+    try {
+      const orderRef = `ord_${Date.now()}`;
+      const response = await fetch(CHALLENGE_API.CREATE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          topicId,
+          orderRef,
+          productId: product.id,
+          durationDays: 7
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data?.task?.id) {
+        throw new Error(data?.error || '创建打卡任务失败');
+      }
+      navigate(`/challenge/${data.task.id}`);
+    } catch (error) {
+      console.error('create challenge failed:', error);
+      window.alert(error.message || '创建打卡任务失败');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const validateAddress = () => {
+    if (!address.receiver || !address.phone || !address.provinceCity || !address.detail) {
+      window.alert('请先完善收货地址');
+      return false;
+    }
+    return true;
+  };
+
+  const handleDirectOrder = async () => {
+    if (!user?.id) {
+      window.alert('请先登录');
+      return;
+    }
+    if (!validateAddress()) return;
+    setSubmitting(true);
+    setActionHint('');
+    try {
+      const clientRequestId = `direct_${Date.now()}_${product.id}`;
+      const response = await fetch(SHOP_API.CREATE_ORDER, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          productId: product.id,
+          quantity,
+          source: 'direct-checkout',
+          clientRequestId
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data?.order?.id) {
+        throw new Error(data?.error || '创建订单失败');
+      }
+      setActionHint(`订单已创建：${data.order.id}，支付能力即将开放`);
+    } catch (error) {
+      console.error('create direct order failed:', error);
+      window.alert(error.message || '创建订单失败');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!product) {
@@ -124,16 +202,53 @@ function ShopOrder() {
             <span className="text-xl font-black text-red-500">¥{totalPrice}</span>
           </div>
         </section>
+
+        <section className="bg-white rounded-2xl p-4">
+          <h2 className="font-bold text-gray-900 mb-3">购买方式</h2>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setCheckoutMode('direct')}
+              className={`w-full text-left rounded-xl border p-3 transition ${checkoutMode === 'direct' ? 'border-rose-400 bg-rose-50' : 'border-gray-200 bg-white'}`}
+            >
+              <p className="text-sm font-bold text-gray-900">直接购买</p>
+              <p className="text-xs text-gray-500 mt-1">立即创建订单，后续支持在线支付</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCheckoutMode('challenge')}
+              disabled={!topicId}
+              className={`w-full text-left rounded-xl border p-3 transition disabled:opacity-50 ${checkoutMode === 'challenge' ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 bg-white'}`}
+            >
+              <p className="text-sm font-bold text-gray-900">7天打卡领取</p>
+              <p className="text-xs text-gray-500 mt-1">完成7天用品打卡后领取，适合内容推荐场景</p>
+            </button>
+          </div>
+          {!topicId && <p className="text-xs text-amber-600 mt-2">当前不是帖子推荐入口，暂不可使用打卡领取</p>}
+          {actionHint && <p className="text-xs text-emerald-600 mt-2">{actionHint}</p>}
+        </section>
       </main>
 
       <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto bg-white border-t border-gray-100 p-4">
-        <button
-          type="button"
-          className="w-full py-3 rounded-xl bg-rose-300 text-white font-bold cursor-not-allowed"
-          title="支付功能暂未开放"
-        >
-          支付（暂未开放）
-        </button>
+        {checkoutMode === 'challenge' ? (
+          <button
+            type="button"
+            onClick={handleGoChallenge}
+            disabled={submitting || !user?.id || !topicId}
+            className="w-full py-3 rounded-xl bg-emerald-500 text-white font-bold disabled:opacity-60"
+          >
+            {submitting ? '创建任务中...' : '去打卡任务页'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleDirectOrder}
+            disabled={submitting || !user?.id}
+            className="w-full py-3 rounded-xl bg-rose-500 text-white font-bold disabled:opacity-60"
+          >
+            {submitting ? '创建订单中...' : '直接购买'}
+          </button>
+        )}
       </div>
     </div>
   );

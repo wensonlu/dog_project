@@ -40,10 +40,18 @@ export const FORUM_API = {
   PRECHECK_REPLY: `${API_BASE_URL}/forum/precheck/reply`,
   CONFIRM_REPLY: `${API_BASE_URL}/forum/confirm/reply`,
   VERIFY_INTERACTION: `${API_BASE_URL}/forum/verify-interaction`,
+  TOPIC_AI_KIT: (id) => `${API_BASE_URL}/forum/${id}/ai-kit`,
 };
 
 export const SHOP_API = {
   CREATE_ORDER: `${API_BASE_URL}/shop/orders`,
   GET_ORDER: (id) => `${API_BASE_URL}/shop/orders/${id}`,
   LIST_ORDERS: `${API_BASE_URL}/shop/orders`
+};
+
+export const CHALLENGE_API = {
+  CREATE: `${API_BASE_URL}/challenge`,
+  MY: `${API_BASE_URL}/challenge/my`,
+  DETAIL: (id) => `${API_BASE_URL}/challenge/${id}`,
+  CHECKIN: (id) => `${API_BASE_URL}/challenge/${id}/checkin`
 };

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>社区驱动商城闭环 - 三屏交互模拟</title>
+  <style>
+    :root{--bg:#f5f2ea;--card:#fff;--line:#e9e2d5;--text:#1f2937;--muted:#6b7280;--brand:#e11d48;--ok:#10b981}
+    *{box-sizing:border-box;font-family:"PingFang SC","Noto Sans SC",sans-serif}
+    body{margin:0;background:linear-gradient(160deg,#faf8f3,#efe9db)}
+    .phone{max-width:400px;margin:0 auto;min-height:100vh;padding:14px 14px 88px;position:relative}
+    .head{display:flex;align-items:center;justify-content:space-between}
+    .title{font-size:22px;font-weight:800}.sub{font-size:13px;color:var(--muted)}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-top:10px}
+    .tag{font-size:11px;padding:2px 8px;border-radius:999px;background:#ffe4e6;color:#9f1239}
+    .btn{display:inline-block;border:0;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;cursor:pointer}
+    .btn-primary{background:var(--brand);color:#fff}
+    .btn-ghost{background:#f3f4f6;color:#374151}
+    .row{display:flex;gap:8px;align-items:center}
+    .switch{width:44px;height:24px;border-radius:999px;background:#fecdd3;position:relative;display:inline-block;vertical-align:middle}
+    .switch::after{content:'';position:absolute;right:2px;top:2px;width:20px;height:20px;border-radius:50%;background:#fff}
+    .progress{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
+    .day{padding:6px 0;border-radius:10px;text-align:center;font-size:11px;background:#f3f4f6;color:#6b7280}
+    .day.done{background:#dcfce7;color:#166534}
+    .footer{position:fixed;left:0;right:0;bottom:0;max-width:400px;margin:0 auto;background:#fff;border-top:1px solid var(--line);padding:10px 14px 18px}
+    .screen{display:none}.screen.active{display:block}
+    .crumb{font-size:12px;color:#9ca3af}
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="head">
+      <div>
+        <div class="title">社区驱动商城闭环</div>
+        <div class="sub">真实用户交互三屏演示</div>
+      </div>
+      <span class="tag" id="screenTag">帖子页</span>
+    </div>
+
+    <div class="crumb" id="crumb">1/3 帖子页 -> AI清单 -> 去下单</div>
+
+    <section class="screen active" id="screen1">
+      <div class="card">
+        <strong>帖子：狗狗换季肠胃不适怎么办？</strong>
+        <p class="sub">最近两周反复软便，精神还可以，想先做家庭干预。</p>
+      </div>
+
+      <div class="card" data-ui="ai-kit-card">
+        <strong>AI提炼用品清单</strong>
+        <p class="sub">推荐商品：益生菌肠胃调理粉</p>
+        <p class="sub">为什么推荐：帖子中提到“软便 + 食欲波动”，优先肠道支持。</p>
+        <p class="sub">来自帖子证据："最近两周反复软便"</p>
+        <button class="btn btn-primary" data-ui="btn-checkout" onclick="goTo(2)">去下单</button>
+      </div>
+    </section>
+
+    <section class="screen" id="screen2">
+      <div class="card">
+        <strong>确认订单</strong>
+        <p class="sub">商品：益生菌肠胃调理粉 x1</p>
+        <p class="sub">收货地址：上海市浦东新区 xx 路 xx 号</p>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <div>
+            <strong>加入7天打卡计划</strong>
+            <p class="sub">购买后自动创建打卡任务（默认开启）</p>
+          </div>
+          <span class="switch" data-ui="switch-challenge"></span>
+        </div>
+        <button class="btn btn-primary" data-ui="btn-create-task" onclick="goTo(3)">创建任务并继续</button>
+      </div>
+    </section>
+
+    <section class="screen" id="screen3">
+      <div class="card">
+        <strong>7天打卡任务</strong>
+        <p class="sub">任务已创建，今天是 Day 1</p>
+        <div class="progress">
+          <div class="day done">D1</div>
+          <div class="day">D2</div><div class="day">D3</div><div class="day">D4</div>
+          <div class="day">D5</div><div class="day">D6</div><div class="day">D7</div>
+        </div>
+        <button class="btn btn-primary" data-ui="btn-checkin" style="margin-top:10px;" onclick="checkin()">今日打卡</button>
+      </div>
+
+      <div class="card" id="doneCard" style="display:none; border-color:#bbf7d0;">
+        <strong style="color:#166534;">今天已打卡完成</strong>
+        <p class="sub">建议回到原帖分享进展，触发更多社区互动。</p>
+        <button class="btn btn-ghost">回到原帖分享</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="footer">
+    <div class="row" style="justify-content:space-between;">
+      <button class="btn btn-ghost" onclick="prev()">上一步</button>
+      <button class="btn btn-primary" onclick="next()">下一步</button>
+    </div>
+  </div>
+
+  <script>
+    let index = 1;
+    const total = 3;
+    const labels = {1:'帖子页',2:'订单页',3:'打卡页'};
+    const crumbs = {
+      1:'1/3 帖子页 -> AI清单 -> 去下单',
+      2:'2/3 订单页 -> 地址确认 -> 创建打卡任务',
+      3:'3/3 打卡页 -> 今日打卡 -> 回流社区'
+    };
+
+    function render(){
+      for(let i=1;i<=total;i++){
+        document.getElementById('screen'+i).classList.toggle('active', i===index);
+      }
+      document.getElementById('screenTag').textContent = labels[index];
+      document.getElementById('crumb').textContent = crumbs[index];
+    }
+
+    function goTo(i){ index = Math.max(1, Math.min(total, i)); render(); }
+    function next(){ goTo(index+1); }
+    function prev(){ goTo(index-1); }
+
+    function checkin(){
+      document.getElementById('doneCard').style.display='block';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>多Agent协同轨迹 - 状态模拟</title>
+  <style>
+    :root{--bg:#f4f2ea;--line:#e8e1d2;--ok:#10b981;--run:#f59e0b;--err:#ef4444}
+    *{box-sizing:border-box;font-family:"PingFang SC","Noto Sans SC",sans-serif}
+    body{margin:0;background:#f4f2ea}.wrap{max-width:400px;margin:0 auto;padding:14px}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px}
+    .btns{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.btn{border:0;border-radius:12px;padding:10px;font-weight:700}
+    .s{padding:8px 0;border-bottom:1px dashed #eee}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#cbd5e1;margin-right:6px}
+    .run .dot{background:var(--run)} .ok .dot{background:var(--ok)} .err .dot{background:var(--err)}
+    .log{margin-top:10px;background:#111827;color:#fff;border-radius:12px;padding:10px;font-size:12px;min-height:90px;white-space:pre-line}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <div class="btns">
+        <button class="btn" data-ui="btn-start" id="start">开始执行</button>
+        <button class="btn" data-ui="btn-fail" id="fail">失败注入</button>
+        <button class="btn" data-ui="btn-retry" id="retry">重试</button>
+        <button class="btn" id="cancel">取消</button>
+      </div>
+      <div id="p" class="s"><span class="dot"></span>Planner</div>
+      <div id="e" class="s"><span class="dot"></span>Executor</div>
+      <div id="v" class="s"><span class="dot"></span>Verifier</div>
+      <div class="log" data-ui="event-log" id="log">idle</div>
+    </div>
+  </div>
+  <script>
+    const p=document.getElementById('p'),e=document.getElementById('e'),v=document.getElementById('v'),log=document.getElementById('log');
+    const w=(t)=>log.textContent=`${new Date().toLocaleTimeString()} ${t}\n`+log.textContent;
+    const reset=()=>{p.className='s';e.className='s';v.className='s';};
+    async function run(){reset();p.className='s run';w('planner.started');await new Promise(r=>setTimeout(r,500));p.className='s ok';w('planner.completed');e.className='s run';w('executor.started');await new Promise(r=>setTimeout(r,600));e.className='s ok';w('executor.completed');v.className='s run';w('verifier.started');await new Promise(r=>setTimeout(r,500));v.className='s ok';w('verifier.passed');}
+    document.getElementById('start').onclick=run;
+    document.getElementById('retry').onclick=run;
+    document.getElementById('fail').onclick=()=>{reset();e.className='s err';w('executor.failed');v.className='s err';w('verifier.failed -> retry_plan_generated');};
+    document.getElementById('cancel').onclick=()=>{reset();w('task.cancelled');};
+  </script>
+</body>
+</html>

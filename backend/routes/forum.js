@@ -23,7 +23,8 @@ const {
   toggleTopicAuthorFollow,
   getMyFollowingAuthors,
   getForumContext,
-  getSearchAiSummary
+  getSearchAiSummary,
+  getTopicAiKit
 } = require('../controllers/forumController');
 const checkSupabase = require('../middleware/supabaseCheck');
 const supabase = require('../config/supabase');
@@ -90,6 +91,7 @@ router.post('/verify-interaction', checkSupabase, verifyTopicInteraction);
 router.get('/follows/me', checkSupabase, getMyFollowingAuthors);
 
 // Get topic by ID
+router.get('/:id/ai-kit', checkSupabase, getTopicAiKit);
 router.get('/:id', checkSupabase, getTopicById);
 
 // Create a new topic
