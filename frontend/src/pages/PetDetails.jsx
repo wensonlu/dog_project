@@ -17,6 +17,7 @@ const PetDetails = () => {
     const [canReview, setCanReview] = useState(false);
     const [applicationId, setApplicationId] = useState(null);
     const [loadingReviews, setLoadingReviews] = useState(true);
+    const enableRnPilotEntry = import.meta.env.VITE_ENABLE_RN_PET_DETAILS === 'true';
 
     // Find the dog by id, or default to the first one for demo
     const dog = DOGS.find(d => d.id === parseInt(id)) || DOGS[0];
@@ -94,6 +95,12 @@ const PetDetails = () => {
         toggleFavorite(dog.id);
     };
 
+    const openRnPilotPetDetails = () => {
+        const petId = dog?.id || id;
+        const deepLink = `dogproject://pet/${petId}`;
+        window.location.href = deepLink;
+    };
+
     return (
         <div className="min-h-screen bg-background-light dark:bg-background-dark pb-32">
             <div className="fixed top-0 ios-safe-top left-0 right-0 z-50 flex items-center justify-between p-4 bg-gradient-to-b from-black/30 to-transparent pointer-events-none">
@@ -136,6 +143,16 @@ const PetDetails = () => {
                         <span className="material-symbols-outlined text-3xl">pets</span>
                     </div>
                 </div>
+
+                {enableRnPilotEntry && (
+                    <button
+                        type="button"
+                        onClick={openRnPilotPetDetails}
+                        className="mb-4 w-full rounded-xl border border-[#f59e0b]/40 bg-[#fff7ed] px-4 py-3 text-left text-sm text-[#9a3412] dark:bg-[#2b1c11] dark:text-[#fdba74]"
+                    >
+                        打开 RN 试点页: dogproject://pet/{dog?.id || id}
+                    </button>
+                )}
 
                 <div className="flex gap-2 py-6 overflow-x-auto hide-scrollbar">
                     {[
