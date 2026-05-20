@@ -2,9 +2,11 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
 
-const BottomNav = () => {
+const BottomNav = ({ hidden = false }) => {
     const navigate = useNavigate();
     const location = useLocation();
+
+    if (hidden) return null;
 
     const navItems = [
         { label: '探索', icon: 'style', path: '/' },

@@ -30,6 +30,16 @@ const SHOP_TASK_STEPS = [
   '进入订单页',
   '结果校验'
 ];
+const TOPIC_AI_STEPS = [
+  '定位目标帖子',
+  '读取帖子上下文',
+  '生成AI结果'
+];
+const FORUM_SEARCH_STEPS = [
+  '解析检索意图',
+  '检索论坛帖子',
+  '整理结果输出'
+];
 const PROMPT_EXAMPLES = [
   '帮我给第4个帖子点赞并评论：支持你，写得很好，再关注作者',
   '帮我买一份主粮并下单',
@@ -46,6 +56,7 @@ export default function ChatAssistant() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [inputValue, setInputValue] = useState('');
   const [inputError, setInputError] = useState('');
   const [currentTaskSteps, setCurrentTaskSteps] = useState(FORUM_TASK_STEPS);
@@ -75,13 +86,51 @@ export default function ChatAssistant() {
     error: chatError,
     sendMessage,
     regenerateLastReply,
-    stopGeneration
+    stopGeneration,
+    setMessages
   } = useChat(sessionId);
 
   // 自动滚动到底部
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setKeyboardOffset(0);
+      return undefined;
+    }
+
+    const originalOverflow = document.body.style.overflow;
+    const originalTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+
+    const vv = window.visualViewport;
+    if (!vv) {
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        document.body.style.touchAction = originalTouchAction;
+      };
+    }
+
+    const updateKeyboardOffset = () => {
+      const viewportHeight = vv.height || window.innerHeight;
+      const rawOffset = window.innerHeight - viewportHeight - (vv.offsetTop || 0);
+      setKeyboardOffset(Math.max(0, Math.round(rawOffset)));
+    };
+
+    updateKeyboardOffset();
+    vv.addEventListener('resize', updateKeyboardOffset);
+    vv.addEventListener('scroll', updateKeyboardOffset);
+
+    return () => {
+      vv.removeEventListener('resize', updateKeyboardOffset);
+      vv.removeEventListener('scroll', updateKeyboardOffset);
+      document.body.style.overflow = originalOverflow;
+      document.body.style.touchAction = originalTouchAction;
+    };
+  }, [isOpen]);
 
   const handleInputChange = (e) => {
     const text = e.target.value;
@@ -107,6 +156,20 @@ export default function ChatAssistant() {
     }
 
     setInputError('');
+    const forumSearchCommand = parseForumSearchCommand(trimmedInput);
+    if (forumSearchCommand) {
+      setInputValue('');
+      await executeForumSearchTask(forumSearchCommand);
+      return;
+    }
+
+    const topicAiCommand = parseTopicAiCommand(trimmedInput);
+    if (topicAiCommand) {
+      setInputValue('');
+      await executeTopicAiTask(topicAiCommand);
+      return;
+    }
+
     const shopCommand = parseShopCommand(trimmedInput);
     if (shopCommand) {
       if (!user?.id) {
@@ -187,6 +250,40 @@ export default function ChatAssistant() {
     const commentMatch = normalized.match(/评论[：:\s]*([\s\S]+)$/);
     const commentText = commentMatch?.[1]?.trim() || '';
     return { targetIndex, targetTopicId, targetLabel, commentText, followAuthor };
+  };
+
+  const parseTopicAiCommand = (text) => {
+    const normalized = String(text || '').trim();
+    const askSummary = /(总结|提炼).*(3|三).*(观点|要点)/.test(normalized);
+    const askDraftReply = /(草拟|起草|生成).*(回复)/.test(normalized);
+    if (!askSummary && !askDraftReply) return null;
+
+    const currentTopicMatch = window.location.pathname.match(/^\/forum\/([^/]+)$/);
+    const currentTopicId = currentTopicMatch?.[1] || null;
+    const useCurrentTopic = /这个帖子|当前帖子|本帖/.test(normalized);
+    const useLastTopic = /刚才那个帖子|上一个帖子/.test(normalized);
+    const lastTopicId = taskContext?.topicId || null;
+    const targetTopicId = (useCurrentTopic && currentTopicId) ? currentTopicId : (useLastTopic ? lastTopicId : currentTopicId || lastTopicId);
+
+    return {
+      type: askSummary ? 'topic_summary' : 'topic_draft_reply',
+      targetTopicId
+    };
+  };
+
+  const parseForumSearchCommand = (text) => {
+    const normalized = String(text || '').trim();
+    const hasSearchIntent = /(找找|查找|搜索|检索|看看).*(帖子|话题)/.test(normalized);
+    if (!hasSearchIntent) return null;
+
+    let query = normalized
+      .replace(/帮我|请|在论坛中|论坛里|论坛中|帖子|话题|相关的|相关|找找|查找|搜索|检索|看看/g, ' ')
+      .replace(/[，。！？]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!query) query = '新手领养';
+    return { type: 'forum_search', query };
   };
 
   const setStepStatus = (stepIndex, status) => {
@@ -328,6 +425,166 @@ export default function ChatAssistant() {
         targetIndex: targetIndex || 1,
         commentText,
         followAuthor,
+        command,
+        interactionSyncedAt: Date.now()
+      }));
+      setTaskRunning(false);
+      setTaskFailed(false);
+    } catch (error) {
+      const isCancelled = String(error.message || '').includes('已取消');
+      setTaskRunning(false);
+      if (isCancelled) {
+        setTaskStatusText('任务已取消');
+      } else {
+        setTaskFailed(true);
+        setTaskStatusText(`执行失败：${error.message || '未知错误'}`);
+      }
+    }
+  };
+
+  const appendAssistantMessage = (content) => {
+    setMessages((prev) => ([
+      ...prev,
+      { id: Date.now() + Math.random(), role: 'assistant', content }
+    ]));
+  };
+
+  const executeTopicAiTask = async (command) => {
+    try {
+      cancelTaskRef.current = false;
+      setTaskFailed(false);
+      setTaskRunning(true);
+      setTaskHudVisible(true);
+      setIsOpen(false);
+      setCurrentTaskSteps(TOPIC_AI_STEPS);
+      setTaskStepStates(TOPIC_AI_STEPS.map(() => 'pending'));
+      setTaskTitle(command.type === 'topic_summary' ? '执行帖子观点总结' : '执行帖子回复草拟');
+
+      setTaskStatusText('1/3 正在定位目标帖子...');
+      setStepStatus(0, 'running');
+      const topicId = command.targetTopicId;
+      if (!topicId) {
+        throw new Error('未定位到帖子，请先进入帖子详情页再执行');
+      }
+      setStepStatus(0, 'ok');
+
+      if (cancelTaskRef.current) throw new Error('任务已取消');
+
+      setTaskStatusText('2/3 正在读取帖子上下文...');
+      setStepStatus(1, 'running');
+      const params = new URLSearchParams();
+      if (user?.id) params.append('userId', user.id);
+      const topicResp = await fetch(`${FORUM_API.LIST}/${topicId}?${params.toString()}`);
+      const topicData = await topicResp.json();
+      if (!topicResp.ok || !topicData?.topic) {
+        throw new Error(topicData?.error || '读取帖子详情失败');
+      }
+      setStepStatus(1, 'ok');
+
+      if (cancelTaskRef.current) throw new Error('任务已取消');
+
+      setTaskStatusText('3/3 正在生成AI结果...');
+      setStepStatus(2, 'running');
+      if (command.type === 'topic_summary') {
+        const prompt = `请基于下面帖子内容，提炼3条关键观点。要求：\n1) 每条20-40字\n2) 直接用“1. 2. 3.”输出\n3) 不要输出额外解释\n\n帖子标题：${topicData.topic.title}\n帖子内容：${topicData.topic.content}`;
+        await sendMessage(prompt);
+      } else {
+        const response = await fetch(FORUM_API.DRAFT_REPLY, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            topicId,
+            userIntent: '礼貌回复并补充建议',
+            tone: 'friendly',
+            length: 'medium',
+            userId: user?.id || null
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.error || '草拟回复失败');
+        }
+        const replyText = data?.draft || '暂未生成草稿，请重试。';
+        appendAssistantMessage(`基于当前帖子生成的礼貌回复草稿：\n\n${replyText}`);
+      }
+
+      setStepStatus(2, 'ok');
+      setTaskStatusText('已完成：结果已输出到助手对话');
+      setTaskContext((prev) => ({
+        ...(prev || {}),
+        taskType: 'topic_ai',
+        topicId,
+        command,
+        interactionSyncedAt: Date.now()
+      }));
+      setTaskRunning(false);
+      setTaskFailed(false);
+    } catch (error) {
+      const isCancelled = String(error.message || '').includes('已取消');
+      setTaskRunning(false);
+      if (isCancelled) {
+        setTaskStatusText('任务已取消');
+      } else {
+        setTaskFailed(true);
+        setTaskStatusText(`执行失败：${error.message || '未知错误'}`);
+      }
+    }
+  };
+
+  const executeForumSearchTask = async (command) => {
+    try {
+      cancelTaskRef.current = false;
+      setTaskFailed(false);
+      setTaskRunning(true);
+      setTaskHudVisible(true);
+      setIsOpen(false);
+      setCurrentTaskSteps(FORUM_SEARCH_STEPS);
+      setTaskStepStates(FORUM_SEARCH_STEPS.map(() => 'pending'));
+      setTaskTitle('执行论坛智能检索');
+
+      setTaskStatusText('1/3 正在解析检索意图...');
+      setStepStatus(0, 'running');
+      const query = String(command.query || '').trim();
+      if (!query) throw new Error('未识别到检索关键词');
+      setStepStatus(0, 'ok');
+
+      if (cancelTaskRef.current) throw new Error('任务已取消');
+
+      setTaskStatusText(`2/3 正在检索“${query}”相关帖子...`);
+      setStepStatus(1, 'running');
+      const params = new URLSearchParams({
+        format: 'mcp',
+        limit: '8',
+        cursor: '0',
+        sort: 'hot',
+        query
+      });
+      if (user?.id) params.set('userId', user.id);
+      const response = await fetch(`${FORUM_API.LIST}?${params.toString()}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || '论坛检索失败');
+      const items = Array.isArray(data?.items) ? data.items : [];
+      setStepStatus(1, 'ok');
+
+      if (cancelTaskRef.current) throw new Error('任务已取消');
+
+      setTaskStatusText('3/3 正在整理结果输出...');
+      setStepStatus(2, 'running');
+      if (items.length === 0) {
+        appendAssistantMessage(`未检索到“${query}”相关帖子。你可以换更具体关键词，例如：新手领养金毛、首次领养准备、领养回家注意事项。`);
+      } else {
+        const lines = items.slice(0, 5).map((item, idx) => (
+          `${idx + 1}. ${item.title}（赞${item.likes ?? 0}/评${item.comments ?? 0}）\n   跳转：/forum/${item.id}`
+        ));
+        appendAssistantMessage(`帮你找到这些“${query}”相关帖子：\n\n${lines.join('\n\n')}\n\n要不要我继续帮你对其中某一条做“3点总结”或“草拟回复”？`);
+      }
+      setStepStatus(2, 'ok');
+
+      setTaskStatusText('已完成：检索结果已输出到助手对话');
+      setTaskContext((prev) => ({
+        ...(prev || {}),
+        taskType: 'forum_search',
+        query,
         command,
         interactionSyncedAt: Date.now()
       }));
@@ -535,6 +792,7 @@ export default function ChatAssistant() {
               exit={{ opacity: 0, y: 80 }}
               transition={{ type: 'spring', damping: 26, stiffness: 260 }}
               className="chat-window"
+              style={{ '--chat-keyboard-offset': `${keyboardOffset}px` }}
             >
               <div className="chat-sheet-handle-wrap">
                 <div className="chat-sheet-handle" />

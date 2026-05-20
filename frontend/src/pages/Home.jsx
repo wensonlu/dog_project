@@ -30,6 +30,8 @@ const Home = ({ isActive = true }) => {
     const [talkingError, setTalkingError] = useState('');
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
+    const [talkPanelOpen, setTalkPanelOpen] = useState(false);
+    const [isVoiceSupported, setIsVoiceSupported] = useState(true);
 
     // 智能显示/隐藏统计条
     useEffect(() => {
@@ -81,6 +83,36 @@ const Home = ({ isActive = true }) => {
     const currentDog = hasDogs ? DOGS[currentIndex % DOGS.length] : null;
     const nextDog = hasDogs ? DOGS[(currentIndex + 1) % DOGS.length] : null;
 
+    const buildLocalTalkingLine = (dog) => {
+        const name = dog?.name || '毛孩子';
+        const age = dog?.age || '小年轻';
+        const breed = dog?.breed || '汪星人';
+        return {
+            lineId: `local-${dog?.id || Date.now()}`,
+            bubbleText: `${name}申请开麦：我${age}，${breed}，主打一个可爱但不讲武德。`,
+            speechText: `哈喽我是${name}，别看我表面高冷，实际是黏人小甜豆。你要是点个收藏，我今天的尾巴就不下班啦。`,
+            ctaText: '点个收藏，我立刻营业',
+            source: 'local-fallback'
+        };
+    };
+
+    const pickCuteVoice = () => {
+        if (typeof window === 'undefined' || !window.speechSynthesis) return null;
+        const voices = window.speechSynthesis.getVoices() || [];
+        const preferred = [
+            /ting-ting/i,
+            /siri/i,
+            /xiaoxiao/i,
+            /zh[-_]?cn/i,
+            /female/i
+        ];
+        for (const rule of preferred) {
+            const found = voices.find((voice) => rule.test(`${voice.name} ${voice.lang}`));
+            if (found) return found;
+        }
+        return voices.find((voice) => /zh/i.test(voice.lang)) || voices[0] || null;
+    };
+
     const stopSpeaking = () => {
         if (typeof window !== 'undefined' && window.speechSynthesis) {
             window.speechSynthesis.cancel();
@@ -88,13 +120,18 @@ const Home = ({ isActive = true }) => {
         setIsSpeaking(false);
     };
 
-    const fetchTalkingLine = async (dogId) => {
+    const fetchTalkingLine = async (dogId, forceNew = false) => {
         setTalkingLoading(true);
         setTalkingError('');
         try {
+            const seed = forceNew ? Date.now() + Math.floor(Math.random() * 1000000) : currentIndex;
             const response = await fetch(`${API_BASE_URL}/dogs/${dogId}/talking-line`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    seed,
+                    previousHook: forceNew ? (talkingLine?.bubbleText || '') : ''
+                })
             });
 
             if (!response.ok) {
@@ -102,18 +139,26 @@ const Home = ({ isActive = true }) => {
             }
 
             const data = await response.json();
-            setTalkingLine(data);
+            if (forceNew && data?.bubbleText && data.bubbleText === talkingLine?.bubbleText) {
+                setTalkingLine({
+                    ...data,
+                    bubbleText: `${data.bubbleText}（加更版）`,
+                    speechText: `${data.speechText} 我再补一句，今天也想被你夸夸。`
+                });
+            } else {
+                setTalkingLine(data);
+            }
         } catch (error) {
             console.error('获取会说话文案失败:', error);
-            setTalkingError('它刚刚嘴瓢了，点“换一句”再试试');
-            setTalkingLine(null);
+            setTalkingError('接口异常，已切本地可爱模式');
+            setTalkingLine(buildLocalTalkingLine(currentDog));
         } finally {
             setTalkingLoading(false);
         }
     };
 
     const playTalkingLine = async () => {
-        if (!talkingLine?.speechText || isMuted) return;
+        if (!talkingLine?.speechText || isMuted || !isVoiceSupported) return;
 
         try {
             const response = await fetch(`${API_BASE_URL}/dogs/${currentDog.id}/talking-voice`, {
@@ -132,8 +177,14 @@ const Home = ({ isActive = true }) => {
             const voicePayload = await response.json();
             const utterance = new SpeechSynthesisUtterance(voicePayload.speechText);
             utterance.lang = 'zh-CN';
-            utterance.rate = 1.02;
-            utterance.pitch = 1.08;
+            utterance.rate = 1.12;
+            utterance.pitch = 1.28;
+            utterance.volume = 1;
+            const cuteVoice = pickCuteVoice();
+            if (cuteVoice) {
+                utterance.voice = cuteVoice;
+                utterance.lang = cuteVoice.lang || 'zh-CN';
+            }
             utterance.onend = () => setIsSpeaking(false);
             utterance.onerror = () => {
                 setIsSpeaking(false);
@@ -153,10 +204,20 @@ const Home = ({ isActive = true }) => {
     useEffect(() => {
         if (!isActive || !currentDog?.id) return;
         stopSpeaking();
+        setTalkPanelOpen(false);
         fetchTalkingLine(currentDog.id);
     }, [currentDog?.id, isActive]);
 
     useEffect(() => () => stopSpeaking(), []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const support = !!window.speechSynthesis && typeof window.SpeechSynthesisUtterance !== 'undefined';
+        setIsVoiceSupported(support);
+        if (!support) {
+            setTalkingError('当前设备不支持语音播放，仅展示文案');
+        }
+    }, []);
 
     const handleNext = (isFavorite = false) => {
         if (!currentDog) return;
@@ -410,9 +471,24 @@ const Home = ({ isActive = true }) => {
                                 <span className="text-sm font-medium">{currentDog.location}</span>
                             </div>
 
-                            <div className="mt-3 rounded-2xl bg-black/35 backdrop-blur-md border border-white/20 p-3">
-                                <div className="text-[11px] font-semibold tracking-wide text-amber-200 mb-1">AI 玩梗开麦</div>
-                                <p className="text-sm leading-5 min-h-[40px]">
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setTalkPanelOpen((prev) => !prev);
+                                }}
+                                className="mt-2 w-full rounded-full bg-black/40 backdrop-blur-md border border-white/20 px-3 py-2 flex items-center justify-between"
+                            >
+                                <span className="text-xs font-semibold text-amber-200">AI 玩梗开麦</span>
+                                <span className="text-xs text-white/90 truncate ml-2">
+                                    {talkingLoading ? '正在想梗...' : talkingLine?.bubbleText || talkingError || '点开让它营业'}
+                                </span>
+                            </button>
+                        </div>
+
+                        {talkPanelOpen && (
+                            <div className="absolute bottom-[78px] left-6 right-6 z-30 rounded-2xl bg-black/55 backdrop-blur-md border border-white/20 p-3 text-white">
+                                <p className="text-sm leading-5 min-h-[36px]">
                                     {talkingLoading ? '正在给它想梗...' : talkingLine?.bubbleText || talkingError || '点“换一句”让它营业'}
                                 </p>
                                 <div className="mt-2 flex items-center gap-2">
@@ -426,19 +502,19 @@ const Home = ({ isActive = true }) => {
                                                 playTalkingLine();
                                             }
                                         }}
-                                        disabled={talkingLoading || isMuted || !talkingLine?.speechText}
-                                        className="px-3 py-1.5 rounded-full bg-rose-500/90 hover:bg-rose-500 text-white text-xs font-semibold disabled:opacity-50"
+                                        disabled={talkingLoading || isMuted || !isVoiceSupported || !talkingLine?.speechText}
+                                        className="px-3 py-1.5 rounded-full bg-rose-500/90 text-white text-xs font-semibold disabled:opacity-50"
                                     >
-                                        {isSpeaking ? '停止开麦' : '让它开口'}
+                                        {isSpeaking ? '停止开麦' : '可爱开麦'}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            fetchTalkingLine(currentDog.id);
+                                            fetchTalkingLine(currentDog.id, true);
                                         }}
                                         disabled={talkingLoading}
-                                        className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold disabled:opacity-50"
+                                        className="px-3 py-1.5 rounded-full bg-white/20 text-white text-xs font-semibold disabled:opacity-50"
                                     >
                                         换一句
                                     </button>
@@ -450,13 +526,13 @@ const Home = ({ isActive = true }) => {
                                             setIsMuted(nextMuted);
                                             if (nextMuted) stopSpeaking();
                                         }}
-                                        className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold"
+                                        className="px-3 py-1.5 rounded-full bg-white/20 text-white text-xs font-semibold"
                                     >
                                         {isMuted ? '取消静音' : '静音全部'}
                                     </button>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* 操作按钮 */}
                         <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-4">

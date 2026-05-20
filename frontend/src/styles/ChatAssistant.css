@@ -48,7 +48,8 @@
   right: 0;
   width: 100vw;
   max-width: 100vw;
-  height: min(78vh, 760px);
+  height: min(78dvh, 760px);
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px));
   background: white;
   border-radius: 20px 20px 0 0;
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
@@ -56,6 +57,9 @@
   flex-direction: column;
   z-index: 1002;
   overflow: hidden;
+  overscroll-behavior: contain;
+  transform: translateY(calc(-1 * var(--chat-keyboard-offset, 0px)));
+  transition: transform 0.2s ease;
 }
 
 .chat-sheet-backdrop {
@@ -126,6 +130,8 @@
   overflow-y: auto;
   padding: 16px;
   background: #fafafa;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .chat-welcome {
@@ -466,7 +472,7 @@
 @media (max-width: 640px) {
   .chat-window {
     width: 100vw;
-    height: 82vh;
+    height: 82dvh;
     border-radius: 18px 18px 0 0;
   }
 

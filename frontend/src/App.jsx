@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DogProvider } from './context/DogContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -59,6 +59,7 @@ const PrivateRoute = ({ children }) => {
 
 function AppContent() {
   const location = useLocation();
+  const navigate = useNavigate();
   const isHomePath = location.pathname === '/';
   const isForumListPath = location.pathname === '/forum';
   const isShopPath = location.pathname === '/shop';
@@ -94,6 +95,57 @@ function AppContent() {
       setMountedTabs((prev) => ({ ...prev, profile: true }));
     }
   }, [isHomePath, isForumListPath, isShopPath, isContentPath, isStoriesPath, isProfilePath]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const ua = window.navigator.userAgent || '';
+    const isiOS = /iPad|iPhone|iPod/.test(ua) || (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);
+    if (!isiOS) return undefined;
+
+    const tabRootPaths = new Set(['/', '/forum', '/shop', '/content', '/stories', '/profile']);
+    if (tabRootPaths.has(location.pathname)) return undefined;
+
+    const EDGE_WIDTH = 24;
+    const MIN_X_DISTANCE = 70;
+    const MAX_Y_DRIFT = 36;
+
+    let tracking = false;
+    let startX = 0;
+    let startY = 0;
+
+    const onTouchStart = (event) => {
+      if (!event.touches || event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      tracking = startX <= EDGE_WIDTH;
+    };
+
+    const onTouchEnd = (event) => {
+      if (!tracking || !event.changedTouches || event.changedTouches.length !== 1) {
+        tracking = false;
+        return;
+      }
+
+      const touch = event.changedTouches[0];
+      const deltaX = touch.clientX - startX;
+      const deltaY = Math.abs(touch.clientY - startY);
+
+      if (deltaX >= MIN_X_DISTANCE && deltaY <= MAX_Y_DRIFT) {
+        navigate(-1);
+      }
+      tracking = false;
+    };
+
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [location.pathname, navigate]);
 
   return (
     <DogProvider>

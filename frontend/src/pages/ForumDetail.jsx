@@ -36,7 +36,9 @@ const ForumDetail = () => {
   const [deleteCommentReplyLoading, setDeleteCommentReplyLoading] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
   const [barBottomPx, setBarBottomPx] = useState(80);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [isBarInputMode, setIsBarInputMode] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
   const [aiKitLoading, setAiKitLoading] = useState(false);
   const [aiKit, setAiKit] = useState([]);
   const imageScrollRef = useRef(null);
@@ -128,11 +130,15 @@ const ForumDetail = () => {
   // 键盘弹起时底部栏吸附在键盘上方（visualViewport）
   useEffect(() => {
     const vv = window.visualViewport;
+    if (!vv) return undefined;
+
     const updateBarBottom = () => {
-      const keyboardHeight = window.innerHeight - vv.height;
+      const keyboardHeight = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0));
       const isKeyboardOpen = keyboardHeight > 80;
-      setBarBottomPx(isKeyboardOpen ? keyboardHeight : 80);
+      setKeyboardOpen(isKeyboardOpen);
+      setBarBottomPx(isKeyboardOpen ? keyboardHeight + 8 : 80);
     };
+
     updateBarBottom();
     vv.addEventListener('resize', updateBarBottom);
     vv.addEventListener('scroll', updateBarBottom);
@@ -141,6 +147,47 @@ const ForumDetail = () => {
       vv.removeEventListener('scroll', updateBarBottom);
     };
   }, []);
+
+  useEffect(() => {
+    const shouldLock = keyboardOpen || inputFocused;
+    if (!shouldLock) return undefined;
+
+    const scrollY = window.scrollY;
+    const bodyStyle = document.body.style;
+    const htmlStyle = document.documentElement.style;
+
+    const originalBody = {
+      position: bodyStyle.position,
+      top: bodyStyle.top,
+      left: bodyStyle.left,
+      right: bodyStyle.right,
+      width: bodyStyle.width,
+      overflow: bodyStyle.overflow,
+      touchAction: bodyStyle.touchAction
+    };
+    const originalHtmlOverflow = htmlStyle.overflow;
+
+    bodyStyle.position = 'fixed';
+    bodyStyle.top = `-${scrollY}px`;
+    bodyStyle.left = '0';
+    bodyStyle.right = '0';
+    bodyStyle.width = '100%';
+    bodyStyle.overflow = 'hidden';
+    bodyStyle.touchAction = 'none';
+    htmlStyle.overflow = 'hidden';
+
+    return () => {
+      bodyStyle.position = originalBody.position;
+      bodyStyle.top = originalBody.top;
+      bodyStyle.left = originalBody.left;
+      bodyStyle.right = originalBody.right;
+      bodyStyle.width = originalBody.width;
+      bodyStyle.overflow = originalBody.overflow;
+      bodyStyle.touchAction = originalBody.touchAction;
+      htmlStyle.overflow = originalHtmlOverflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, [keyboardOpen, inputFocused]);
 
   const handleLike = async () => {
     if (!user?.id) {
@@ -847,10 +894,12 @@ const ForumDetail = () => {
                     }
                   }}
                   onBlur={() => {
+                    setInputFocused(false);
                     setTimeout(() => {
                       if (!commentText.trim()) setIsBarInputMode(false);
                     }, 150);
                   }}
+                  onFocus={() => setInputFocused(true)}
                 />
                 {commentText.trim() && (
                   <button
@@ -916,7 +965,7 @@ const ForumDetail = () => {
         </div>
       </div>
 
-      <BottomNav />
+      <BottomNav hidden={keyboardOpen || inputFocused || isBarInputMode} />
 
       {/* 删除确认弹窗（H5 友好，替代 confirm） */}
       <ConfirmModal
