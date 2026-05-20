@@ -18,6 +18,7 @@ const PetDetails = () => {
     const [applicationId, setApplicationId] = useState(null);
     const [loadingReviews, setLoadingReviews] = useState(true);
     const enableRnPilotEntry = import.meta.env.VITE_ENABLE_RN_PET_DETAILS === 'true';
+    const isCapacitorRuntime = typeof window !== 'undefined' && !!window.Capacitor;
 
     // Find the dog by id, or default to the first one for demo
     const dog = DOGS.find(d => d.id === parseInt(id)) || DOGS[0];
@@ -87,6 +88,23 @@ const PetDetails = () => {
         checkEligibility();
     }, [dog?.id, user]);
 
+    useEffect(() => {
+        if (!enableRnPilotEntry || !isCapacitorRuntime) return;
+        try {
+            const key = 'rn_pilot_events';
+            const events = JSON.parse(localStorage.getItem(key) || '[]');
+            events.push({
+                type: 'rn_pilot_entry_impression',
+                source: 'pet_details_web',
+                petId: String(dog?.id || id),
+                ts: Date.now()
+            });
+            localStorage.setItem(key, JSON.stringify(events.slice(-200)));
+        } catch (_error) {
+            // ignore tracking errors
+        }
+    }, [enableRnPilotEntry, isCapacitorRuntime, dog?.id, id]);
+
     const handleFavorite = () => {
         if (!user) {
             navigate('/login');
@@ -98,6 +116,19 @@ const PetDetails = () => {
     const openRnPilotPetDetails = () => {
         const petId = dog?.id || id;
         const deepLink = `dogproject://pet/${petId}`;
+        try {
+            const key = 'rn_pilot_events';
+            const events = JSON.parse(localStorage.getItem(key) || '[]');
+            events.push({
+                type: 'rn_pilot_open_click',
+                source: 'pet_details_web',
+                petId: String(petId),
+                ts: Date.now()
+            });
+            localStorage.setItem(key, JSON.stringify(events.slice(-200)));
+        } catch (_error) {
+            // ignore tracking errors
+        }
         window.location.href = deepLink;
     };
 
@@ -144,7 +175,7 @@ const PetDetails = () => {
                     </div>
                 </div>
 
-                {enableRnPilotEntry && (
+                {enableRnPilotEntry && isCapacitorRuntime && (
                     <button
                         type="button"
                         onClick={openRnPilotPetDetails}
