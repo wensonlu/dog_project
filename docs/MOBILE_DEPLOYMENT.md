@@ -420,6 +420,7 @@ echo "构建完成！"
 - [Capacitor 官方文档](https://capacitorjs.com/docs)
 - [iOS 发布指南](https://developer.apple.com/app-store/review/guidelines/)
 - [Android 发布指南](https://developer.android.com/distribute/googleplay/start)
+- [React Native CLI vs Expo 选型调研（本项目）](./RN_EXPO_TECH_SELECTION.md)
 
 ## 快速开始命令
 
