@@ -419,7 +419,7 @@ function sanitizeMemeLine(text) {
   return source.slice(0, 140);
 }
 
-function buildMockTalkingLine({ name, breed, age, location }) {
+function buildMockTalkingLine({ name, breed, age, location, seed = 0 }) {
   const safeName = name || '这位毛孩子';
   const safeBreed = breed || '汪星人';
   const safeAge = age || '小年轻';
@@ -433,16 +433,20 @@ function buildMockTalkingLine({ name, breed, age, location }) {
     `你滑我一眼，我记你一天；你收藏一下，我记你一辈子。`,
   ];
 
+  const baseIndex = Math.abs(Number(seed) || Date.now()) % candidates.length;
+  const nextIndex = (baseIndex + 1) % candidates.length;
+  const ctaIndex = (baseIndex + 2) % candidates.length;
+
   return {
-    hook: candidates[0],
-    mainLine: candidates[1],
-    ctaLine: candidates[2],
+    hook: candidates[baseIndex],
+    mainLine: candidates[nextIndex],
+    ctaLine: candidates[ctaIndex],
   };
 }
 
-async function generatePetTalkingLine({ name, breed, age, location }) {
+async function generatePetTalkingLine({ name, breed, age, location, seed = 0, previousHook = '' }) {
   const startTime = Date.now();
-  const fallback = buildMockTalkingLine({ name, breed, age, location });
+  const fallback = buildMockTalkingLine({ name, breed, age, location, seed });
 
   try {
     if (!isAiEnabled()) {
@@ -453,7 +457,7 @@ async function generatePetTalkingLine({ name, breed, age, location }) {
       };
     }
 
-    const prompt = `你是宠物领养平台的“搞笑玩梗”文案助手。\n请基于真实宠物信息生成JSON，禁止编造健康/价格承诺，禁止低俗和攻击性内容。\n\n宠物信息：\n- 名称：${name || '未命名'}\n- 品种：${breed || '未知'}\n- 年龄：${age || '未知'}\n- 地点：${location || '未知'}\n\n返回JSON：\n{\n  "hook": "12-24字，短梗开场",\n  "mainLine": "40-90字，玩梗自我介绍",\n  "ctaLine": "12-24字，轻度行动引导"\n}\n只返回JSON。`;
+    const prompt = `你是宠物领养平台的“搞笑玩梗”文案助手。\n请基于真实宠物信息生成JSON，禁止编造健康/价格承诺，禁止低俗和攻击性内容。\n\n宠物信息：\n- 名称：${name || '未命名'}\n- 品种：${breed || '未知'}\n- 年龄：${age || '未知'}\n- 地点：${location || '未知'}\n- 随机种子：${seed || 0}\n- 上一句 hook：${previousHook || '无'}\n\n要求：本次 hook 不能与“上一句 hook”相同。\n\n返回JSON：\n{\n  "hook": "12-24字，短梗开场",\n  "mainLine": "40-90字，玩梗自我介绍",\n  "ctaLine": "12-24字，轻度行动引导"\n}\n只返回JSON。`;
 
     const { generateText, model } = getAiRuntime();
     const { text } = await generateText({ model, prompt });
@@ -463,8 +467,10 @@ async function generatePetTalkingLine({ name, breed, age, location }) {
     const mainLine = sanitizeMemeLine(parsed.mainLine) || fallback.mainLine;
     const ctaLine = sanitizeMemeLine(parsed.ctaLine) || fallback.ctaLine;
 
+    const ensuredHook = hook === previousHook ? fallback.hook : hook;
+
     return {
-      hook,
+      hook: ensuredHook,
       mainLine,
       ctaLine,
       model: 'glm-5',

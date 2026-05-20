@@ -14,6 +14,7 @@ router.get('/:id', checkSupabase, getDogById);
 router.post('/:id/talking-line', checkSupabase, async (req, res) => {
     try {
         const { id } = req.params;
+        const { seed = Date.now(), previousHook = '' } = req.body || {};
         const { data: dog, error } = await supabase
             .from('dogs')
             .select('id, name, breed, age, location')
@@ -28,7 +29,9 @@ router.post('/:id/talking-line', checkSupabase, async (req, res) => {
             name: dog.name,
             breed: dog.breed,
             age: dog.age,
-            location: dog.location
+            location: dog.location,
+            seed,
+            previousHook
         });
 
         const speechText = `${generated.hook} ${generated.mainLine} ${generated.ctaLine}`.trim();
