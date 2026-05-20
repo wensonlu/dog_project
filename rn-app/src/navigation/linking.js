@@ -2,20 +2,31 @@ import * as Linking from 'expo-linking';
 
 export const appScheme = 'dogproject';
 
-export function extractPetIdFromUrl(url) {
-  if (!url) return null;
+function normalizeString(value) {
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim();
+  return text ? text : null;
+}
+
+export function parseLaunchPayload(url) {
+  if (!url) return {};
   try {
     const parsed = Linking.parse(url);
     const rawPath = String(parsed.path || '').replace(/^\/+/, '');
-    const petFromPath = rawPath.match(/^pet\/(\d+)$/)?.[1];
-    if (petFromPath) return petFromPath;
+    const petFromPath = rawPath.match(/^pet\/(\d+)$/)?.[1] || null;
 
-    const petFromQuery = parsed.queryParams?.petId;
-    if (petFromQuery) return String(petFromQuery);
+    return {
+      petId: normalizeString(petFromPath || parsed.queryParams?.petId),
+      token: normalizeString(parsed.queryParams?.token),
+      userId: normalizeString(parsed.queryParams?.userId),
+    };
   } catch (_err) {
-    return null;
+    return {};
   }
-  return null;
+}
+
+export function extractPetIdFromUrl(url) {
+  return parseLaunchPayload(url)?.petId || null;
 }
 
 export function buildPetUrl(petId) {

@@ -1,5 +1,10 @@
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
 
+function buildError(payload, status) {
+  const message = payload?.error || payload?.message || `Request failed (${status})`;
+  return new Error(message);
+}
+
 async function request(path, options = {}) {
   const url = `${API_BASE_URL}${path}`;
   const response = await fetch(url, options);
@@ -12,8 +17,7 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-    const message = payload?.error || `Request failed (${response.status})`;
-    throw new Error(message);
+    throw buildError(payload, response.status);
   }
 
   return payload;
@@ -24,18 +28,37 @@ export async function fetchPetDetails(petId, token) {
   return request(`/dogs/${petId}`, { headers });
 }
 
-export async function togglePetFavorite(petId, token) {
-  if (!token) {
+export async function fetchRelatedTopics(petId, token) {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  return request(`/forum/related/${petId}`, { headers });
+}
+
+export async function fetchReviews(petId, token) {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  return request(`/reviews/${petId}`, { headers });
+}
+
+export async function fetchReviewEligibility(petId, token) {
+  if (!token) return { eligible: false, reason: 'not_logged_in' };
+  const headers = { Authorization: `Bearer ${token}` };
+  return request(`/reviews/check-eligibility/${petId}`, { headers });
+}
+
+export async function togglePetFavorite(petId, { token, userId }) {
+  if (!token || !userId) {
     throw new Error('NOT_AUTHENTICATED');
   }
 
-  return request(`/favorites/${petId}`, {
+  return request('/favorites', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({}),
+    body: JSON.stringify({
+      userId,
+      dogId: Number(petId),
+    }),
   });
 }
 

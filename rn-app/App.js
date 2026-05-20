@@ -3,7 +3,8 @@ import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { StatusBar } from 'expo-status-bar';
 import PetDetailsScreen from './src/screens/PetDetailsScreen';
-import { appScheme, extractPetIdFromUrl } from './src/navigation/linking';
+import { appScheme, parseLaunchPayload } from './src/navigation/linking';
+import { saveAuthState } from './src/services/auth';
 
 const DEFAULT_PET_ID = '1';
 
@@ -13,21 +14,26 @@ export default function App() {
   useEffect(() => {
     let mounted = true;
 
+    async function applyLaunchUrl(url) {
+      const payload = parseLaunchPayload(url);
+      if (payload?.petId && mounted) {
+        setCurrentPetId(payload.petId);
+      }
+
+      if (payload?.token || payload?.userId) {
+        await saveAuthState({ token: payload.token, userId: payload.userId });
+      }
+    }
+
     async function bootstrapFromInitialUrl() {
       const initialUrl = await Linking.getInitialURL();
-      const petId = extractPetIdFromUrl(initialUrl);
-      if (mounted && petId) {
-        setCurrentPetId(petId);
-      }
+      await applyLaunchUrl(initialUrl);
     }
 
     bootstrapFromInitialUrl();
 
     const sub = Linking.addEventListener('url', ({ url }) => {
-      const petId = extractPetIdFromUrl(url);
-      if (petId) {
-        setCurrentPetId(petId);
-      }
+      applyLaunchUrl(url);
     });
 
     return () => {

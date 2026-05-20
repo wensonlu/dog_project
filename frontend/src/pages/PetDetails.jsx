@@ -115,7 +115,23 @@ const PetDetails = () => {
 
     const openRnPilotPetDetails = () => {
         const petId = dog?.id || id;
-        const deepLink = `dogproject://pet/${petId}`;
+        const sessionStr = localStorage.getItem('pawmate_session');
+        const userStr = localStorage.getItem('pawmate_user');
+        let token = '';
+        let userId = '';
+        try {
+            const session = sessionStr ? JSON.parse(sessionStr) : null;
+            const user = userStr ? JSON.parse(userStr) : null;
+            token = session?.access_token || '';
+            userId = user?.id || '';
+        } catch (_error) {
+            token = '';
+            userId = '';
+        }
+        const query = new URLSearchParams();
+        if (token) query.set('token', token);
+        if (userId) query.set('userId', userId);
+        const deepLink = `dogproject://pet/${petId}${query.toString() ? `?${query.toString()}` : ''}`;
         try {
             const key = 'rn_pilot_events';
             const events = JSON.parse(localStorage.getItem(key) || '[]');
