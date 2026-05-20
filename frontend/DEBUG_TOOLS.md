@@ -155,6 +155,44 @@ node debug-advanced.js http://localhost:5173 --screenshot
 # 对比两张截图查看视觉变化
 ```
 
+### 场景 5: 查看 RN 试点入口埋点（曝光/点击/CTR）
+
+在浏览器控制台执行以下代码（`/pet/:id` 页面）：
+
+```javascript
+(() => {
+  const key = 'rn_pilot_events';
+  const events = JSON.parse(localStorage.getItem(key) || '[]');
+  const impressions = events.filter((e) => e?.type === 'rn_pilot_entry_impression');
+  const clicks = events.filter((e) => e?.type === 'rn_pilot_open_click');
+  const ctr = impressions.length ? (clicks.length / impressions.length) * 100 : 0;
+
+  console.table({
+    impressions: impressions.length,
+    clicks: clicks.length,
+    ctr_percent: `${ctr.toFixed(2)}%`,
+  });
+
+  return { impressions, clicks, ctrPercent: ctr.toFixed(2) };
+})();
+```
+
+查看最近 20 条事件明细：
+
+```javascript
+(() => {
+  const key = 'rn_pilot_events';
+  const events = JSON.parse(localStorage.getItem(key) || '[]');
+  console.table(events.slice(-20));
+})();
+```
+
+清空试点事件（重新做一次纯净统计）：
+
+```javascript
+localStorage.removeItem('rn_pilot_events');
+```
+
 ## 自定义配置
 
 您可以修改 `debug-browser.js` 或 `debug-advanced.js` 来自定义调试行为：
