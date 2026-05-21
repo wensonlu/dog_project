@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { addNetworkLog } from '../debug/debugStore';
 
 function resolveApiBaseUrl() {
   const envApi = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -36,6 +37,7 @@ async function request(path, options = {}) {
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let response;
 
+  const started = Date.now();
   try {
     response = await fetch(url, { ...options, signal: controller.signal });
   } catch (err) {
@@ -43,10 +45,12 @@ async function request(path, options = {}) {
     if (err?.name === 'AbortError') {
       const timeoutErr = new Error('REQUEST_TIMEOUT');
       timeoutErr.code = 'REQUEST_TIMEOUT';
+      addNetworkLog({ method: options?.method || 'GET', url, status: 'REQUEST_TIMEOUT', durationMs: Date.now() - started });
       throw timeoutErr;
     }
     const networkErr = new Error('NETWORK_ERROR');
     networkErr.code = 'NETWORK_ERROR';
+    addNetworkLog({ method: options?.method || 'GET', url, status: 'NETWORK_ERROR', durationMs: Date.now() - started });
     throw networkErr;
   } finally {
     clearTimeout(timeout);
@@ -59,6 +63,7 @@ async function request(path, options = {}) {
     payload = null;
   }
 
+  addNetworkLog({ method: options?.method || 'GET', url, status: response.status, durationMs: Date.now() - started });
   if (!response.ok) {
     throw buildError(payload, response.status);
   }

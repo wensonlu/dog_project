@@ -7,11 +7,41 @@ import ForumDetailScreen from './src/screens/ForumDetailScreen';
 import { appScheme, parseLaunchPayload } from './src/navigation/linking';
 import { saveAuthState } from './src/services/auth';
 import { exchangeMobileTicket } from './src/services/api';
+import DebugConsolePanel from './src/debug/DebugConsolePanel';
+import { addConsoleLog } from './src/debug/debugStore';
 
 const DEFAULT_ROUTE = { type: 'pet', id: '1' };
 
-export default function App() {
+export default function App(props) {
   const [route, setRoute] = useState(DEFAULT_ROUTE);
+
+  useEffect(() => {
+    const levels = ['log', 'info', 'warn', 'error'];
+    const originals = {};
+    levels.forEach((level) => {
+      originals[level] = console[level]?.bind(console);
+      console[level] = (...args) => {
+        try {
+          addConsoleLog(level, args.map((item) => {
+            try {
+              return typeof item === 'string' ? item : JSON.stringify(item);
+            } catch {
+              return String(item);
+            }
+          }).join(' '));
+        } catch {
+          // noop
+        }
+        originals[level]?.(...args);
+      };
+    });
+
+    return () => {
+      levels.forEach((level) => {
+        if (originals[level]) console[level] = originals[level];
+      });
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -43,7 +73,7 @@ export default function App() {
     }
 
     async function bootstrapFromInitialUrl() {
-      const initialUrl = await Linking.getInitialURL();
+      const initialUrl = props?.launchUrl || (await Linking.getInitialURL());
       await applyLaunchUrl(initialUrl);
     }
 
@@ -78,6 +108,7 @@ export default function App() {
       ) : (
         <PetDetailsScreen petId={route.id} onBack={() => {}} />
       )}
+      <DebugConsolePanel />
     </SafeAreaView>
   );
 }
