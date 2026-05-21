@@ -4,7 +4,8 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: './', // 重要：使用相对路径
+  // Vercel/SPA 部署需要根路径资源引用，避免线上 js/css 404 导致白屏
+  base: '/',
   build: {
     outDir: 'dist',
     sourcemap: true, // ✅ 开启 source map，方便排查错误
