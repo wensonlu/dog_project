@@ -10,7 +10,8 @@
       "Bash(git reset *)",
       "mcp__plugin_supabase_supabase__apply_migration",
       "Bash(curl -X POST http://localhost:5001/api/chat/messages -H 'Content-Type: application/json' -d '{ *)",
-      "Bash(curl -s -X POST http://localhost:5001/api/chat/sessions -H 'Content-Type: application/json' -d '{\"user_id\": null}')"
+      "Bash(curl -s -X POST http://localhost:5001/api/chat/sessions -H 'Content-Type: application/json' -d '{\"user_id\": null}')",
+      "Bash(curl -s http://localhost:8081/status)"
     ]
   },
   "outputStyle": "Learning"
