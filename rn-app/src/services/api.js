@@ -1,13 +1,56 @@
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
+import Constants from 'expo-constants';
+
+function resolveApiBaseUrl() {
+  const envApi = process.env.EXPO_PUBLIC_API_BASE_URL;
+  if (envApi) return envApi.replace(/\/+$/, '');
+
+  const hostUri = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoClient?.hostUri || '';
+  const host = String(hostUri).split(':')[0];
+
+  if (host) {
+    return `http://${host}:5001/api`;
+  }
+
+  return 'http://localhost:5001/api';
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
+const REQUEST_TIMEOUT_MS = 12000;
 
 function buildError(payload, status) {
+  if (status === 401) {
+    const err = new Error('UNAUTHORIZED');
+    err.code = 'UNAUTHORIZED';
+    return err;
+  }
   const message = payload?.error || payload?.message || `Request failed (${status})`;
-  return new Error(message);
+  const err = new Error(message);
+  err.code = 'HTTP_ERROR';
+  err.status = status;
+  return err;
 }
 
 async function request(path, options = {}) {
   const url = `${API_BASE_URL}${path}`;
-  const response = await fetch(url, options);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let response;
+
+  try {
+    response = await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    clearTimeout(timeout);
+    if (err?.name === 'AbortError') {
+      const timeoutErr = new Error('REQUEST_TIMEOUT');
+      timeoutErr.code = 'REQUEST_TIMEOUT';
+      throw timeoutErr;
+    }
+    const networkErr = new Error('NETWORK_ERROR');
+    networkErr.code = 'NETWORK_ERROR';
+    throw networkErr;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   let payload = null;
   try {
@@ -42,6 +85,14 @@ export async function fetchReviewEligibility(petId, token) {
   if (!token) return { eligible: false, reason: 'not_logged_in' };
   const headers = { Authorization: `Bearer ${token}` };
   return request(`/reviews/check-eligibility/${petId}`, { headers });
+}
+
+export async function fetchForumTopicById(topicId, { token, userId } = {}) {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const query = new URLSearchParams();
+  if (userId) query.set('userId', String(userId));
+  const path = `/forum/${topicId}${query.toString() ? `?${query.toString()}` : ''}`;
+  return request(path, { headers });
 }
 
 export async function togglePetFavorite(petId, { token, userId }) {

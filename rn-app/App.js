@@ -3,21 +3,25 @@ import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { StatusBar } from 'expo-status-bar';
 import PetDetailsScreen from './src/screens/PetDetailsScreen';
+import ForumDetailScreen from './src/screens/ForumDetailScreen';
 import { appScheme, parseLaunchPayload } from './src/navigation/linking';
 import { saveAuthState } from './src/services/auth';
 
-const DEFAULT_PET_ID = '1';
+const DEFAULT_ROUTE = { type: 'pet', id: '1' };
 
 export default function App() {
-  const [currentPetId, setCurrentPetId] = useState(DEFAULT_PET_ID);
+  const [route, setRoute] = useState(DEFAULT_ROUTE);
 
   useEffect(() => {
     let mounted = true;
 
     async function applyLaunchUrl(url) {
       const payload = parseLaunchPayload(url);
-      if (payload?.petId && mounted) {
-        setCurrentPetId(payload.petId);
+
+      if (payload?.topicId && mounted) {
+        setRoute({ type: 'forum', id: payload.topicId });
+      } else if (payload?.petId && mounted) {
+        setRoute({ type: 'pet', id: payload.petId });
       }
 
       if (payload?.token || payload?.userId) {
@@ -43,8 +47,11 @@ export default function App() {
   }, []);
 
   const tipText = useMemo(() => {
-    return `当前试点宠物ID: ${currentPetId}（Deep Link: ${appScheme}://pet/${currentPetId}）`;
-  }, [currentPetId]);
+    if (route.type === 'forum') {
+      return `当前试点帖子ID: ${route.id}（Deep Link: ${appScheme}://forum/${route.id}）`;
+    }
+    return `当前试点宠物ID: ${route.id}（Deep Link: ${appScheme}://pet/${route.id}）`;
+  }, [route]);
 
   return (
     <SafeAreaView style={styles.app}>
@@ -53,7 +60,11 @@ export default function App() {
         <Text style={styles.bannerTitle}>Dog Project RN Pilot (Expo)</Text>
         <Text style={styles.bannerDesc}>{tipText}</Text>
       </View>
-      <PetDetailsScreen petId={currentPetId} onBack={() => {}} />
+      {route.type === 'forum' ? (
+        <ForumDetailScreen topicId={route.id} />
+      ) : (
+        <PetDetailsScreen petId={route.id} onBack={() => {}} />
+      )}
     </SafeAreaView>
   );
 }

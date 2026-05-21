@@ -27,7 +27,7 @@ const {
   getTopicAiKit
 } = require('../controllers/forumController');
 const checkSupabase = require('../middleware/supabaseCheck');
-const supabase = require('../config/supabase');
+const { supabase } = require('../config/supabase');
 
 // Get related topics by dog ID
 router.get('/related/:dogId', checkSupabase, async (req, res) => {
@@ -44,25 +44,55 @@ router.get('/related/:dogId', checkSupabase, async (req, res) => {
     if (dogError) throw dogError;
     
     // 搜索相关话题（按dog_id关联或内容包含宠物名称）
+    const searchTerms = [dog?.name, dog?.breed].filter(Boolean);
+    const searchClause = searchTerms
+      .map((term) => `title.ilike.%${term}%,content.ilike.%${term}%`)
+      .join(',');
+
     const { data: topics, error } = await supabase
       .from('forum_topics')
-      .select(`
-        *,
-        author:users(name),
-        comments:forum_comments(count)
-      `)
-      .or(`dog_id.eq.${dogId},title.ilike.%${dog.name}%,content.ilike.%${dog.name}%`)
+      .select('*')
+      .or(searchClause || `title.ilike.%${dogId}%,content.ilike.%${dogId}%`)
       .order('created_at', { ascending: false })
       .limit(10);
       
     if (error) throw error;
-    
-    // 格式化数据
-    const formattedTopics = topics?.map(topic => ({
-      ...topic,
-      author_name: topic.author?.name || '匿名用户',
-      comment_count: topic.comments?.[0]?.count || 0
-    })) || [];
+
+    const safeTopics = topics || [];
+    const userIds = [...new Set(safeTopics.map((topic) => topic.user_id).filter(Boolean))];
+    let profileMap = {};
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', userIds);
+      profileMap = (profiles || []).reduce((acc, profile) => {
+        acc[profile.id] = profile;
+        return acc;
+      }, {});
+    }
+
+    const topicIds = safeTopics.map((topic) => topic.id);
+    let commentCountMap = {};
+    if (topicIds.length > 0) {
+      const { data: comments } = await supabase
+        .from('forum_comments')
+        .select('topic_id')
+        .in('topic_id', topicIds);
+      commentCountMap = (comments || []).reduce((acc, item) => {
+        acc[item.topic_id] = (acc[item.topic_id] || 0) + 1;
+        return acc;
+      }, {});
+    }
+
+    const formattedTopics = safeTopics.map((topic) => {
+      const profile = profileMap[topic.user_id];
+      return {
+        ...topic,
+        author_name: profile?.full_name || profile?.email?.split('@')[0] || '匿名用户',
+        comment_count: commentCountMap[topic.id] || 0,
+      };
+    });
     
     res.json(formattedTopics);
   } catch (error) {
