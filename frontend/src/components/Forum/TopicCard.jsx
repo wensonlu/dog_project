@@ -1,12 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { openForumDetailByMode } from '../../utils/forumDetailDebug';
 
 const TopicCard = ({ topic, onBeforeNavigate }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
     onBeforeNavigate?.();
-    navigate(`/forum/${topic.id}`);
+    openForumDetailByMode(topic.id, navigate);
   };
 
   const aspectRatios = [
