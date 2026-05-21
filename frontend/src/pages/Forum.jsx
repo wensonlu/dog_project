@@ -87,7 +87,7 @@ const Forum = ({ isActive = true }) => {
       setAiSummaryError(null);
       setAiSummaryLoading(false);
       setAiSummaryNonce(0);
-    }, 2000);
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [searchInput, setSearchQuery]);
