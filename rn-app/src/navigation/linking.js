@@ -38,9 +38,11 @@ export function parseLaunchPayload(url) {
   if (!url) return {};
   try {
     const parsed = Linking.parse(url);
+    const host = normalizeString(parsed.hostname || parsed.host);
     const rawPath = String(parsed.path || '').replace(/^\/+/, '');
-    const petFromPath = rawPath.match(/^pet\/(\d+)$/)?.[1] || null;
-    const forumFromPath = rawPath.match(/^forum\/(\d+)$/)?.[1] || null;
+    const routePath = host && ['pet', 'forum'].includes(host) ? `${host}/${rawPath}` : rawPath;
+    const petFromPath = routePath.match(/^pet\/([^/?#]+)$/)?.[1] || null;
+    const forumFromPath = routePath.match(/^forum\/([^/?#]+)$/)?.[1] || null;
     const wrappedParams = parseWrappedParams(parsed.queryParams?.params);
     const jsonBundle = parseJsonBundle(parsed.queryParams?.bundle);
 

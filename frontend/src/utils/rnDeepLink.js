@@ -46,6 +46,12 @@ export function buildRnPilotDeepLink(routeType, entityId, { wrapParams = true } 
   return `dogproject://${normalizedRoute}/${id}${suffix}`;
 }
 
+export function buildRnPilotPlainDeepLink(routeType, entityId) {
+  const normalizedRoute = routeType === 'forum' ? 'forum' : 'pet';
+  const id = String(entityId || '').trim();
+  return `dogproject://${normalizedRoute}/${id}`;
+}
+
 async function createMobileTicket(token) {
   const response = await fetch(`${API_BASE_URL}/auth/mobile-ticket`, {
     method: 'POST',

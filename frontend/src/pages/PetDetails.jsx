@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { API_BASE_URL } from '../config/api';
 import ReviewSection from '../components/ReviewSection';
-import { buildRnPilotDeepLinkWithTicket } from '../utils/rnDeepLink';
+import { buildRnPilotPlainDeepLink } from '../utils/rnDeepLink';
 
 const PetDetails = () => {
     const navigate = useNavigate();
@@ -116,7 +116,7 @@ const PetDetails = () => {
 
     const openRnPilotPetDetails = async () => {
         const petId = dog?.id || id;
-        const deepLink = await buildRnPilotDeepLinkWithTicket('pet', petId);
+        const deepLink = buildRnPilotPlainDeepLink('pet', petId);
         try {
             const key = 'rn_pilot_events';
             const events = JSON.parse(localStorage.getItem(key) || '[]');

@@ -1,11 +1,13 @@
-import { buildRnPilotDeepLink, buildRnPilotDeepLinkWithTicket } from './rnDeepLink';
+import { buildRnPilotPlainDeepLink } from './rnDeepLink';
 
 const FORUM_DETAIL_MODE_KEY = 'forum_detail_debug_mode';
 
 export function getForumDetailMode() {
-  if (typeof window === 'undefined') return 'h5';
+  if (typeof window === 'undefined') return 'rn';
   const mode = window.localStorage.getItem(FORUM_DETAIL_MODE_KEY);
-  return mode === 'rn' ? 'rn' : 'h5';
+  if (mode === 'h5') return 'h5';
+  if (mode === 'rn') return 'rn';
+  return 'rn';
 }
 
 export function setForumDetailMode(mode) {
@@ -14,18 +16,24 @@ export function setForumDetailMode(mode) {
 }
 
 export function buildForumRnDeepLink(topicId) {
-  return buildRnPilotDeepLink('forum', topicId, { wrapParams: true });
+  return buildRnPilotPlainDeepLink('forum', topicId);
 }
 
-export async function openForumDetailByMode(topicId, navigate, { fallbackToH5 = true } = {}) {
+export async function openForumDetailByMode(topicId, navigate, { fallbackToH5 = false } = {}) {
   const mode = getForumDetailMode();
   if (mode === 'rn') {
-    const deepLink = await buildRnPilotDeepLinkWithTicket('forum', topicId);
-    window.location.href = deepLink;
+    let fallbackTimer = null;
     if (fallbackToH5) {
-      window.setTimeout(() => {
+      fallbackTimer = window.setTimeout(() => {
         navigate(`/forum/${topicId}`);
-      }, 800);
+      }, 900);
+    }
+    const deepLink = buildForumRnDeepLink(topicId);
+    window.location.href = deepLink;
+    if (fallbackTimer) {
+      window.setTimeout(() => {
+        window.clearTimeout(fallbackTimer);
+      }, 1200);
     }
     return;
   }
