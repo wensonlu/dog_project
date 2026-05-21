@@ -1,7 +1,13 @@
 require_relative '../../node_modules/.pnpm/@capacitor+ios@8.1.0_@capacitor+core@8.1.0/node_modules/@capacitor/ios/scripts/pods_helpers'
+rn_app_path = File.expand_path('../../../rn-app', __dir__)
+ENV['NODE_PATH'] = "#{rn_app_path}/node_modules"
+ENV['RCT_NEW_ARCH_ENABLED'] = '0'
+require File.join(File.dirname(`cd #{rn_app_path} && node --print "require.resolve('expo/package.json')"`), 'scripts/autolinking')
+require File.join(File.dirname(`cd #{rn_app_path} && node --print "require.resolve('react-native/package.json')"`), 'scripts/react_native_pods')
 
-platform :ios, '15.0'
-use_frameworks!
+platform :ios, '15.1'
+use_frameworks! :linkage => :static
+prepare_react_native_project!
 
 # workaround to avoid Xcode caching of Pods that requires
 # Product -> Clean Build Folder after new Cordova plugins installed
@@ -17,9 +23,22 @@ end
 
 target 'App' do
   capacitor_pods
-  # Add your Pods here
+  # Embed Expo/RN runtime from rn-app into the same iOS project.
+  use_expo_modules!
+
+  use_react_native!(
+    :path => '../../../rn-app/node_modules/react-native',
+    :hermes_enabled => true,
+    :app_path => '../../../rn-app',
+    :privacy_file_aggregation_enabled => false
+  )
 end
 
 post_install do |installer|
   assertDeploymentTarget(installer)
+  react_native_post_install(
+    installer,
+    '../../../rn-app/node_modules/react-native',
+    :mac_catalyst_enabled => false
+  )
 end

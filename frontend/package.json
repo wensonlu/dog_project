@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "ios:sync": "pnpm build && npx cap sync ios",
+    "ios:pods:rn": "cd ios/App && pod install",
+    "ios:rn:bundle": "mkdir -p ios/App/App/rn_bundle && cd ../rn-app && npx react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ../frontend/ios/App/App/rn_bundle/main.jsbundle --assets-dest ../frontend/ios/App/App/rn_bundle",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",

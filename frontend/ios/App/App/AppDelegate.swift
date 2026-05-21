@@ -1,10 +1,12 @@
 import UIKit
 import Capacitor
+import React
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    private var rnBridge: RCTBridge?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
@@ -34,6 +36,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+        if handleRNRoute(url: url) {
+            return true
+        }
         // Called when the app was launched with a url. Feel free to add additional processing here,
         // but if you want the App API to support tracking app url opens, make sure to keep this call
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
@@ -46,4 +51,47 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
+    private func handleRNRoute(url: URL) -> Bool {
+        guard url.scheme == "dogproject" else {
+            return false
+        }
+        let route = url.host ?? ""
+        guard route == "pet" || route == "forum" else {
+            return false
+        }
+        presentReactNativeScreen(for: url)
+        return true
+    }
+
+    private func presentReactNativeScreen(for url: URL) {
+        if rnBridge == nil {
+            rnBridge = RCTBridge(delegate: self, launchOptions: nil)
+        }
+        guard let bridge = rnBridge else { return }
+
+        let rootView = RCTRootView(
+            bridge: bridge,
+            moduleName: "main",
+            initialProperties: ["launchUrl": url.absoluteString]
+        )
+        rootView.backgroundColor = UIColor.systemBackground
+
+        let vc = UIViewController()
+        vc.view = rootView
+        vc.modalPresentationStyle = .fullScreen
+
+        let presentingVC = window?.rootViewController ?? UIApplication.shared.windows.first?.rootViewController
+        presentingVC?.present(vc, animated: true)
+    }
+
+}
+
+extension AppDelegate: RCTBridgeDelegate {
+    func sourceURL(for bridge: RCTBridge!) -> URL! {
+#if DEBUG
+        return RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
+#else
+        return Bundle.main.url(forResource: "main", withExtension: "jsbundle", subdirectory: "rn_bundle")
+#endif
+    }
 }
