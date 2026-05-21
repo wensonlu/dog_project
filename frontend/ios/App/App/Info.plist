@@ -55,6 +55,14 @@
 				<string>com.wenson.dogadopt</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>dogproject</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>dogproject</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

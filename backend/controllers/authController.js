@@ -1,5 +1,18 @@
 const { supabase } = require('../config/supabase');
 const { calculateProfileCompletion } = require('../utils/applicationWorkflow');
+const crypto = require('crypto');
+
+const MOBILE_TICKET_TTL_MS = 3 * 60 * 1000;
+const mobileTicketStore = new Map();
+
+function cleanupExpiredMobileTickets() {
+    const now = Date.now();
+    for (const [key, value] of mobileTicketStore.entries()) {
+        if (!value || value.expiresAt <= now) {
+            mobileTicketStore.delete(key);
+        }
+    }
+}
 
 /**
  * Register a new user
@@ -103,10 +116,65 @@ async function getProfileCompletion(req, res) {
     });
 }
 
+/**
+ * Create one-time mobile auth ticket from current bearer token.
+ */
+async function createMobileTicket(req, res) {
+    cleanupExpiredMobileTickets();
+    const authHeader = req.headers.authorization || '';
+    if (!authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: '未提供认证 Token' });
+    }
+
+    const accessToken = authHeader.substring(7);
+    const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+    if (error || !user) {
+        return res.status(401).json({ error: '无效的认证 Token' });
+    }
+
+    const ticket = crypto.randomBytes(24).toString('hex');
+    mobileTicketStore.set(ticket, {
+        token: accessToken,
+        userId: user.id,
+        expiresAt: Date.now() + MOBILE_TICKET_TTL_MS,
+    });
+
+    return res.json({
+        ticket,
+        expiresInMs: MOBILE_TICKET_TTL_MS,
+    });
+}
+
+/**
+ * Exchange one-time mobile auth ticket for token and user id.
+ */
+async function exchangeMobileTicket(req, res) {
+    cleanupExpiredMobileTickets();
+    const ticket = String(req.body?.ticket || '').trim();
+    if (!ticket) {
+        return res.status(400).json({ error: 'ticket 必填' });
+    }
+
+    const payload = mobileTicketStore.get(ticket);
+    if (!payload || payload.expiresAt <= Date.now()) {
+        mobileTicketStore.delete(ticket);
+        return res.status(401).json({ error: 'ticket 无效或已过期' });
+    }
+
+    mobileTicketStore.delete(ticket);
+    return res.json({
+        token: payload.token,
+        userId: payload.userId,
+        expiresAt: payload.expiresAt,
+    });
+}
+
 module.exports = {
     register,
     login,
     getProfile,
     updateProfile,
-    getProfileCompletion
+    getProfileCompletion,
+    createMobileTicket,
+    exchangeMobileTicket
 };

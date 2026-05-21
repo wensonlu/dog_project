@@ -6,6 +6,7 @@ import PetDetailsScreen from './src/screens/PetDetailsScreen';
 import ForumDetailScreen from './src/screens/ForumDetailScreen';
 import { appScheme, parseLaunchPayload } from './src/navigation/linking';
 import { saveAuthState } from './src/services/auth';
+import { exchangeMobileTicket } from './src/services/api';
 
 const DEFAULT_ROUTE = { type: 'pet', id: '1' };
 
@@ -26,6 +27,18 @@ export default function App() {
 
       if (payload?.token || payload?.userId) {
         await saveAuthState({ token: payload.token, userId: payload.userId });
+      }
+
+      if (payload?.ticket) {
+        try {
+          const ticketSession = await exchangeMobileTicket(payload.ticket);
+          await saveAuthState({
+            token: ticketSession?.token,
+            userId: ticketSession?.userId,
+          });
+        } catch (_err) {
+          // Ticket exchange failure should not block page routing.
+        }
       }
     }
 

@@ -1,13 +1,6 @@
-const FORUM_DETAIL_MODE_KEY = 'forum_detail_debug_mode';
+import { buildRnPilotDeepLink, buildRnPilotDeepLinkWithTicket } from './rnDeepLink';
 
-function safeJsonParse(raw) {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch (_err) {
-    return null;
-  }
-}
+const FORUM_DETAIL_MODE_KEY = 'forum_detail_debug_mode';
 
 export function getForumDetailMode() {
   if (typeof window === 'undefined') return 'h5';
@@ -21,27 +14,13 @@ export function setForumDetailMode(mode) {
 }
 
 export function buildForumRnDeepLink(topicId) {
-  const session = safeJsonParse(window.localStorage.getItem('pawmate_session'));
-  const user = safeJsonParse(window.localStorage.getItem('pawmate_user'));
-  const token = session?.access_token || '';
-  const userId = user?.id || '';
-
-  const wrapped = new URLSearchParams();
-  if (token) wrapped.set('token', token);
-  if (userId) wrapped.set('userId', userId);
-
-  const query = new URLSearchParams();
-  if (wrapped.toString()) {
-    query.set('params', wrapped.toString());
-  }
-
-  return `dogproject://forum/${topicId}${query.toString() ? `?${query.toString()}` : ''}`;
+  return buildRnPilotDeepLink('forum', topicId, { wrapParams: true });
 }
 
-export function openForumDetailByMode(topicId, navigate, { fallbackToH5 = true } = {}) {
+export async function openForumDetailByMode(topicId, navigate, { fallbackToH5 = true } = {}) {
   const mode = getForumDetailMode();
   if (mode === 'rn') {
-    const deepLink = buildForumRnDeepLink(topicId);
+    const deepLink = await buildRnPilotDeepLinkWithTicket('forum', topicId);
     window.location.href = deepLink;
     if (fallbackToH5) {
       window.setTimeout(() => {

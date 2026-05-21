@@ -113,4 +113,20 @@ export async function togglePetFavorite(petId, { token, userId }) {
   });
 }
 
+export async function exchangeMobileTicket(ticket) {
+  if (!ticket) {
+    const err = new Error('MISSING_TICKET');
+    err.code = 'MISSING_TICKET';
+    throw err;
+  }
+
+  return request('/auth/mobile-ticket/exchange', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ticket }),
+  });
+}
+
 export { API_BASE_URL };

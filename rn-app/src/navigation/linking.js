@@ -60,6 +60,9 @@ export function parseLaunchPayload(url) {
       userId: normalizeString(
         parsed.queryParams?.userId || wrappedParams?.get('userId') || jsonBundle?.userId
       ),
+      ticket: normalizeString(
+        parsed.queryParams?.ticket || wrappedParams?.get('ticket') || jsonBundle?.ticket
+      ),
     };
   } catch (_err) {
     return {};

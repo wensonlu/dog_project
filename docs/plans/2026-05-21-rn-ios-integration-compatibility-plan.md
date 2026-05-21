@@ -179,3 +179,13 @@ P2（规模化扩展）
 - H5 跳 RN 入口：`frontend/src/pages/PetDetails.jsx`
 - 论坛后端接口：`backend/routes/forum.js`
 
+## 8. 新增会话票据接口（2026-05-21）
+
+- `POST /api/auth/mobile-ticket`
+  - Header: `Authorization: Bearer <access_token>`
+  - 返回: `{ ticket, expiresInMs }`
+- `POST /api/auth/mobile-ticket/exchange`
+  - Body: `{ ticket }`
+  - 返回: `{ token, userId, expiresAt }`
+
+说明：移动端 Deep Link 优先传 `ticket`，避免在 URL 直传长期 token。

@@ -5,9 +5,9 @@ import { openForumDetailByMode } from '../../utils/forumDetailDebug';
 const TopicCard = ({ topic, onBeforeNavigate }) => {
   const navigate = useNavigate();
 
-  const handleClick = () => {
+  const handleClick = async () => {
     onBeforeNavigate?.();
-    openForumDetailByMode(topic.id, navigate);
+    await openForumDetailByMode(topic.id, navigate);
   };
 
   const aspectRatios = [
