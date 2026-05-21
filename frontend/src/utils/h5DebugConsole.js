@@ -7,6 +7,8 @@ let originalFetch = null;
 let originalXhrOpen = null;
 let originalXhrSend = null;
 let originalConsole = {};
+let vConsoleCtor = null;
+let vConsoleLoadPromise = null;
 
 function readBuffer() {
   if (typeof window === 'undefined') return [];
@@ -156,30 +158,36 @@ export function clearH5DebugLogs() {
 
 export async function ensureVConsoleLoaded() {
   if (typeof window === 'undefined') return false;
-  if (window.VConsole) return true;
-  const existing = document.querySelector('script[data-vconsole-loader="1"]');
-  if (existing) return false;
+  if (vConsoleCtor || window.VConsole) return true;
 
-  await new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/vconsole@3.15.1/dist/vconsole.min.js';
-    script.async = true;
-    script.dataset.vconsoleLoader = '1';
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
+  if (!vConsoleLoadPromise) {
+    vConsoleLoadPromise = import('vconsole')
+      .then((mod) => {
+        vConsoleCtor = mod.default || mod;
+        window.VConsole = vConsoleCtor;
+        return true;
+      })
+      .catch((err) => {
+        vConsoleLoadPromise = null;
+        throw err;
+      });
+  }
 
-  return Boolean(window.VConsole);
+  return vConsoleLoadPromise;
 }
 
 export function enableVConsole() {
-  if (typeof window === 'undefined' || !window.VConsole) return false;
+  if (typeof window === 'undefined') return false;
+  const VConsoleCtor = vConsoleCtor || window.VConsole;
+  if (!VConsoleCtor) return false;
   if (window.__h5VConsole) {
     window.__h5VConsole.show();
     return true;
   }
-  window.__h5VConsole = new window.VConsole();
+  window.__h5VConsole = new VConsoleCtor({
+    maxLogNumber: H5_DEBUG_MAX,
+    theme: 'light',
+  });
   return true;
 }
 

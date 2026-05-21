@@ -11,9 +11,9 @@ import {
 initH5DebugCapture()
 
 if (getH5DebugEnabled()) {
-  ensureVConsoleLoaded()
+  await ensureVConsoleLoaded()
     .then(() => enableVConsole())
-    .catch(() => {})
+    .catch(() => false)
 }
 
 createRoot(document.getElementById('root')).render(
