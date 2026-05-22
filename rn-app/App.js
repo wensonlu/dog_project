@@ -12,6 +12,13 @@ const DEFAULT_ROUTE = { type: 'pet', id: '1' };
 
 export default function App(props) {
   const [route, setRoute] = useState(DEFAULT_ROUTE);
+  const handleBack = async () => {
+    try {
+      await Linking.openURL(`${appScheme}://close`);
+    } catch (_err) {
+      setRoute(DEFAULT_ROUTE);
+    }
+  };
 
   useEffect(() => {
     const levels = ['log', 'info', 'warn', 'error'];
@@ -102,9 +109,9 @@ export default function App(props) {
         <Text style={styles.bannerDesc}>{tipText}</Text>
       </View>
       {route.type === 'forum' ? (
-        <ForumDetailScreen topicId={route.id} />
+        <ForumDetailScreen topicId={route.id} onBack={handleBack} />
       ) : (
-        <PetDetailsScreen petId={route.id} onBack={() => {}} />
+        <PetDetailsScreen petId={route.id} onBack={handleBack} />
       )}
       <DebugConsolePanel />
     </SafeAreaView>

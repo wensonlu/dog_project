@@ -7,7 +7,6 @@ import {
   RefreshControl,
   SafeAreaView,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   View,
@@ -22,13 +21,25 @@ import {
 import { getAuthToken, getAuthUserId } from '../services/auth';
 
 const traitList = [
-  { icon: '💉', text: '已接种疫苗' },
-  { icon: '✅', text: '已绝育' },
-  { icon: '😊', text: '性格亲人' },
-  { icon: '🏠', text: '定点入厕' },
+  { icon: 'verified_user', text: '已接种疫苗', highlight: true },
+  { icon: 'check_circle', text: '已绝育' },
+  { icon: 'mood', text: '性格亲人' },
+  { icon: 'house', text: '定点入厕' },
 ];
 
-export default function PetDetailsScreen({ petId, onBack }) {
+function topicPreview(topic) {
+  const content = topic?.content || '';
+  return content.length > 56 ? `${content.slice(0, 56)}...` : content;
+}
+
+export default function PetDetailsScreen({
+  petId,
+  onBack,
+  onOpenForumTopic,
+  onOpenForumList,
+  onOpenApply,
+  onConsult,
+}) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -41,15 +52,17 @@ export default function PetDetailsScreen({ petId, onBack }) {
   const [token, setToken] = useState(null);
   const [userId, setUserId] = useState(null);
   const [favoriting, setFavoriting] = useState(false);
-  const [favoriteStatus, setFavoriteStatus] = useState('');
-  const handleCopyError = useCallback(async () => {
-    await Share.share({ message: `加载失败：${error}` });
-  }, [error]);
 
   const title = useMemo(() => {
     if (!pet) return `宠物 #${petId}`;
     return `${pet.name || '未命名宠物'}${pet.age ? `, ${pet.age}` : ''}`;
   }, [pet, petId]);
+
+  const subtitle = useMemo(() => {
+    const gender = pet?.gender || '公';
+    const breed = pet?.breed || '汪星人';
+    return `${gender} • ${breed}`;
+  }, [pet]);
 
   const loadAllData = useCallback(async ({ silent = false } = {}) => {
     if (!silent) {
@@ -95,7 +108,6 @@ export default function PetDetailsScreen({ petId, onBack }) {
       setFavoriting(true);
       const result = await togglePetFavorite(petId, { token, userId });
       const statusText = result?.status === 'added' ? '已加入收藏' : '已取消收藏';
-      setFavoriteStatus(statusText);
       Alert.alert('收藏状态更新', statusText);
       await loadAllData({ silent: true });
     } catch (err) {
@@ -109,39 +121,69 @@ export default function PetDetailsScreen({ petId, onBack }) {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={onBack} style={styles.iconBtn}>
-          <Text style={styles.iconText}>返回</Text>
-        </Pressable>
-        <Pressable onPress={handleFavorite} style={styles.iconBtn} disabled={favoriting}>
-          <Text style={styles.iconText}>{favoriting ? '处理中' : '收藏'}</Text>
-        </Pressable>
-      </View>
+  const handleOpenTopic = (topic) => {
+    if (typeof onOpenForumTopic === 'function') {
+      onOpenForumTopic(topic);
+      return;
+    }
+    Alert.alert('提示', `当前试点未接入帖子跳转（topicId=${topic?.id}）`);
+  };
 
-      {loading ? (
+  const handleOpenForumList = () => {
+    if (typeof onOpenForumList === 'function') {
+      onOpenForumList({ petId, petName: pet?.name });
+      return;
+    }
+    Alert.alert('提示', '当前试点未接入论坛列表跳转');
+  };
+
+  const handleApply = () => {
+    if (typeof onOpenApply === 'function') {
+      onOpenApply({ petId, pet });
+      return;
+    }
+    Alert.alert('领养申请', '当前试点未接入申请页跳转');
+  };
+
+  const handleConsult = () => {
+    if (typeof onConsult === 'function') {
+      onConsult({ petId, pet });
+      return;
+    }
+    Alert.alert('咨询', '当前试点未接入咨询入口');
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
         <View style={styles.centerState}>
           <ActivityIndicator size="large" color="#f97316" />
           <Text style={styles.hintText}>正在加载宠物信息...</Text>
         </View>
-      ) : error ? (
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
         <View style={styles.centerState}>
           <Text style={styles.errorText}>加载失败：{error}</Text>
-          <View style={styles.errorActions}>
-            <Pressable style={styles.retryBtn} onPress={() => loadAllData()}>
-              <Text style={styles.retryText}>重试</Text>
-            </Pressable>
-            <Pressable style={styles.copyBtn} onPress={handleCopyError}>
-              <Text style={styles.retryText}>复制</Text>
-            </Pressable>
-          </View>
+          <Pressable style={styles.retryBtn} onPress={() => loadAllData()}>
+            <Text style={styles.retryText}>重试</Text>
+          </Pressable>
         </View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={styles.content}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <View style={styles.heroWrap}>
           <Image
             source={{
               uri:
@@ -150,46 +192,79 @@ export default function PetDetailsScreen({ petId, onBack }) {
             }}
             style={styles.hero}
           />
+          <View style={styles.heroMask} />
+          <View style={styles.topActions}>
+            <Pressable onPress={onBack} style={styles.topBtn}>
+              <Text style={styles.topBtnText}>‹</Text>
+            </Pressable>
+            <Pressable onPress={handleFavorite} style={styles.topBtn} disabled={favoriting}>
+              <Text style={styles.topBtnText}>{favoriting ? '...' : '♥'}</Text>
+            </Pressable>
+          </View>
+          <View style={styles.heroDots}>
+            <View style={styles.heroDotActive} />
+            <View style={styles.heroDot} />
+            <View style={styles.heroDot} />
+            <View style={styles.heroDot} />
+          </View>
+        </View>
 
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{pet?.breed || '汪星人'} · {pet?.location || '待补充地点'}</Text>
-          {!!favoriteStatus && <Text style={styles.favoriteHint}>{favoriteStatus}</Text>}
+        <View style={styles.mainCard}>
+          <View style={styles.titleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.subtitle}>{subtitle}</Text>
+            </View>
+            <View style={styles.petBadge}>
+              <Text style={styles.petBadgeIcon}>🐾</Text>
+            </View>
+          </View>
 
           <View style={styles.traitsWrap}>
             {traitList.map((trait) => (
-              <View key={trait.text} style={styles.traitItem}>
-                <Text>{trait.icon}</Text>
-                <Text style={styles.traitText}>{trait.text}</Text>
+              <View key={trait.text} style={[styles.traitItem, trait.highlight ? styles.traitItemHighlight : null]}>
+                <Text style={styles.traitIcon}>{trait.icon}</Text>
+                <Text style={[styles.traitText, trait.highlight ? styles.traitTextHighlight : null]}>{trait.text}</Text>
               </View>
             ))}
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>关于我</Text>
-            <Text style={styles.cardText}>
-              {pet?.name || '这只小狗'}性格温柔，喜欢散步，也喜欢被摸摸肚子。和孩子与其他狗狗相处友好，
-              正在寻找一个稳定、温暖、愿意长期陪伴的家庭。
-            </Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>关于我</Text>
+            <View style={styles.sectionBody}>
+              <Text style={styles.bodyText}>
+                {pet?.name || '这只小狗'}性格温柔，最喜欢在公园里悠闲散步，也特别享受被摸肚子的时光。他与孩子和其他狗狗都能和谐相处，是陪伴家庭成长的完美伙伴。{"\n\n"}
+                他已经掌握了一些基本指令，不过偶尔会有点小调皮！{pet?.name || '他'}正在寻找一个永远的家，希望成为你最忠诚的伴侣。
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>相关讨论 ({relatedTopics.length})</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>相关讨论 {relatedTopics.length > 0 ? `(${relatedTopics.length})` : ''}</Text>
             {relatedTopics.length === 0 ? (
-              <Text style={styles.emptyText}>暂无相关讨论</Text>
+              <View style={styles.sectionBody}>
+                <Text style={styles.emptyText}>暂无相关讨论</Text>
+              </View>
             ) : (
-              relatedTopics.slice(0, 5).map((topic) => (
-                <View key={String(topic.id)} style={styles.topicItem}>
-                  <Text style={styles.topicTitle} numberOfLines={1}>{topic.title}</Text>
-                  <Text style={styles.topicMeta} numberOfLines={1}>
-                    {topic.author_name || '匿名用户'} · 评论 {topic.comment_count || 0}
-                  </Text>
-                </View>
-              ))
+              <View style={styles.topicList}>
+                {relatedTopics.slice(0, 3).map((topic) => (
+                  <Pressable key={String(topic.id)} style={styles.topicItem} onPress={() => handleOpenTopic(topic)}>
+                    <Text style={styles.topicTitle} numberOfLines={1}>{topic.title}</Text>
+                    <Text style={styles.topicPreview} numberOfLines={2}>{topicPreview(topic)}</Text>
+                    <Text style={styles.topicMeta}>{topic.author_name || '匿名用户'} · 评论 {topic.comment_count || 0}</Text>
+                  </Pressable>
+                ))}
+                {relatedTopics.length > 3 ? (
+                  <Pressable style={styles.moreTopicBtn} onPress={handleOpenForumList}>
+                    <Text style={styles.moreTopicText}>查看全部 {relatedTopics.length} 个讨论 →</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             )}
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>领养评价 ({reviews.length})</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>领养评价 ({reviews.length})</Text>
             <Text style={styles.eligibilityText}>
               {reviewEligibility?.eligible
                 ? '你有资格评价这只宠物（RN 试点页暂未开放发评价表单）'
@@ -201,15 +276,25 @@ export default function PetDetailsScreen({ petId, onBack }) {
               reviews.slice(0, 6).map((review) => (
                 <View key={String(review.id)} style={styles.reviewItem}>
                   <Text style={styles.reviewMeta}>
-                    {(review.username || '匿名用户')} · 评分 {review.rating || '-'} / 5
+                    {review.username || '匿名用户'} · 评分 {review.rating || '-'} / 5
                   </Text>
                   <Text style={styles.reviewContent}>{review.content || ''}</Text>
                 </View>
               ))
             )}
           </View>
-        </ScrollView>
-      )}
+        </View>
+      </ScrollView>
+
+      <View style={styles.bottomBar}>
+        <Pressable style={styles.consultBtn} onPress={handleConsult}>
+          <Text style={styles.consultBtnIcon}>💬</Text>
+          <Text style={styles.consultBtnText}>咨询</Text>
+        </Pressable>
+        <Pressable style={styles.applyBtn} onPress={handleApply}>
+          <Text style={styles.applyBtnText}>领养我 ♥</Text>
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 }
@@ -218,22 +303,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fffaf5',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  iconBtn: {
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: '#1f2937',
-  },
-  iconText: {
-    color: '#ffffff',
-    fontWeight: '600',
   },
   centerState: {
     flex: 1,
@@ -249,11 +318,6 @@ const styles = StyleSheet.create({
     color: '#b91c1c',
     textAlign: 'center',
   },
-  errorActions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
   retryBtn: {
     marginTop: 8,
     borderRadius: 10,
@@ -265,103 +329,203 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
   },
-  copyBtn: {
-    marginTop: 8,
-    borderRadius: 10,
-    backgroundColor: '#6b7280',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
   content: {
-    padding: 16,
-    gap: 12,
-    paddingBottom: 32,
+    paddingBottom: 120,
+  },
+  heroWrap: {
+    width: '100%',
+    aspectRatio: 4 / 5,
+    backgroundColor: '#f3ebe7',
   },
   hero: {
     width: '100%',
-    height: 280,
+    height: '100%',
+  },
+  heroMask: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.14)',
+  },
+  topActions: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    top: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  topBtn: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  topBtnText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  heroDots: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  heroDotActive: {
+    width: 26,
+    height: 6,
+    borderRadius: 99,
+    backgroundColor: '#fff',
+  },
+  heroDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 99,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+  },
+  mainCard: {
+    marginTop: -18,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    backgroundColor: '#fffaf5',
+    paddingHorizontal: 18,
+    paddingTop: 16,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 6,
   },
   title: {
     fontSize: 30,
     fontWeight: '800',
-    color: '#111827',
+    color: '#1b120e',
+    letterSpacing: -0.2,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#9a3412',
-    fontWeight: '600',
+    marginTop: 4,
+    fontSize: 17,
+    color: '#97674e',
+    fontWeight: '700',
   },
-  favoriteHint: {
-    fontSize: 13,
-    color: '#15803d',
-    fontWeight: '600',
+  petBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#fff0dd',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  petBadgeIcon: {
+    fontSize: 22,
   },
   traitsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 4,
+    paddingTop: 10,
+    paddingBottom: 8,
   },
   traitItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    borderRadius: 999,
-    borderColor: '#fed7aa',
+    borderRadius: 12,
+    borderColor: '#e5ded9',
     borderWidth: 1,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 8,
     backgroundColor: '#fff',
   },
-  traitText: {
-    color: '#7c2d12',
+  traitItemHighlight: {
+    borderColor: '#f59e0b55',
+    backgroundColor: '#fff5e7',
+  },
+  traitIcon: {
     fontSize: 12,
-    fontWeight: '600',
+    color: '#5c4033',
   },
-  card: {
-    marginTop: 6,
-    borderRadius: 16,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#fed7aa',
-    padding: 14,
-    gap: 8,
-  },
-  cardTitle: {
-    fontSize: 17,
+  traitText: {
+    color: '#1b120e',
+    fontSize: 12,
     fontWeight: '700',
-    color: '#111827',
   },
-  cardText: {
+  traitTextHighlight: {
+    color: '#be5a0e',
+  },
+  section: {
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1b120e',
+    marginBottom: 10,
+  },
+  sectionBody: {
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5ded9',
+    padding: 14,
+  },
+  bodyText: {
     fontSize: 15,
-    lineHeight: 22,
-    color: '#374151',
+    lineHeight: 23,
+    color: '#5c4033',
+    fontWeight: '500',
   },
   emptyText: {
     color: '#6b7280',
+    fontSize: 14,
+  },
+  topicList: {
+    gap: 8,
   },
   topicItem: {
-    borderRadius: 10,
-    backgroundColor: '#fff7ed',
-    borderColor: '#fed7aa',
+    borderRadius: 16,
+    backgroundColor: '#fff',
     borderWidth: 1,
-    padding: 10,
+    borderColor: '#e5ded9',
+    padding: 12,
     gap: 4,
   },
   topicTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: '#1b120e',
+  },
+  topicPreview: {
+    fontSize: 13,
+    color: '#6b7280',
+    lineHeight: 18,
   },
   topicMeta: {
     fontSize: 12,
-    color: '#6b7280',
+    color: '#94a3b8',
+  },
+  moreTopicBtn: {
+    alignSelf: 'stretch',
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  moreTopicText: {
+    color: '#0f766e',
+    fontSize: 13,
+    fontWeight: '700',
   },
   eligibilityText: {
     fontSize: 13,
     color: '#9a3412',
+    marginBottom: 8,
   },
   reviewItem: {
     borderTopWidth: 1,
@@ -378,5 +542,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     lineHeight: 20,
+  },
+  bottomBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderTopWidth: 1,
+    borderTopColor: '#e5ded9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 22,
+  },
+  consultBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: '#f7efe8',
+    borderWidth: 1,
+    borderColor: '#e5ded9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  consultBtnIcon: {
+    fontSize: 18,
+  },
+  consultBtnText: {
+    marginTop: 2,
+    fontSize: 10,
+    color: '#1b120e',
+    fontWeight: '800',
+  },
+  applyBtn: {
+    flex: 1,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: '#f97316',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyBtnText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
   },
 });

@@ -56,6 +56,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             return false
         }
         let route = url.host ?? ""
+        if route == "close" {
+            DispatchQueue.main.async { [weak self] in
+                self?.dismissReactNativeScreen()
+            }
+            return true
+        }
         guard route == "pet" || route == "forum" else {
             return false
         }
@@ -89,6 +95,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
         let presentingVC = root.presentedViewController ?? root
         presentingVC.present(vc, animated: true)
+    }
+
+    private func dismissReactNativeScreen() {
+        guard let root = window?.rootViewController ?? UIApplication.shared.windows.first?.rootViewController else {
+            return
+        }
+        let presented = root.presentedViewController
+        presented?.dismiss(animated: true)
     }
 
 }

@@ -47,16 +47,26 @@ export function parseLaunchPayload(url) {
     });
     const wrappedParams = parseWrappedParams(queryParams?.params);
     const jsonBundle = parseJsonBundle(queryParams?.bundle);
+    const idFromQuery = normalizeString(
+      queryParams?.id || wrappedParams?.get('id') || jsonBundle?.id
+    );
+    const routeFromHost = host === 'forum' ? 'forum' : host === 'pet' ? 'pet' : null;
+    const entityIdFromHost = normalizeString(rawPath || idFromQuery);
 
     return {
       petId: normalizeString(
-        petFromPath || queryParams?.petId || wrappedParams?.get('petId') || jsonBundle?.petId
+        petFromPath ||
+          queryParams?.petId ||
+          wrappedParams?.get('petId') ||
+          jsonBundle?.petId ||
+          (routeFromHost === 'pet' ? entityIdFromHost : null)
       ),
       topicId: normalizeString(
         forumFromPath ||
           queryParams?.topicId ||
           wrappedParams?.get('topicId') ||
-          jsonBundle?.topicId
+          jsonBundle?.topicId ||
+          (routeFromHost === 'forum' ? entityIdFromHost : null)
       ),
       token: normalizeString(
         queryParams?.token || wrappedParams?.get('token') || jsonBundle?.token

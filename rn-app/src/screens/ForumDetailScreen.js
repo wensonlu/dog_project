@@ -17,13 +17,15 @@ import { getAuthToken, getAuthUserId } from '../services/auth';
 
 const screenWidth = Dimensions.get('window').width;
 
-export default function ForumDetailScreen({ topicId }) {
+export default function ForumDetailScreen({ topicId, onBack }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [topic, setTopic] = useState(null);
   const [comments, setComments] = useState([]);
   const [imageIndex, setImageIndex] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
 
   const loadData = useCallback(async ({ silent = false } = {}) => {
     if (!silent) {
@@ -37,6 +39,8 @@ export default function ForumDetailScreen({ topicId }) {
       setTopic(payload?.topic || null);
       setComments(Array.isArray(payload?.comments) ? payload.comments : []);
       setImageIndex(0);
+      setIsLiked(Boolean(payload?.topic?.isLiked));
+      setLikeCount(Number(payload?.topic?.likes || 0));
     } catch (err) {
       if (err?.code === 'UNAUTHORIZED') {
         setError('登录态失效，请从主 App 重新进入详情页');
@@ -64,8 +68,8 @@ export default function ForumDetailScreen({ topicId }) {
 
   const summary = useMemo(() => {
     if (!topic) return '';
-    return `${topic.views || 0} 浏览 · ${topic.likes || 0} 点赞 · ${topic.comments || 0} 评论`;
-  }, [topic]);
+    return `${topic.views || 0} 浏览 · ${likeCount || 0} 点赞 · ${topic.comments || 0} 评论`;
+  }, [topic, likeCount]);
 
   const images = Array.isArray(topic?.images) ? topic.images : [];
   const hasImages = images.length > 0;
@@ -109,6 +113,22 @@ export default function ForumDetailScreen({ topicId }) {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        <View style={styles.topActions}>
+          <Pressable style={styles.topBtn} onPress={onBack}>
+            <Text style={styles.topBtnText}>‹</Text>
+          </Pressable>
+          <Pressable
+            style={styles.topBtn}
+            onPress={() => {
+              const next = !isLiked;
+              setIsLiked(next);
+              setLikeCount((v) => Math.max(0, v + (next ? 1 : -1)));
+            }}
+          >
+            <Text style={styles.topBtnText}>{isLiked ? '♥' : '♡'}</Text>
+          </Pressable>
+        </View>
+
         {hasImages && (
           <View style={styles.heroWrap}>
             <ScrollView
@@ -247,6 +267,30 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingBottom: 24,
+  },
+  topActions: {
+    position: 'absolute',
+    top: 12,
+    left: 14,
+    right: 14,
+    zIndex: 5,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  topBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBtnText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '700',
   },
   heroWrap: {
     width: screenWidth,
