@@ -59,7 +59,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         guard route == "pet" || route == "forum" else {
             return false
         }
-        presentReactNativeScreen(for: url)
+        // Return from openURL as soon as possible; initializing RN bridge can be slow
+        // and would otherwise make iOS treat this deep link as timed out.
+        DispatchQueue.main.async { [weak self] in
+            self?.presentReactNativeScreen(for: url)
+        }
         return true
     }
 
@@ -80,8 +84,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         vc.view = rootView
         vc.modalPresentationStyle = .fullScreen
 
-        let presentingVC = window?.rootViewController ?? UIApplication.shared.windows.first?.rootViewController
-        presentingVC?.present(vc, animated: true)
+        guard let root = window?.rootViewController ?? UIApplication.shared.windows.first?.rootViewController else {
+            return
+        }
+        let presentingVC = root.presentedViewController ?? root
+        presentingVC.present(vc, animated: true)
     }
 
 }

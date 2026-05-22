@@ -1,5 +1,3 @@
-import * as Linking from 'expo-linking';
-
 export const appScheme = 'dogproject';
 
 function normalizeString(value) {
@@ -37,33 +35,37 @@ function parseJsonBundle(raw) {
 export function parseLaunchPayload(url) {
   if (!url) return {};
   try {
-    const parsed = Linking.parse(url);
+    const parsed = new URL(url);
     const host = normalizeString(parsed.hostname || parsed.host);
-    const rawPath = String(parsed.path || '').replace(/^\/+/, '');
+    const rawPath = String(parsed.pathname || '').replace(/^\/+/, '');
     const routePath = host && ['pet', 'forum'].includes(host) ? `${host}/${rawPath}` : rawPath;
     const petFromPath = routePath.match(/^pet\/([^/?#]+)$/)?.[1] || null;
     const forumFromPath = routePath.match(/^forum\/([^/?#]+)$/)?.[1] || null;
-    const wrappedParams = parseWrappedParams(parsed.queryParams?.params);
-    const jsonBundle = parseJsonBundle(parsed.queryParams?.bundle);
+    const queryParams = {};
+    parsed.searchParams.forEach((value, key) => {
+      queryParams[key] = value;
+    });
+    const wrappedParams = parseWrappedParams(queryParams?.params);
+    const jsonBundle = parseJsonBundle(queryParams?.bundle);
 
     return {
       petId: normalizeString(
-        petFromPath || parsed.queryParams?.petId || wrappedParams?.get('petId') || jsonBundle?.petId
+        petFromPath || queryParams?.petId || wrappedParams?.get('petId') || jsonBundle?.petId
       ),
       topicId: normalizeString(
         forumFromPath ||
-          parsed.queryParams?.topicId ||
+          queryParams?.topicId ||
           wrappedParams?.get('topicId') ||
           jsonBundle?.topicId
       ),
       token: normalizeString(
-        parsed.queryParams?.token || wrappedParams?.get('token') || jsonBundle?.token
+        queryParams?.token || wrappedParams?.get('token') || jsonBundle?.token
       ),
       userId: normalizeString(
-        parsed.queryParams?.userId || wrappedParams?.get('userId') || jsonBundle?.userId
+        queryParams?.userId || wrappedParams?.get('userId') || jsonBundle?.userId
       ),
       ticket: normalizeString(
-        parsed.queryParams?.ticket || wrappedParams?.get('ticket') || jsonBundle?.ticket
+        queryParams?.ticket || wrappedParams?.get('ticket') || jsonBundle?.ticket
       ),
     };
   } catch (_err) {
@@ -76,9 +78,9 @@ export function extractPetIdFromUrl(url) {
 }
 
 export function buildPetUrl(petId) {
-  return Linking.createURL(`pet/${petId}`);
+  return `${appScheme}://pet/${petId}`;
 }
 
 export function buildForumUrl(topicId) {
-  return Linking.createURL(`forum/${topicId}`);
+  return `${appScheme}://forum/${topicId}`;
 }

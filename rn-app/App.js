@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
-import * as Linking from 'expo-linking';
-import { StatusBar } from 'expo-status-bar';
+import { Linking, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import PetDetailsScreen from './src/screens/PetDetailsScreen';
 import ForumDetailScreen from './src/screens/ForumDetailScreen';
 import { appScheme, parseLaunchPayload } from './src/navigation/linking';
@@ -98,7 +96,7 @@ export default function App(props) {
 
   return (
     <SafeAreaView style={styles.app}>
-      <StatusBar style="dark" />
+      <StatusBar barStyle="dark-content" />
       <View style={styles.banner}>
         <Text style={styles.bannerTitle}>Dog Project RN Pilot (Expo)</Text>
         <Text style={styles.bannerDesc}>{tipText}</Text>

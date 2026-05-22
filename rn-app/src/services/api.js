@@ -1,18 +1,8 @@
-import Constants from 'expo-constants';
 import { addNetworkLog } from '../debug/debugStore';
 
 function resolveApiBaseUrl() {
-  const envApi = process.env.EXPO_PUBLIC_API_BASE_URL;
-  if (envApi) return envApi.replace(/\/+$/, '');
-
-  const hostUri = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoClient?.hostUri || '';
-  const host = String(hostUri).split(':')[0];
-
-  if (host) {
-    return `http://${host}:5001/api`;
-  }
-
-  return 'http://localhost:5001/api';
+  // Pure RN runtime fallback (without Expo globals).
+  return 'https://dog-project-6aoq.vercel.app/api';
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
