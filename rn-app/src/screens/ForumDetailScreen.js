@@ -7,6 +7,7 @@ import {
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -69,6 +70,10 @@ export default function ForumDetailScreen({ topicId }) {
   const images = Array.isArray(topic?.images) ? topic.images : [];
   const hasImages = images.length > 0;
 
+  const handleCopyError = useCallback(async () => {
+    await Share.share({ message: `加载失败: ${error}` });
+  }, [error]);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -85,9 +90,14 @@ export default function ForumDetailScreen({ topicId }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.centerState}>
           <Text style={styles.errorText}>加载失败: {error}</Text>
-          <Pressable style={styles.retryBtn} onPress={() => loadData()}>
-            <Text style={styles.retryBtnText}>重试</Text>
-          </Pressable>
+          <View style={styles.errorActions}>
+            <Pressable style={styles.retryBtn} onPress={() => loadData()}>
+              <Text style={styles.retryBtnText}>重试</Text>
+            </Pressable>
+            <Pressable style={styles.copyBtn} onPress={handleCopyError}>
+              <Text style={styles.copyBtnText}>复制</Text>
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -208,14 +218,29 @@ const styles = StyleSheet.create({
     color: '#b91c1c',
     textAlign: 'center',
   },
-  retryBtn: {
+  errorActions: {
+    flexDirection: 'row',
+    gap: 8,
     marginTop: 8,
+  },
+  retryBtn: {
     borderRadius: 8,
     backgroundColor: '#ea7a1b',
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   retryBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  copyBtn: {
+    borderRadius: 8,
+    backgroundColor: '#6b7280',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  copyBtnText: {
     color: '#fff',
     fontSize: 13,
     fontWeight: '700',

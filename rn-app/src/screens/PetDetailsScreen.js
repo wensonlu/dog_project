@@ -7,6 +7,7 @@ import {
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -41,6 +42,9 @@ export default function PetDetailsScreen({ petId, onBack }) {
   const [userId, setUserId] = useState(null);
   const [favoriting, setFavoriting] = useState(false);
   const [favoriteStatus, setFavoriteStatus] = useState('');
+  const handleCopyError = useCallback(async () => {
+    await Share.share({ message: `加载失败：${error}` });
+  }, [error]);
 
   const title = useMemo(() => {
     if (!pet) return `宠物 #${petId}`;
@@ -124,9 +128,14 @@ export default function PetDetailsScreen({ petId, onBack }) {
       ) : error ? (
         <View style={styles.centerState}>
           <Text style={styles.errorText}>加载失败：{error}</Text>
-          <Pressable style={styles.retryBtn} onPress={() => loadAllData()}>
-            <Text style={styles.retryText}>重试</Text>
-          </Pressable>
+          <View style={styles.errorActions}>
+            <Pressable style={styles.retryBtn} onPress={() => loadAllData()}>
+              <Text style={styles.retryText}>重试</Text>
+            </Pressable>
+            <Pressable style={styles.copyBtn} onPress={handleCopyError}>
+              <Text style={styles.retryText}>复制</Text>
+            </Pressable>
+          </View>
         </View>
       ) : (
         <ScrollView
@@ -240,6 +249,11 @@ const styles = StyleSheet.create({
     color: '#b91c1c',
     textAlign: 'center',
   },
+  errorActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
   retryBtn: {
     marginTop: 8,
     borderRadius: 10,
@@ -250,6 +264,13 @@ const styles = StyleSheet.create({
   retryText: {
     color: '#fff',
     fontWeight: '700',
+  },
+  copyBtn: {
+    marginTop: 8,
+    borderRadius: 10,
+    backgroundColor: '#6b7280',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   content: {
     padding: 16,

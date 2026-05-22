@@ -29,6 +29,9 @@
     },
     "plugins": [
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "apiBaseUrl": "https://dog-project-6aoq.vercel.app/api"
+    }
   }
 }
