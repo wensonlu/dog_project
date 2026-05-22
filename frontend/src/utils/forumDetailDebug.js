@@ -29,6 +29,7 @@ export async function openForumDetailByMode(topicId, navigate, { fallbackToH5 = 
       }, 900);
     }
     const deepLink = buildForumRnDeepLink(topicId);
+    console.log('[ForumDetailDebug] openForumDetailByMode -> RN deepLink:', deepLink, 'topicId:', topicId);
     window.location.href = deepLink;
     if (fallbackTimer) {
       window.setTimeout(() => {

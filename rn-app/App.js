@@ -53,11 +53,17 @@ export default function App(props) {
 
     async function applyLaunchUrl(url) {
       const payload = parseLaunchPayload(url);
+      console.log('[RN Route] launchUrl:', url || '');
+      console.log('[RN Route] payload:', payload);
 
       if (payload?.topicId && mounted) {
+        console.log('[RN Route] switch -> forum', payload.topicId);
         setRoute({ type: 'forum', id: payload.topicId });
       } else if (payload?.petId && mounted) {
+        console.log('[RN Route] switch -> pet', payload.petId);
         setRoute({ type: 'pet', id: payload.petId });
+      } else {
+        console.log('[RN Route] no topicId/petId, keep default route');
       }
 
       if (payload?.token || payload?.userId) {
@@ -111,7 +117,15 @@ export default function App(props) {
       {route.type === 'forum' ? (
         <ForumDetailScreen topicId={route.id} onBack={handleBack} />
       ) : (
-        <PetDetailsScreen petId={route.id} onBack={handleBack} />
+        <PetDetailsScreen
+          petId={route.id}
+          onBack={handleBack}
+          onOpenForumTopic={(topic) => {
+            const topicId = topic?.id ? String(topic.id) : null;
+            if (!topicId) return;
+            setRoute({ type: 'forum', id: topicId });
+          }}
+        />
       )}
       <DebugConsolePanel />
     </SafeAreaView>

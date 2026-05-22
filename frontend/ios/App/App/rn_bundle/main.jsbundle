@@ -120536,16 +120536,22 @@ __d(function (global, require, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, expor
       function _applyLaunchUrl() {
         _applyLaunchUrl = (0, _asyncToGenerator2.default)(function* (url) {
           var payload = (0, _linking.parseLaunchPayload)(url);
+          console.log('[RN Route] launchUrl:', url || '');
+          console.log('[RN Route] payload:', payload);
           if (payload != null && payload.topicId && mounted) {
+            console.log('[RN Route] switch -> forum', payload.topicId);
             setRoute({
               type: 'forum',
               id: payload.topicId
             });
           } else if (payload != null && payload.petId && mounted) {
+            console.log('[RN Route] switch -> pet', payload.petId);
             setRoute({
               type: 'pet',
               id: payload.petId
             });
+          } else {
+            console.log('[RN Route] no topicId/petId, keep default route');
           }
           if (payload != null && payload.token || payload != null && payload.userId) {
             yield (0, _auth.saveAuthState)({
@@ -120599,7 +120605,7 @@ __d(function (global, require, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, expor
         barStyle: "dark-content"
       }, void 0, false, {
         fileName: _jsxFileName,
-        lineNumber: 106,
+        lineNumber: 112,
         columnNumber: 7
       }, this), /*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)(_reactNative.View, {
         style: styles.banner,
@@ -120608,42 +120614,50 @@ __d(function (global, require, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, expor
           children: "Dog Project RN Pilot (Expo)"
         }, void 0, false, {
           fileName: _jsxFileName,
-          lineNumber: 108,
+          lineNumber: 114,
           columnNumber: 9
         }, this), /*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)(_reactNative.Text, {
           style: styles.bannerDesc,
           children: tipText
         }, void 0, false, {
           fileName: _jsxFileName,
-          lineNumber: 109,
+          lineNumber: 115,
           columnNumber: 9
         }, this)]
       }, void 0, true, {
         fileName: _jsxFileName,
-        lineNumber: 107,
+        lineNumber: 113,
         columnNumber: 7
       }, this), route.type === 'forum' ? /*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)(_ForumDetailScreen.default, {
         topicId: route.id,
         onBack: handleBack
       }, void 0, false, {
         fileName: _jsxFileName,
-        lineNumber: 112,
+        lineNumber: 118,
         columnNumber: 9
       }, this) : /*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)(_PetDetailsScreen.default, {
         petId: route.id,
-        onBack: handleBack
+        onBack: handleBack,
+        onOpenForumTopic: function onOpenForumTopic(topic) {
+          var topicId = topic != null && topic.id ? String(topic.id) : null;
+          if (!topicId) return;
+          setRoute({
+            type: 'forum',
+            id: topicId
+          });
+        }
       }, void 0, false, {
         fileName: _jsxFileName,
-        lineNumber: 114,
+        lineNumber: 120,
         columnNumber: 9
       }, this), /*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)(_DebugConsolePanel.default, {}, void 0, false, {
         fileName: _jsxFileName,
-        lineNumber: 116,
+        lineNumber: 130,
         columnNumber: 7
       }, this)]
     }, void 0, true, {
       fileName: _jsxFileName,
-      lineNumber: 105,
+      lineNumber: 111,
       columnNumber: 5
     }, this);
   }
@@ -122743,6 +122757,7 @@ __d(function (global, require, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, expor
   });
 },590,[1,70,52,76,2,587,589,79],"src/screens/ForumDetailScreen.js");
 __d(function (global, require, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, exports, _dependencyMap) {
+  var _interopRequireDefault = require(_dependencyMap[0], "@babel/runtime/helpers/interopRequireDefault");
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
@@ -122751,6 +122766,7 @@ __d(function (global, require, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, expor
   exports.buildPetUrl = buildPetUrl;
   exports.extractPetIdFromUrl = extractPetIdFromUrl;
   exports.parseLaunchPayload = parseLaunchPayload;
+  var _slicedToArray2 = _interopRequireDefault(require(_dependencyMap[1], "@babel/runtime/helpers/slicedToArray"));
   var appScheme = exports.appScheme = 'dogproject';
   function normalizeString(value) {
     if (value === null || value === undefined) return null;
@@ -122782,33 +122798,37 @@ __d(function (global, require, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, expor
   }
   function parseLaunchPayload(url) {
     if (!url) return {};
-    try {
-      var _routePath$match, _routePath$match2;
-      var parsed = new URL(url);
-      var host = normalizeString(parsed.hostname || parsed.host);
-      var rawPath = String(parsed.pathname || '').replace(/^\/+/, '');
-      var routePath = host && ['pet', 'forum'].includes(host) ? `${host}/${rawPath}` : rawPath;
-      var petFromPath = ((_routePath$match = routePath.match(/^pet\/([^/?#]+)$/)) == null ? void 0 : _routePath$match[1]) || null;
-      var forumFromPath = ((_routePath$match2 = routePath.match(/^forum\/([^/?#]+)$/)) == null ? void 0 : _routePath$match2[1]) || null;
-      var queryParams = {};
-      parsed.searchParams.forEach(function (value, key) {
+    var raw = String(url).trim();
+    var noScheme = raw.replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, '');
+    var _noScheme$split = noScheme.split('?'),
+      _noScheme$split2 = (0, _slicedToArray2.default)(_noScheme$split, 2),
+      pathPart = _noScheme$split2[0],
+      _noScheme$split2$ = _noScheme$split2[1],
+      queryPart = _noScheme$split2$ === void 0 ? '' : _noScheme$split2$;
+    var path = String(pathPart || '').replace(/^\/+/, '');
+    var pathSegments = path.split('/').filter(Boolean);
+    var host = normalizeString(pathSegments[0]);
+    var firstPathId = normalizeString(pathSegments[1]);
+    var queryParams = {};
+    var queryString = normalizeString(queryPart);
+    if (queryString) {
+      var parsedQuery = new URLSearchParams(queryString);
+      parsedQuery.forEach(function (value, key) {
         queryParams[key] = value;
       });
-      var wrappedParams = parseWrappedParams(queryParams == null ? void 0 : queryParams.params);
-      var jsonBundle = parseJsonBundle(queryParams == null ? void 0 : queryParams.bundle);
-      var idFromQuery = normalizeString((queryParams == null ? void 0 : queryParams.id) || (wrappedParams == null ? void 0 : wrappedParams.get('id')) || (jsonBundle == null ? void 0 : jsonBundle.id));
-      var routeFromHost = host === 'forum' ? 'forum' : host === 'pet' ? 'pet' : null;
-      var entityIdFromHost = normalizeString(rawPath || idFromQuery);
-      return {
-        petId: normalizeString(petFromPath || (queryParams == null ? void 0 : queryParams.petId) || (wrappedParams == null ? void 0 : wrappedParams.get('petId')) || (jsonBundle == null ? void 0 : jsonBundle.petId) || (routeFromHost === 'pet' ? entityIdFromHost : null)),
-        topicId: normalizeString(forumFromPath || (queryParams == null ? void 0 : queryParams.topicId) || (wrappedParams == null ? void 0 : wrappedParams.get('topicId')) || (jsonBundle == null ? void 0 : jsonBundle.topicId) || (routeFromHost === 'forum' ? entityIdFromHost : null)),
-        token: normalizeString((queryParams == null ? void 0 : queryParams.token) || (wrappedParams == null ? void 0 : wrappedParams.get('token')) || (jsonBundle == null ? void 0 : jsonBundle.token)),
-        userId: normalizeString((queryParams == null ? void 0 : queryParams.userId) || (wrappedParams == null ? void 0 : wrappedParams.get('userId')) || (jsonBundle == null ? void 0 : jsonBundle.userId)),
-        ticket: normalizeString((queryParams == null ? void 0 : queryParams.ticket) || (wrappedParams == null ? void 0 : wrappedParams.get('ticket')) || (jsonBundle == null ? void 0 : jsonBundle.ticket))
-      };
-    } catch (_err) {
-      return {};
     }
+    var wrappedParams = parseWrappedParams(queryParams == null ? void 0 : queryParams.params);
+    var jsonBundle = parseJsonBundle(queryParams == null ? void 0 : queryParams.bundle);
+    var idFromQuery = normalizeString((queryParams == null ? void 0 : queryParams.id) || (wrappedParams == null ? void 0 : wrappedParams.get('id')) || (jsonBundle == null ? void 0 : jsonBundle.id));
+    var routeFromHost = host === 'forum' ? 'forum' : host === 'pet' ? 'pet' : null;
+    var entityIdFromHost = normalizeString(firstPathId || idFromQuery);
+    return {
+      petId: normalizeString((queryParams == null ? void 0 : queryParams.petId) || (wrappedParams == null ? void 0 : wrappedParams.get('petId')) || (jsonBundle == null ? void 0 : jsonBundle.petId) || (routeFromHost === 'pet' ? entityIdFromHost : null)),
+      topicId: normalizeString((queryParams == null ? void 0 : queryParams.topicId) || (wrappedParams == null ? void 0 : wrappedParams.get('topicId')) || (jsonBundle == null ? void 0 : jsonBundle.topicId) || (routeFromHost === 'forum' ? entityIdFromHost : null)),
+      token: normalizeString((queryParams == null ? void 0 : queryParams.token) || (wrappedParams == null ? void 0 : wrappedParams.get('token')) || (jsonBundle == null ? void 0 : jsonBundle.token)),
+      userId: normalizeString((queryParams == null ? void 0 : queryParams.userId) || (wrappedParams == null ? void 0 : wrappedParams.get('userId')) || (jsonBundle == null ? void 0 : jsonBundle.userId)),
+      ticket: normalizeString((queryParams == null ? void 0 : queryParams.ticket) || (wrappedParams == null ? void 0 : wrappedParams.get('ticket')) || (jsonBundle == null ? void 0 : jsonBundle.ticket))
+    };
   }
   function extractPetIdFromUrl(url) {
     var _parseLaunchPayload;
@@ -122820,7 +122840,7 @@ __d(function (global, require, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, expor
   function buildForumUrl(topicId) {
     return `${appScheme}://forum/${topicId}`;
   }
-},591,[],"src/navigation/linking.js");
+},591,[1,52],"src/navigation/linking.js");
 __d(function (global, require, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, exports, _dependencyMap) {
   var _interopRequireDefault = require(_dependencyMap[0], "@babel/runtime/helpers/interopRequireDefault");
   Object.defineProperty(exports, "__esModule", {
