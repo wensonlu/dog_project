@@ -1,6 +1,76 @@
 # 部署配置指南
 
-本文档说明如何在 Vercel 上部署后端服务，包括环境变量配置和常见问题排查。
+本文档说明如何部署宠物领养平台，包括 Vercel 海外部署、CloudBase Run 大陆部署、环境变量配置和常见问题排查。
+
+## 双区域部署方案
+
+目标：大陆用户走腾讯云 CloudBase，海外用户继续走 Vercel。
+
+```text
+正式域名
+  ├─ 中国大陆线路 -> CloudBase 静态托管 + CloudBase Run API
+  └─ 境外线路     -> Vercel 前端 + Vercel Express API
+```
+
+### 前端 API 地址
+
+前端通过 `VITE_API_URL` 控制后端 API 地址：
+
+```env
+# 海外 Vercel 前端
+VITE_API_URL=https://dog-project-6aoq.vercel.app/api
+
+# 大陆 CloudBase 前端
+VITE_API_URL=https://<cloudbase-run-domain>/api
+```
+
+如果没有配置 `VITE_API_URL`：
+- 本地开发默认 `http://localhost:5001/api`
+- Vercel 域名默认回落到 `https://dog-project-6aoq.vercel.app/api`
+- 非 Vercel 生产域名默认使用同源 `/api`
+
+### CloudBase Run 后端部署
+
+后端位于 `backend/`，已提供 CloudBase Run 容器部署配置：
+
+```text
+backend/
+├── Dockerfile
+├── .dockerignore
+├── index.js
+├── app.js
+└── package.json
+```
+
+CloudBase Run 使用 Container mode 部署时，构建目录选择 `backend/`。服务必须配置以下环境变量：
+
+```env
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+SUPABASE_ANON_KEY=your_supabase_anon_key
+AI_ENABLED=false
+AI_BASE_URL=your_ai_api_endpoint
+AI_API_KEY=your_ai_api_key
+AI_MODEL=your_model_name
+```
+
+建议服务名：`dog-project-api`。资源规格可从 `0.5 CPU / 1 GB` 起步，`MinNum=0`，`MaxNum=5`；公开 Web 访问需开启 `WEB`。
+
+部署后验证：
+
+```bash
+curl https://<cloudbase-run-domain>/api/_ping
+curl https://<cloudbase-run-domain>/api/health
+```
+
+### 数据与存储现状
+
+第一阶段保持 Supabase 不迁移：CloudBase Run 后端仍访问 Supabase Database/Auth/Storage。这样改动最小，但大陆访问体验仍可能受 Supabase `ap-southeast-2` 跨境链路影响。
+
+若后续 Supabase 仍慢，再进入第二阶段：
+- 图片存储从 Supabase Storage `dog-images` 迁到腾讯云 COS 或 CloudBase 存储
+- 数据库从 Supabase Postgres 迁到腾讯云 PostgreSQL/CloudBase 关系型数据库
+- 登录体系评估 Supabase Auth 迁移或保留
 
 ## Vercel 环境变量配置
 

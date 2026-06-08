@@ -1,7 +1,8 @@
 /**
  * API 配置
  * 开发模式：使用 http://localhost:5001/api
- * 生产模式：默认使用稳定后端域名（可通过 VITE_API_URL 覆盖）
+ * 生产模式：优先使用 VITE_API_URL；CloudBase/自定义域默认同源 /api；
+ * Vercel 域名回落到稳定后端域名，避免旧部署缺少环境变量时失效。
  */
 function getApiBaseUrl() {
     const envApiUrl = import.meta.env.VITE_API_URL;
@@ -14,8 +15,12 @@ function getApiBaseUrl() {
         return 'http://localhost:5001/api';
     }
 
-    // 生产环境默认使用稳定后端域名，避免预览域名失效导致 404/CORS
-    return 'https://dog-project-6aoq.vercel.app/api';
+    const hostname = window.location.hostname;
+    if (hostname.endsWith('.vercel.app')) {
+        return 'https://dog-project-6aoq.vercel.app/api';
+    }
+
+    return '/api';
 }
 
 export const API_BASE_URL = getApiBaseUrl();
