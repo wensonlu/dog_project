@@ -10,6 +10,7 @@ const AuthContext = createContext();
 const NATIVE_REDIRECT_URL = 'com.wenson.dogadopt://login-callback/';
 const OAUTH_SESSION_POLL_ATTEMPTS = 12;
 const OAUTH_SESSION_POLL_INTERVAL_MS = 300;
+const DISABLE_SUPABASE_CLIENT_AUTH = import.meta.env.VITE_DISABLE_SUPABASE_CLIENT_AUTH === 'true';
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
@@ -96,8 +97,8 @@ export const AuthProvider = ({ children }) => {
                 const userData = JSON.parse(storedUser);
                 const sessionData = JSON.parse(storedSession);
 
-                // 恢复 Supabase 客户端 session（供管理页面使用）
-                if (sessionData.access_token && sessionData.refresh_token) {
+                // 恢复 Supabase 客户端 session（供 OAuth / 海外环境使用）
+                if (!DISABLE_SUPABASE_CLIENT_AUTH && sessionData.access_token && sessionData.refresh_token) {
                     supabase.auth.setSession({
                         access_token: sessionData.access_token,
                         refresh_token: sessionData.refresh_token
@@ -108,7 +109,7 @@ export const AuthProvider = ({ children }) => {
 
                 console.log('[AuthContext useEffect] 恢复用户状态:', userData);
                 setUser(userData);
-            } else {
+            } else if (!DISABLE_SUPABASE_CLIENT_AUTH) {
                 // 可能刚从 Google OAuth 回调回来，Supabase 有 session 但本地还没有
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.user) {
@@ -126,7 +127,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     useEffect(() => {
-        if (!Capacitor.isNativePlatform()) return undefined;
+        if (DISABLE_SUPABASE_CLIENT_AUTH || !Capacitor.isNativePlatform()) return undefined;
 
         const handleAuthCallbackUrl = async (callbackUrl) => {
             if (!callbackUrl || !callbackUrl.startsWith('com.wenson.dogadopt://')) return;
@@ -173,6 +174,8 @@ export const AuthProvider = ({ children }) => {
 
     // 监听 Supabase 登录状态（Google OAuth 回调后会触发 SIGNED_IN）
     useEffect(() => {
+        if (DISABLE_SUPABASE_CLIENT_AUTH) return undefined;
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_IN' && session?.user) {
                 console.log('[AuthContext] onAuthStateChange SIGNED_IN，同步 session 并调用 permissions/me');
@@ -206,12 +209,14 @@ export const AuthProvider = ({ children }) => {
 
         // 同步 session 到 Supabase 客户端（供管理页面使用）
         // 异步调用，不等待完成，避免阻塞登录流程
-        supabase.auth.setSession({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token
-        }).catch(err => {
-            console.warn('[AuthContext] setSession 失败（不影响登录）:', err);
-        });
+        if (!DISABLE_SUPABASE_CLIENT_AUTH) {
+            supabase.auth.setSession({
+                access_token: data.session.access_token,
+                refresh_token: data.session.refresh_token
+            }).catch(err => {
+                console.warn('[AuthContext] setSession 失败（不影响登录）:', err);
+            });
+        }
 
         // 立即获取用户权限
         console.log('[AuthContext] 获取用户权限...');
@@ -237,6 +242,10 @@ export const AuthProvider = ({ children }) => {
     };
 
     const loginWithGoogle = async () => {
+        if (DISABLE_SUPABASE_CLIENT_AUTH) {
+            throw new Error('当前大陆版暂不支持 Google 登录，请使用邮箱登录。');
+        }
+
         if (Capacitor.isNativePlatform()) {
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
@@ -322,12 +331,14 @@ export const AuthProvider = ({ children }) => {
 
         // 同步 session 到 Supabase 客户端（供管理页面使用）
         // 异步调用，不等待完成，避免阻塞注册流程
-        supabase.auth.setSession({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token
-        }).catch(err => {
-            console.warn('[AuthContext] setSession 失败（不影响注册）:', err);
-        });
+        if (!DISABLE_SUPABASE_CLIENT_AUTH) {
+            supabase.auth.setSession({
+                access_token: data.session.access_token,
+                refresh_token: data.session.refresh_token
+            }).catch(err => {
+                console.warn('[AuthContext] setSession 失败（不影响注册）:', err);
+            });
+        }
 
         // 立即获取用户权限
         const permissions = await fetchPermissions();
@@ -350,7 +361,9 @@ export const AuthProvider = ({ children }) => {
 
     const logout = async () => {
         // 清除 Supabase 客户端的 session（如果有 Google 登录）
-        await supabase.auth.signOut();
+        if (!DISABLE_SUPABASE_CLIENT_AUTH) {
+            await supabase.auth.signOut();
+        }
         // 清除本地状态
         setUser(null);
         localStorage.removeItem('pawmate_user');

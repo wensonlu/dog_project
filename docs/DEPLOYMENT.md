@@ -21,13 +21,22 @@
 VITE_API_URL=https://dog-project-6aoq.vercel.app/api
 
 # 大陆 CloudBase 前端
-VITE_API_URL=https://<cloudbase-run-domain>/api
+VITE_API_URL=https://dog-project-api-267930-8-1256251536.sh.run.tcloudbase.com/api
+VITE_DISABLE_SUPABASE_CLIENT_AUTH=true
 ```
 
 如果没有配置 `VITE_API_URL`：
 - 本地开发默认 `http://localhost:5001/api`
 - Vercel 域名默认回落到 `https://dog-project-6aoq.vercel.app/api`
 - 非 Vercel 生产域名默认使用同源 `/api`
+
+当前 CloudBase 静态托管测试域名：
+
+```text
+https://wenson-d4gk4y3af8da0a6fd-1256251536.tcloudbaseapp.com
+```
+
+腾讯云测试域名会出现访问风险提示页；正式面向用户前建议绑定已备案自有域名。
 
 ### CloudBase Run 后端部署
 
@@ -59,13 +68,40 @@ AI_MODEL=your_model_name
 部署后验证：
 
 ```bash
-curl https://<cloudbase-run-domain>/api/_ping
-curl https://<cloudbase-run-domain>/api/health
+curl https://dog-project-api-267930-8-1256251536.sh.run.tcloudbase.com/api/_ping
+curl https://dog-project-api-267930-8-1256251536.sh.run.tcloudbase.com/api/health
+```
+
+### CloudBase 静态托管前端部署
+
+大陆前端使用本地构建产物上传到 CloudBase 静态托管：
+
+```bash
+cd frontend
+VITE_API_URL=https://dog-project-api-267930-8-1256251536.sh.run.tcloudbase.com/api \
+VITE_DISABLE_SUPABASE_CLIENT_AUTH=true \
+pnpm build
+
+tcb hosting deploy /Users/wenson/dog_project/frontend/dist \
+  -e wenson-d4gk4y3af8da0a6fd \
+  --json
+```
+
+注意：当前项目使用 React BrowserRouter。CloudBase 静态托管需要将错误文档配置为 `index.html`，否则直接刷新 `/favorites`、`/forum/123` 等前端路由会返回 COS `NoSuchKey` 404。当前 CLI 公开命令没有暴露该配置入口，可在 CloudBase 控制台静态托管中设置：
+
+```text
+Index Document: index.html
+Error Document: index.html
 ```
 
 ### 数据与存储现状
 
-第一阶段保持 Supabase 不迁移：CloudBase Run 后端仍访问 Supabase Database/Auth/Storage。这样改动最小，但大陆访问体验仍可能受 Supabase `ap-southeast-2` 跨境链路影响。
+第一阶段保持 Supabase 不迁移：CloudBase Run 后端仍访问 Supabase Database/Auth/Storage。大陆前端构建会禁用浏览器端 Supabase Auth 直连，邮箱登录/注册、资料保存和图片上传通过 CloudBase Run 后端转发；Google OAuth 仍依赖 Supabase/Google，暂不作为大陆版主登录方式。
+
+仍需继续优化的资源：
+- 历史图片 URL 仍包含 Supabase Storage、Google、Unsplash 等域名，部分大陆网络可能加载慢或失败
+- 新上传图片目前仍由后端上传到 Supabase Storage，只是避免了浏览器直连
+- 若图片访问仍不稳定，应迁移到腾讯云 COS 或 CloudBase 存储，并做历史 URL 回填
 
 若后续 Supabase 仍慢，再进入第二阶段：
 - 图片存储从 Supabase Storage `dog-images` 迁到腾讯云 COS 或 CloudBase 存储

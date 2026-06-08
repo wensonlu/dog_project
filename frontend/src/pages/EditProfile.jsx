@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
-import { supabase } from '../config/supabase';
 
 const EditProfile = () => {
     const { user, refreshProfile } = useAuth();
@@ -49,7 +48,7 @@ const EditProfile = () => {
         setSaving(true);
 
         try {
-            const { data: { session } } = await supabase.auth.getSession();
+            const session = JSON.parse(localStorage.getItem('pawmate_session') || 'null');
             const token = session?.access_token;
 
             const response = await fetch(`${API_BASE_URL}/auth/profile/${user.id}`, {
@@ -81,21 +80,20 @@ const EditProfile = () => {
         if (!file) return;
 
         try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-            const filePath = `avatars/${fileName}`;
+            const uploadFormData = new FormData();
+            uploadFormData.append('image', file);
 
-            const { error: uploadError } = await supabase.storage
-                .from('dog-images')
-                .upload(filePath, file);
+            const response = await fetch(`${API_BASE_URL}/upload/image`, {
+                method: 'POST',
+                body: uploadFormData
+            });
+            const data = await response.json();
 
-            if (uploadError) throw uploadError;
+            if (!response.ok || !data.url) {
+                throw new Error(data.error || '头像上传失败');
+            }
 
-            const { data: { publicUrl } } = supabase.storage
-                .from('dog-images')
-                .getPublicUrl(filePath);
-
-            setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
+            setFormData(prev => ({ ...prev, avatar_url: data.url }));
         } catch (error) {
             console.error('Error uploading avatar:', error);
             alert('头像上传失败');
