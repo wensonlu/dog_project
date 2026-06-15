@@ -9,7 +9,7 @@
 
 1. 打开浏览器访问：https://supabase.com/dashboard
 2. 登录您的账户
-3. 选择项目（Project Reference: djvhueamitqvosgruioo）
+3. 选择项目（Project Reference: xquzpsmzfdrfldtgoqgz）
 4. 左侧菜单 → SQL Editor
 
 ### 步骤2：创建新查询

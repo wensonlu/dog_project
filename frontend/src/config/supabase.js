@@ -19,6 +19,9 @@ const createFallbackSupabaseClient = () => ({
         async signInWithOAuth() {
             return { data: null, error: createMissingEnvError() };
         },
+        async signInWithPassword() {
+            return { data: null, error: createMissingEnvError() };
+        },
         async exchangeCodeForSession() {
             return { data: null, error: createMissingEnvError() };
         },

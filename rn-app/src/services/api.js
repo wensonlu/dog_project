@@ -84,10 +84,49 @@ export async function fetchReviewEligibility(petId, token) {
 
 export async function fetchForumTopicById(topicId, { token, userId } = {}) {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
-  const query = new URLSearchParams();
-  if (userId) query.set('userId', String(userId));
-  const path = `/forum/${topicId}${query.toString() ? `?${query.toString()}` : ''}`;
+  const query = userId ? `?userId=${encodeURIComponent(String(userId))}` : '';
+  const path = `/forum/${encodeURIComponent(String(topicId))}${query}`;
   return request(path, { headers });
+}
+
+export async function fetchWikiArticles(limit = 4) {
+  return request(`/wiki/articles?limit=${encodeURIComponent(String(limit))}`);
+}
+
+export async function fetchStories(page = 1, limit = 10) {
+  return request(`/stories?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`);
+}
+
+export async function fetchStoryById(storyId) {
+  return request(`/stories/${encodeURIComponent(String(storyId))}`);
+}
+
+export async function toggleStoryLike(storyId, token) {
+  if (!token) {
+    const err = new Error('NOT_AUTHENTICATED');
+    err.code = 'NOT_AUTHENTICATED';
+    throw err;
+  }
+  return request(`/stories/${encodeURIComponent(String(storyId))}/like`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function addStoryComment(storyId, content, token) {
+  if (!token) {
+    const err = new Error('NOT_AUTHENTICATED');
+    err.code = 'NOT_AUTHENTICATED';
+    throw err;
+  }
+  return request(`/stories/${encodeURIComponent(String(storyId))}/comments`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ content }),
+  });
 }
 
 export async function togglePetFavorite(petId, { token, userId }) {

@@ -5,6 +5,7 @@ import { Browser } from '@capacitor/browser';
 import { API_BASE_URL } from '../config/api';
 import { supabase } from '../config/supabase';
 import { hasPermission as checkPermission } from '../constants/permissions';
+import { getWebOAuthRedirectUrl } from '../utils/oauthRedirect';
 
 const AuthContext = createContext();
 const NATIVE_REDIRECT_URL = 'com.wenson.dogadopt://login-callback/';
@@ -192,6 +193,34 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         console.log('[AuthContext] 开始登录...');
+
+        if (!DISABLE_SUPABASE_CLIENT_AUTH) {
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            if (!data.session || !data.user) throw new Error('登录成功但未获取到用户会话');
+
+            const sessionToStore = {
+                access_token: data.session.access_token,
+                refresh_token: data.session.refresh_token
+            };
+            const userData = {
+                id: data.user.id,
+                email: data.user.email,
+                name: data.user.user_metadata?.name || data.user.email,
+                avatar: data.user.user_metadata?.avatar_url || null,
+                permissions: 0,
+                session: sessionToStore
+            };
+            localStorage.setItem('pawmate_session', JSON.stringify(sessionToStore));
+            localStorage.setItem('pawmate_user', JSON.stringify(userData));
+            setUser(userData);
+
+            syncSessionAndFetchPermissions(data.session, data.user).catch((syncError) => {
+                console.warn('[AuthContext] 登录后同步权限或资料失败:', syncError);
+            });
+            return data.user;
+        }
+
         const res = await fetch(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -306,6 +335,7 @@ export const AuthProvider = ({ children }) => {
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
+                redirectTo: getWebOAuthRedirectUrl(window.location.origin),
                 queryParams: {
                     access_type: 'offline',
                     prompt: 'consent'

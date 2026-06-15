@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { API_BASE_URL } from '../config/api';
 import ReviewSection from '../components/ReviewSection';
-import { buildRnPilotPlainDeepLink } from '../utils/rnDeepLink';
 
 const PetDetails = () => {
     const navigate = useNavigate();
@@ -18,8 +17,6 @@ const PetDetails = () => {
     const [canReview, setCanReview] = useState(false);
     const [applicationId, setApplicationId] = useState(null);
     const [loadingReviews, setLoadingReviews] = useState(true);
-    const enableRnPilotEntry = import.meta.env.VITE_ENABLE_RN_PET_DETAILS === 'true';
-    const isCapacitorRuntime = typeof window !== 'undefined' && !!window.Capacitor;
 
     // Find the dog by id, or default to the first one for demo
     const dog = DOGS.find(d => d.id === parseInt(id)) || DOGS[0];
@@ -89,48 +86,12 @@ const PetDetails = () => {
         checkEligibility();
     }, [dog?.id, user]);
 
-    useEffect(() => {
-        if (!enableRnPilotEntry || !isCapacitorRuntime) return;
-        try {
-            const key = 'rn_pilot_events';
-            const events = JSON.parse(localStorage.getItem(key) || '[]');
-            events.push({
-                type: 'rn_pilot_entry_impression',
-                source: 'pet_details_web',
-                petId: String(dog?.id || id),
-                ts: Date.now()
-            });
-            localStorage.setItem(key, JSON.stringify(events.slice(-200)));
-        } catch (_error) {
-            // ignore tracking errors
-        }
-    }, [enableRnPilotEntry, isCapacitorRuntime, dog?.id, id]);
-
     const handleFavorite = () => {
         if (!user) {
             navigate('/login');
             return;
         }
         toggleFavorite(dog.id);
-    };
-
-    const openRnPilotPetDetails = async () => {
-        const petId = dog?.id || id;
-        const deepLink = buildRnPilotPlainDeepLink('pet', petId);
-        try {
-            const key = 'rn_pilot_events';
-            const events = JSON.parse(localStorage.getItem(key) || '[]');
-            events.push({
-                type: 'rn_pilot_open_click',
-                source: 'pet_details_web',
-                petId: String(petId),
-                ts: Date.now()
-            });
-            localStorage.setItem(key, JSON.stringify(events.slice(-200)));
-        } catch (_error) {
-            // ignore tracking errors
-        }
-        window.location.href = deepLink;
     };
 
     return (
@@ -175,16 +136,6 @@ const PetDetails = () => {
                         <span className="material-symbols-outlined text-3xl">pets</span>
                     </div>
                 </div>
-
-                {enableRnPilotEntry && isCapacitorRuntime && (
-                    <button
-                        type="button"
-                        onClick={openRnPilotPetDetails}
-                        className="mb-4 w-full rounded-xl border border-[#f59e0b]/40 bg-[#fff7ed] px-4 py-3 text-left text-sm text-[#9a3412] dark:bg-[#2b1c11] dark:text-[#fdba74]"
-                    >
-                        打开 RN 试点页: dogproject://pet/{dog?.id || id}
-                    </button>
-                )}
 
                 <div className="flex gap-2 py-6 overflow-x-auto hide-scrollbar">
                     {[

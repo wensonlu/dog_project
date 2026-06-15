@@ -11,12 +11,8 @@
 - iOS deployment target: `15.1`
 - 当前 Xcode 签名 Team: `DA9FH4698M`
 
-注意: 本项目的 `frontend/ios/App/Podfile` 会引用仓库根目录下的 `rn-app`:
-
-- `rn-app/node_modules/expo`
-- `rn-app/node_modules/react-native`
-
-所以换机后不能只安装 `frontend` 依赖, 还必须安装 `rn-app` 依赖。
+注意: `rn-app` 业务架构目前保留，但不接入 iOS 编译链。换机后只需安装
+`frontend` 依赖即可构建 Capacitor iOS App。
 
 ## 1. 新机器前置检查
 
@@ -25,6 +21,7 @@ xcodebuild -version
 xcode-select -p
 node -v
 pod --version
+xcodebuild -showsdks
 ```
 
 要求:
@@ -34,8 +31,11 @@ pod --version
 - CocoaPods 可用。如果没有:
 
 ```bash
-sudo gem install cocoapods
+brew install cocoapods
 ```
+
+优先使用 Homebrew 安装 CocoaPods。macOS 自带 Ruby 版本可能较旧, `gem install
+cocoapods` 容易因为 `ffi` 或 Ruby 头文件不兼容而失败。
 
 如果使用真机:
 
@@ -78,6 +78,16 @@ cd ../frontend
 ```bash
 ./node_modules/.bin/vite build
 ./node_modules/.bin/cap sync ios
+```
+
+注意: Codex App 内置 Node 可能不是项目要求的 Node 20, 且可能因为 macOS library
+validation 无法加载 Rollup 原生模块。遇到 Rollup `ERR_DLOPEN_FAILED` 时, 使用独立
+Node 20 执行 Vite 和 Capacitor CLI:
+
+```bash
+NODE20=/path/to/node-v20/bin/node
+$NODE20 ./node_modules/vite/bin/vite.js build
+$NODE20 ./node_modules/@capacitor/cli/bin/capacitor sync ios
 ```
 
 ## 3. 同步 Web 改动到 iOS
@@ -167,6 +177,13 @@ DEVICE_UDID=00008140-001C115E3A0A801C
 ./node_modules/.bin/cap run ios --no-sync --target "$DEVICE_UDID"
 ```
 
+RN/Expo 试点模块当前暂停接入，iOS 使用纯 Capacitor 构建。运行:
+
+```bash
+cd frontend
+./node_modules/.bin/cap run ios --no-sync --target "$DEVICE_UDID"
+```
+
 说明:
 
 - `--no-sync` 是刻意的。先手动 sync, 再 run, 可以减少 `cap run` 内部重复 sync/clean 带来的变量。
@@ -232,6 +249,27 @@ cd ../frontend
 ./node_modules/.bin/cap sync ios
 ```
 
+### `pod` 不存在或 `gem install cocoapods` 失败
+
+典型错误:
+
+```text
+ffi requires Ruby version >= 3.0
+fatal error: 'ruby/config.h' file not found
+```
+
+原因是 macOS 自带 Ruby 与新版 CocoaPods 依赖不兼容。使用 Homebrew 安装:
+
+```bash
+/usr/local/Homebrew/bin/brew install cocoapods
+```
+
+如果 Homebrew 不在 PATH, 执行命令时显式加入:
+
+```bash
+PATH=/usr/local/bin:/usr/local/Homebrew/bin:$PATH pod --version
+```
+
 ### `xcodebuild clean` 无法删除 `frontend/ios/App/build`
 
 报错类似:
@@ -251,6 +289,34 @@ xattr -w com.apple.xcode.CreatedByBuildSystem true ios/App/build
 ```
 
 如果 `ios/App/build` 不存在, 跳过这一步。
+
+### Xcode 提示 iOS platform 未安装
+
+典型错误:
+
+```text
+Unable to find a destination matching the provided destination specifier
+iOS 26.2 is not installed. Please download and install the platform
+```
+
+先完成 Xcode 首次启动任务:
+
+```bash
+xcodebuild -runFirstLaunch -checkForNewerComponents
+```
+
+然后下载 iOS platform:
+
+```bash
+xcodebuild -downloadPlatform iOS
+```
+
+该下载可能超过 10GB。完成后确认真机出现在 available destinations:
+
+```bash
+cd frontend/ios/App
+xcodebuild -workspace App.xcworkspace -scheme App -showdestinations
+```
 
 ### Codex 沙盒无法访问 CoreSimulator 或 Xcode DerivedData
 
@@ -334,9 +400,15 @@ xcrun devicectl device process launch --device "$DEVICE_ID" com.wenson.dogadopt 
 给 Codex 的最短路径:
 
 ```bash
+git pull --ff-only origin main
+
+cd rn-app
+npm install
+
 cd frontend
 ./node_modules/.bin/vite build
 ./node_modules/.bin/cap sync ios
+
 xcrun xctrace list devices
 ./node_modules/.bin/cap run ios --no-sync --target "$DEVICE_UDID"
 ```
@@ -352,7 +424,7 @@ xcrun devicectl device process launch --device "$DEVICE_ID" com.wenson.dogadopt 
 
 ## 10. 本次验证记录
 
-在当前机器上验证过的事实:
+### 2026-06-08 首次记录
 
 - `./node_modules/.bin/vite build` 成功。
 - `./node_modules/.bin/cap sync ios` 成功。
@@ -361,3 +433,51 @@ xcrun devicectl device process launch --device "$DEVICE_ID" com.wenson.dogadopt 
 - CoreDevice identifier: `3AF0D47E-192A-5641-BE0B-16752C186875`。
 - `cap run ios --no-sync --target 00008140-001C115E3A0A801C` 完成了 `xcodebuild`, 但 Capacitor 部署阶段返回 `ERR_UNKNOWN`。
 - 遇到过 `ios/App/build` 缺少 `com.apple.xcode.CreatedByBuildSystem` 标记导致 clean 失败, 可用 `xattr` 处理。
+
+### 2026-06-08 完整跑通复盘
+
+最终成功链路:
+
+1. 拉取最新 `main`, 提交从 `e9174c1` 快进到 `e019fa8`。
+2. 安装 `rn-app` 依赖, 让 Podfile 能解析 Expo 和 React Native。
+3. Codex 内置 Node 无法加载 Rollup 原生模块, 改用独立 Node `v20.19.5` 构建。
+4. 使用 Homebrew 安装 CocoaPods `1.16.2_2`。
+5. 为 `frontend/ios/App/build` 写入 `com.apple.xcode.CreatedByBuildSystem` 标记。
+6. `cap sync ios` 成功完成 Web copy、插件更新和 `pod install`。
+7. Xcode 首次运行后仍提示 iOS platform 未安装, 执行 `xcodebuild -downloadPlatform iOS`。
+8. 首次真机构建失败于 ReactCodegen generated headers 缺失, 手动运行 RN codegen 后恢复。
+9. `cap run ios --no-sync --target 00008140-001C115E3A0A801C` 成功构建并部署。
+10. 使用以下命令明确启动并验证 App:
+
+```bash
+xcrun devicectl device process launch \
+  --device 3AF0D47E-192A-5641-BE0B-16752C186875 \
+  com.wenson.dogadopt \
+  --terminate-existing
+```
+
+成功输出:
+
+```text
+Launched application with com.wenson.dogadopt bundle identifier.
+```
+
+完整环境准备后, 后续日常同步通常只需:
+
+```bash
+cd frontend
+pnpm build
+./node_modules/.bin/cap sync ios
+
+./node_modules/.bin/cap run ios --no-sync --target 00008140-001C115E3A0A801C
+```
+
+## 11. RN 试点状态
+
+`rn-app/` 与相关架构设计保留，但当前不接入 H5 跳转入口和 iOS 编译链。故事、
+论坛详情、宠物详情均使用 H5 页面，iOS 发布执行纯 Capacitor 流程:
+
+```bash
+cd frontend
+pnpm ios:release:prepare
+```

@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Linking, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import PetDetailsScreen from './src/screens/PetDetailsScreen';
 import ForumDetailScreen from './src/screens/ForumDetailScreen';
-import { appScheme, parseLaunchPayload } from './src/navigation/linking';
+import ContentHubScreen from './src/screens/ContentHubScreen';
+import StoriesScreen from './src/screens/StoriesScreen';
+import StoryDetailScreen from './src/screens/StoryDetailScreen';
+import { appScheme, buildWebUrl, parseLaunchPayload } from './src/navigation/linking';
 import { saveAuthState } from './src/services/auth';
 import { exchangeMobileTicket } from './src/services/api';
 import DebugConsolePanel from './src/debug/DebugConsolePanel';
@@ -12,12 +15,20 @@ const DEFAULT_ROUTE = { type: 'pet', id: '1' };
 
 export default function App(props) {
   const [route, setRoute] = useState(DEFAULT_ROUTE);
+  const [previousStoryRoute, setPreviousStoryRoute] = useState({ type: 'content' });
   const handleBack = async () => {
     try {
       await Linking.openURL(`${appScheme}://close`);
     } catch (_err) {
       setRoute(DEFAULT_ROUTE);
     }
+  };
+  const openWeb = async (path) => {
+    await Linking.openURL(buildWebUrl(path));
+  };
+  const openStory = (storyId, from = route) => {
+    setPreviousStoryRoute(from?.type === 'stories' ? { type: 'stories' } : { type: 'content' });
+    setRoute({ type: 'story', id: String(storyId) });
   };
 
   useEffect(() => {
@@ -56,7 +67,14 @@ export default function App(props) {
       console.log('[RN Route] launchUrl:', url || '');
       console.log('[RN Route] payload:', payload);
 
-      if (payload?.topicId && mounted) {
+      if (payload?.routeType === 'content' && mounted) {
+        setRoute({ type: 'content' });
+      } else if (payload?.routeType === 'stories' && mounted) {
+        setRoute({ type: 'stories' });
+      } else if (payload?.storyId && mounted) {
+        setPreviousStoryRoute({ type: 'stories' });
+        setRoute({ type: 'story', id: payload.storyId });
+      } else if (payload?.topicId && mounted) {
         console.log('[RN Route] switch -> forum', payload.topicId);
         setRoute({ type: 'forum', id: payload.topicId });
       } else if (payload?.petId && mounted) {
@@ -110,11 +128,31 @@ export default function App(props) {
   return (
     <SafeAreaView style={styles.app}>
       <StatusBar barStyle="dark-content" />
-      <View style={styles.banner}>
-        <Text style={styles.bannerTitle}>Dog Project RN Pilot (Expo)</Text>
-        <Text style={styles.bannerDesc}>{tipText}</Text>
-      </View>
-      {route.type === 'forum' ? (
+      {['pet', 'forum'].includes(route.type) ? (
+        <View style={styles.banner}>
+          <Text style={styles.bannerTitle}>Dog Project RN Pilot (Expo)</Text>
+          <Text style={styles.bannerDesc}>{tipText}</Text>
+        </View>
+      ) : null}
+      {route.type === 'content' ? (
+        <ContentHubScreen
+          onOpenStories={() => setRoute({ type: 'stories' })}
+          onOpenStory={(storyId) => openStory(storyId, { type: 'content' })}
+          onOpenWeb={openWeb}
+        />
+      ) : route.type === 'stories' ? (
+        <StoriesScreen
+          onBack={() => setRoute({ type: 'content' })}
+          onOpenStory={(storyId) => openStory(storyId, { type: 'stories' })}
+          onOpenWeb={openWeb}
+        />
+      ) : route.type === 'story' ? (
+        <StoryDetailScreen
+          storyId={route.id}
+          onBack={() => setRoute(previousStoryRoute)}
+          onOpenWeb={openWeb}
+        />
+      ) : route.type === 'forum' ? (
         <ForumDetailScreen topicId={route.id} onBack={handleBack} />
       ) : (
         <PetDetailsScreen

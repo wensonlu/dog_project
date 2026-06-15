@@ -24,10 +24,10 @@
 
 ```bash
 # 测试 Supabase 域名解析
-ping djvhueamitqvosgruioo.supabase.co
+ping xquzpsmzfdrfldtgoqgz.supabase.co
 
 # 测试 Supabase API 连接
-curl -v https://djvhueamitqvosgruioo.supabase.co/rest/v1/
+curl -v https://xquzpsmzfdrfldtgoqgz.supabase.co/rest/v1/
 ```
 
 #### 2. 检查后端服务

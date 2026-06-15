@@ -1,3 +1,6 @@
+import { Capacitor } from '@capacitor/core';
+import { resolveApiBaseUrl } from './apiBaseUrl';
+
 /**
  * API 配置
  * 开发模式：使用 http://localhost:5001/api
@@ -5,22 +8,12 @@
  * Vercel 域名回落到稳定后端域名，避免旧部署缺少环境变量时失效。
  */
 function getApiBaseUrl() {
-    const envApiUrl = import.meta.env.VITE_API_URL;
-    if (envApiUrl) {
-        return envApiUrl.replace(/\/+$/, '');
-    }
-
-    // 开发环境
-    if (import.meta.env.DEV) {
-        return 'http://localhost:5001/api';
-    }
-
-    const hostname = window.location.hostname;
-    if (hostname.endsWith('.vercel.app')) {
-        return 'https://dog-project-6aoq.vercel.app/api';
-    }
-
-    return '/api';
+    return resolveApiBaseUrl({
+        envApiUrl: import.meta.env.VITE_API_URL,
+        isDev: import.meta.env.DEV,
+        isNative: Capacitor.isNativePlatform(),
+        hostname: window.location.hostname,
+    });
 }
 
 export const API_BASE_URL = getApiBaseUrl();

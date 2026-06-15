@@ -39,7 +39,6 @@ import Shop from './pages/Shop';
 import ShopDetail from './pages/ShopDetail';
 import ShopOrder from './pages/ShopOrder';
 import ChallengeCheckin from './pages/ChallengeCheckin';
-import ForumDetailDebugFloat from './components/ForumDetailDebugFloat';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -227,7 +226,6 @@ function AppContent() {
         
           </Routes>
           <ChatAssistant />
-          <ForumDetailDebugFloat />
         </ForumListProvider>
       </TaskProvider>
     </DogProvider>

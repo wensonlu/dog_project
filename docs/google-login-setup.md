@@ -30,9 +30,9 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here
 
 1. 进入 **Authentication** → **URL Configuration**
 2. 在 **Redirect URLs** 中添加：
-   - 开发环境：`http://localhost:5173`
+   - 开发环境：`http://localhost:5173/login`
    - 原生 App（Capacitor）：`com.wenson.dogadopt://login-callback/`
-   - 生产环境：你的实际域名（例如 `https://your-domain.com`）
+   - 生产环境：你的实际域名登录页（例如 `https://your-domain.com/login`）
 
 ### 4. 验证 Google OAuth 配置
 
@@ -41,6 +41,9 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here
 1. 进入 **Authentication** → **Providers**
 2. 确认 **Google** 已启用
 3. 检查 **Client ID** 和 **Client Secret** 已正确配置
+4. 在 Google Cloud Console 中，将
+   `https://<project-ref>.supabase.co/auth/v1/callback`
+   添加到 OAuth 客户端的 Authorized redirect URIs
 
 ## 使用方式
 
