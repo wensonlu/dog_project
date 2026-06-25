@@ -1,4 +1,5 @@
 App/build
+App/rn_codegen
 App/Pods
 App/output
 App/App/public

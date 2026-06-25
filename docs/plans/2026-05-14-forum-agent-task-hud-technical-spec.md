@@ -7,21 +7,23 @@
 
 ## 1.2 逻辑分层
 1. Assistant UI Layer（Chat Sheet / Task HUD）
-2. Task Orchestrator（前端执行器）
-3. Forum MCP API（后端工具层）
-4. Data Layer（Supabase）
+2. LLM Planner（`POST /agent/plan`，只产出结构化 plan，不执行）
+3. Authorization Gate（展示计划、风险、账号与动作清单，用户确认后继续）
+4. Tool Executor（前端 allowlist 执行器）
+5. Forum MCP API（后端工具层）
+6. Data Layer（Supabase）
 
 ## 1.3 关键流
 1. 用户输入自然语言
-2. 意图识别为 `forum_compound_action`
-3. 生成执行计划（steps）
-4. 执行器逐步调用 MCP API
-5. 通过事件总线推送 HUD 更新
+2. LLM Planner 基于页面上下文和工具目录生成执行计划（steps）
+3. 授权弹窗展示计划；所有写操作和购买决策必须先确认
+4. Tool Executor 逐步调用 allowlist API
+5. HUD 更新每一步状态
 6. 成功/失败收敛并落审计日志
 
 ---
 
-## 2. 执行型意图 DSL
+## 2. LLM Agent Plan Schema
 
 ### 2.1 目标语义
 示例：`帮我给第一个帖子点赞评论123`
@@ -29,19 +31,29 @@
 解析结果：
 ```json
 {
-  "intent": "forum_compound_action",
-  "target": { "type": "topic_index", "index": 1 },
-  "actions": [
-    { "type": "like_topic" },
-    { "type": "reply_topic", "content": "123" }
+  "intent": "community.interaction",
+  "title": "论坛互动计划",
+  "summary": "定位第一个帖子并执行点赞、评论。",
+  "confidence": 0.86,
+  "steps": [
+    { "id": "resolve-topic", "tool": "forum.resolve_topic", "label": "定位目标帖子", "args": { "targetIndex": 1 } },
+    { "id": "like-topic", "tool": "forum.like_topic", "label": "点赞帖子", "args": {} },
+    { "id": "comment-topic", "tool": "forum.comment_topic", "label": "发布评论", "args": { "content": "123" } }
   ]
 }
 ```
 
-### 2.2 v1 允许动作
-1. `like_topic`
-2. `reply_topic`
-3. `navigate_topic`
+### 2.2 v1 允许工具
+1. `forum.search_topics`
+2. `forum.resolve_topic`
+3. `forum.get_topic`
+4. `forum.summarize_topic`
+5. `forum.draft_reply`
+6. `forum.like_topic`
+7. `forum.comment_topic`
+8. `forum.follow_author`
+9. `forum.verify_interaction`
+10. `ui.navigate`
 
 ---
 
@@ -371,4 +383,3 @@ interface AgentTask {
 1. 任务失败率 > 8%（5分钟窗口）告警
 2. `confirm token` 过期率 > 5% 告警
 3. 平均耗时 > 6s 告警
-

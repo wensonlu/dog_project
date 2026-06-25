@@ -8,6 +8,7 @@
     "build": "vite build",
     "ios:sync": "vite build && cap sync ios",
     "ios:release:prepare": "vite build && cap sync ios",
+    "rn:bundle:qr": "node ../scripts/rn-bundle-manifest.mjs --serve",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",

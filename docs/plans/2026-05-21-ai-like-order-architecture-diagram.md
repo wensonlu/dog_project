@@ -10,8 +10,9 @@
 ```mermaid
 flowchart LR
   U[用户输入自然语言指令] --> A[ChatAssistant 前端]
-  A --> B[Intent Parser\n复合意图解析]
-  B --> C[Task Orchestrator\n步骤状态机]
+  A --> B[LLM Agent Planner\n/agent/plan 产出工具计划]
+  B --> C[Allowlist Tool Executor\n步骤状态机]
+  C --> X[Authorization Gate\n用户确认后执行]
 
   subgraph D[数据暴露层 Data Exposure]
     D1[get_forum_context]
@@ -32,8 +33,8 @@ flowchart LR
     E7[verify_order]
   end
 
-  C --> D
-  C --> E
+  X --> D
+  X --> E
 
   subgraph F[后端 API + 领域服务]
     F1[Forum Controller]
@@ -89,7 +90,10 @@ sequenceDiagram
   participant DB as DB
 
   User->>UI: 帮我给第一个帖子点赞并下单同款
-  UI->>ORC: parseIntent(command)
+  UI->>ORC: POST /agent/plan(command, pageContext)
+  ORC-->>UI: plan: [{tool,args,risk}]
+  UI->>User: 展示计划与风险，请求授权
+  User-->>UI: 确认执行
 
   ORC->>MCP: get_forum_context + search_topics
   MCP->>API: GET /forum?format=mcp
@@ -134,12 +138,16 @@ sequenceDiagram
 
 ## 5. Tool 契约建议（最小集）
 
-1. `forum.like(topicId, userId, operationId)` -> `{ liked, likes, deduped }`
-2. `forum.comment(topicId, content, userId, operationId)` -> `{ commentId, status }`
-3. `shop.create_order_precheck(productId, qty, userId, operationId)` -> `{ confirmToken, quote }`
-4. `shop.create_order_confirm(confirmToken, userId)` -> `{ orderId, status }`
-5. `verify_interaction(topicId, userId)` -> `{ pass, liked, commentMatched }`
-6. `verify_order(orderId, userId)` -> `{ pass, paid, stockLocked }`
+Planner 输出的 tool name 必须在 allowlist 内, 前端执行器按 tool 分发:
+
+1. `forum.search_topics(args)` -> `{ items }`
+2. `forum.resolve_topic(args)` -> `{ topicId,title }`
+3. `forum.like_topic(topicId,userId,authorizationId)` -> `{ liked, likes }`
+4. `forum.comment_topic(topicId,content,userId,authorizationId)` -> `precheck/reply -> confirm/reply`
+5. `forum.follow_author(topicId,userId,authorizationId)` -> `{ followed }`
+6. `forum.verify_interaction(topicId,userId)` -> `{ pass, evidence }`
+7. `shop.select_product(productId|productQuery, quantity)` -> `{ productId, quantity, quote }`
+8. `shop.open_checkout(productId, quantity, authorizationId)` -> 进入订单页; 真正创建订单仍由订单页二次确认。
 
 ## 6. 失败与降级策略
 1. MCP 工具不可用：降级为“仅给出操作建议，不自动执行”。
@@ -153,4 +161,3 @@ sequenceDiagram
 3. 后端：新增订单 precheck/confirm/verify 接口与幂等键校验。
 4. 数据库：补 `assistant_action_logs`、`idempotency_keys`（或等效表）。
 5. 监控：记录步骤耗时、失败率、重试率、最终成功率。
-

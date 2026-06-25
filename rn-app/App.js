@@ -5,6 +5,7 @@ import ForumDetailScreen from './src/screens/ForumDetailScreen';
 import ContentHubScreen from './src/screens/ContentHubScreen';
 import StoriesScreen from './src/screens/StoriesScreen';
 import StoryDetailScreen from './src/screens/StoryDetailScreen';
+import RnDemoScreen from './src/screens/RnDemoScreen';
 import { appScheme, buildWebUrl, parseLaunchPayload } from './src/navigation/linking';
 import { saveAuthState } from './src/services/auth';
 import { exchangeMobileTicket } from './src/services/api';
@@ -15,6 +16,11 @@ const DEFAULT_ROUTE = { type: 'pet', id: '1' };
 
 export default function App(props) {
   const [route, setRoute] = useState(DEFAULT_ROUTE);
+  const [launchContext, setLaunchContext] = useState(() => ({
+    launchUrl: props?.launchUrl || '',
+    bundleSource: props?.bundleSource || 'unknown',
+    debugParams: props?.debugParams || {},
+  }));
   const [previousStoryRoute, setPreviousStoryRoute] = useState({ type: 'content' });
   const handleBack = async () => {
     try {
@@ -66,8 +72,17 @@ export default function App(props) {
       const payload = parseLaunchPayload(url);
       console.log('[RN Route] launchUrl:', url || '');
       console.log('[RN Route] payload:', payload);
+      if (mounted) {
+        setLaunchContext((prev) => ({
+          ...prev,
+          launchUrl: url || prev.launchUrl,
+          debugParams: payload?.debugParams || props?.debugParams || prev.debugParams || {},
+        }));
+      }
 
-      if (payload?.routeType === 'content' && mounted) {
+      if (payload?.routeType === 'rn-demo' && mounted) {
+        setRoute({ type: 'demo' });
+      } else if (payload?.routeType === 'content' && mounted) {
         setRoute({ type: 'content' });
       } else if (payload?.routeType === 'stories' && mounted) {
         setRoute({ type: 'stories' });
@@ -134,7 +149,13 @@ export default function App(props) {
           <Text style={styles.bannerDesc}>{tipText}</Text>
         </View>
       ) : null}
-      {route.type === 'content' ? (
+      {route.type === 'demo' ? (
+        <RnDemoScreen
+          launchUrl={launchContext.launchUrl}
+          bundleSource={launchContext.bundleSource}
+          debugParams={launchContext.debugParams}
+        />
+      ) : route.type === 'content' ? (
         <ContentHubScreen
           onOpenStories={() => setRoute({ type: 'stories' })}
           onOpenStory={(storyId) => openStory(storyId, { type: 'content' })}

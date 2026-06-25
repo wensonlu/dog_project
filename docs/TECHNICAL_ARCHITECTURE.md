@@ -140,6 +140,7 @@ HTTP Request
 
 `backend/app.js` 同时挂载 `/xxx` 和 `/api/xxx`, 用于兼容本地开发与不同部署环境。
 非关键的 `agent` 和 `health` 路由采用延迟加载, 避免可选模块初始化失败拖垮整个 API。
+`/agent/plan` 是端智能操作的 LLM Planner 入口：它只把自然语言拆解为 allowlist 工具计划, 不直接执行点赞、评论、关注或下单动作。
 
 主要 API 域:
 
@@ -150,7 +151,7 @@ HTTP Request
 | 领养流程 | `/applications`, `/dog-submissions` |
 | 消息与评论 | `/messages`, `/reviews` |
 | 社区内容 | `/forum`, `/stories`, `/wiki` |
-| AI 与推荐 | `/chat`, `/recommendations`, `/agent` |
+| AI 与推荐 | `/chat`, `/recommendations`, `/agent`, `/agent/plan` |
 | 商城与活动 | `/shop`, `/challenge` |
 | 权限与运营 | `/permissions`, `/stats`, `/upload` |
 
@@ -198,6 +199,19 @@ Supabase 提供:
 前端页面权限只用于用户体验, 不能替代 API 和数据库层校验。
 
 移动端认证桥接优先使用一次性 mobile ticket, 避免长期 token 直接暴露在 Deep Link 中。
+
+### 6.1 AI 助手意图路由
+
+宠物小助手先通过 `/api/agent/plan` 做 Affinity funnel 路由, 再决定是否进入工具执行或普通回复:
+
+- `assistant_capability_agent`: 处理“你会什么/能做什么”等能力问答, 只返回 `chat.append_message`, 不要求授权。
+- `intelligent_action_agent`: 处理商城下单、点赞、评论、关注等写操作或购买决策, 必须进入授权弹窗。
+- `forum_research_agent`: 处理论坛检索、帖子总结和回复草稿等读操作或草稿型任务。
+- `navigation_agent`: 处理应用内导航。
+- `custom_rule_agent`: 预留给后续运营配置的关键词、正则或自定义规则。
+- `chat_answer_agent`: 处理没有工具计划的普通问答。
+
+写操作默认要求确认; 评论必须走 `precheck -> confirm -> send`; 下单只允许路由到订单确认页, 真正创建订单仍由订单页二次确认。
 
 ## 7. 核心运行链路
 

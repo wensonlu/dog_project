@@ -6,7 +6,40 @@
 const express = require('express');
 const router = express.Router();
 const { generatePetBio, generateHealthAdvice } = require('../utils/ai');
+const { createAgentPlan } = require('../utils/agentPlanner');
 const { getSupabaseClient } = require('../utils/supabaseClient');
+
+/**
+ * POST /api/agent/plan
+ * 将自然语言意图交给 LLM Planner 拆解为 allowlist 工具计划。
+ */
+router.post('/plan', async (req, res) => {
+  try {
+    const { content, context = {}, userId = null, sessionId = null } = req.body || {};
+
+    if (!content || !String(content).trim()) {
+      return res.status(400).json({ ok: false, reason: 'empty_content', error: 'content is required' });
+    }
+
+    if (String(content).trim().length > 500) {
+      return res.status(400).json({ ok: false, reason: 'content_too_long', error: 'content exceeds 500 characters' });
+    }
+
+    const result = await createAgentPlan({
+      content,
+      context: {
+        ...(context && typeof context === 'object' ? context : {}),
+        userId,
+        sessionId,
+      },
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Create agent plan failed:', error);
+    res.status(500).json({ ok: false, reason: 'planner_failed', error: error.message || 'planner failed' });
+  }
+});
 
 /**
  * POST /api/agent/:dogId/generate

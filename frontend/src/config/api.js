@@ -26,6 +26,10 @@ export const CHAT_API = {
   DELETE_SESSION: (sessionId) => `${API_BASE_URL}/chat/sessions/${sessionId}`
 };
 
+export const AGENT_API = {
+  PLAN: `${API_BASE_URL}/agent/plan`
+};
+
 export const FORUM_API = {
   LIST: `${API_BASE_URL}/forum`,
   CONTEXT: `${API_BASE_URL}/forum/context`,

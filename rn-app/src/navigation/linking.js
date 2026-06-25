@@ -64,7 +64,7 @@ export function parseLaunchPayload(url) {
   const idFromQuery = normalizeString(
     queryParams?.id || wrappedParams?.id || jsonBundle?.id
   );
-  const routeFromHost = ['content', 'stories', 'story', 'forum', 'pet', 'web'].includes(host)
+  const routeFromHost = ['content', 'stories', 'story', 'forum', 'pet', 'web', 'rn-demo'].includes(host)
     ? host
     : null;
   const entityIdFromHost = normalizeString(firstPathId || idFromQuery);
@@ -101,6 +101,11 @@ export function parseLaunchPayload(url) {
     ticket: normalizeString(
       queryParams?.ticket || wrappedParams?.ticket || jsonBundle?.ticket
     ),
+    debugParams:
+      (jsonBundle?.debugParams && typeof jsonBundle.debugParams === 'object' && jsonBundle.debugParams) ||
+      (wrappedParams?.debugParams && parseJsonBundle(wrappedParams.debugParams)) ||
+      (queryParams?.debugParams && parseJsonBundle(queryParams.debugParams)) ||
+      null,
   };
 }
 
@@ -118,6 +123,10 @@ export function buildForumUrl(topicId) {
 
 export function buildContentUrl() {
   return `${appScheme}://content`;
+}
+
+export function buildRnDemoUrl() {
+  return `${appScheme}://rn-demo`;
 }
 
 export function buildStoryUrl(storyId) {

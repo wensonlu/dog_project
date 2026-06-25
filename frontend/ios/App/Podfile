@@ -1,12 +1,39 @@
 require_relative '../../node_modules/.pnpm/@capacitor+ios@8.1.0_@capacitor+core@8.1.0/node_modules/@capacitor/ios/scripts/pods_helpers'
+require 'fileutils'
+
+rn_app_path = File.expand_path('../../../rn-app', __dir__)
+rn_node_modules = File.join(rn_app_path, 'node_modules')
+rn_app_relative_path = '../../../rn-app'
+rn_node_modules_relative = '../../../rn-app/node_modules'
+require File.join(rn_node_modules, 'expo/scripts/autolinking')
+require File.join(rn_node_modules, 'react-native/scripts/react_native_pods')
+
+$CODEGEN_OUTPUT_DIR = 'rn_codegen/generated/ios'
+
+def mirror_react_codegen_artifacts!
+  codegen_source_dir = File.join(__dir__, 'build/generated/ios')
+  codegen_target_dir = File.join(__dir__, $CODEGEN_OUTPUT_DIR)
+  return unless File.directory?(codegen_source_dir)
+
+  FileUtils.mkdir_p(codegen_target_dir)
+  Dir.glob(File.join(codegen_target_dir, '*')).each do |path|
+    next if File.basename(path) == 'ReactCodegen.podspec.json'
+
+    FileUtils.rm_rf(path)
+  end
+  FileUtils.cp_r(Dir.glob(File.join(codegen_source_dir, '*')), codegen_target_dir)
+  Pod::UI.puts "[Codegen] Mirrored generated artifacts to #{codegen_target_dir}"
+end
 
 platform :ios, '15.1'
 use_frameworks! :linkage => :static
+ENV['RCT_NEW_ARCH_ENABLED'] = '0'
 
 # workaround to avoid Xcode caching of Pods that requires
 # Product -> Clean Build Folder after new Cordova plugins installed
 # Requires CocoaPods 1.6 or newer
 install! 'cocoapods', :disable_input_output_paths => true
+prepare_react_native_project!
 
 def capacitor_pods
   pod 'Capacitor', :path => '../../node_modules/.pnpm/@capacitor+ios@8.1.0_@capacitor+core@8.1.0/node_modules/@capacitor/ios'
@@ -17,8 +44,142 @@ end
 
 target 'App' do
   capacitor_pods
+  use_expo_modules!({
+    :searchPaths => [rn_node_modules],
+  })
+  use_react_native!(
+    :path => File.join(rn_node_modules_relative, 'react-native'),
+    :app_path => rn_app_path,
+    :config_file_dir => rn_app_path,
+    :new_arch_enabled => false,
+    :hermes_enabled => false,
+    :fabric_enabled => false
+  )
+  mirror_react_codegen_artifacts!
 end
 
 post_install do |installer|
   assertDeploymentTarget(installer)
+  react_native_post_install(
+    installer,
+    File.join(rn_node_modules_relative, 'react-native'),
+    :mac_catalyst_enabled => false
+  )
+
+  react_common_headers = File.join(rn_app_path, 'node_modules/react-native/ReactCommon')
+  yoga_headers = File.join(react_common_headers, 'yoga')
+  react_graphics_ios_headers = File.join(react_common_headers, 'react/renderer/graphics/platform/ios')
+  react_view_cxx_headers = File.join(react_common_headers, 'react/renderer/components/view/platform/cxx')
+  react_textinput_ios_headers = File.join(react_common_headers, 'react/renderer/components/textinput/platform/ios')
+  react_textlayout_ios_headers = File.join(react_common_headers, 'react/renderer/textlayoutmanager/platform/ios')
+  react_imagemanager_ios_headers = File.join(react_common_headers, 'react/renderer/imagemanager/platform/ios')
+  react_native_module_core_headers = File.join(react_common_headers, 'react/nativemodule/core')
+  react_native_module_ios_headers = File.join(react_common_headers, 'react/nativemodule/core/platform/ios')
+  react_runtime_ios_headers = File.join(react_common_headers, 'react/runtime/platform/ios')
+  codegen_headers = File.join(__dir__, $CODEGEN_OUTPUT_DIR)
+  installer.pods_project.targets.each do |target|
+    next unless target.name.start_with?('React') || target.name == 'RCT-Folly' || target.name == 'Yoga' || target.name == 'ExpoModulesCore'
+    next unless target.respond_to?(:headers_build_phase)
+
+    target.build_configurations.each do |config|
+      header_search_paths = config.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)']
+      header_search_paths = [header_search_paths] if header_search_paths.is_a?(String)
+      header_search_paths << %("#{react_common_headers}")
+      header_search_paths << %("#{yoga_headers}")
+      header_search_paths << %("#{react_graphics_ios_headers}")
+      header_search_paths << %("#{react_view_cxx_headers}")
+      header_search_paths << %("#{react_textinput_ios_headers}")
+      header_search_paths << %("#{react_textlayout_ios_headers}")
+      header_search_paths << %("#{react_imagemanager_ios_headers}")
+      header_search_paths << %("#{react_native_module_core_headers}")
+      header_search_paths << %("#{react_native_module_ios_headers}")
+      header_search_paths << %("#{react_runtime_ios_headers}")
+      header_search_paths << %("#{codegen_headers}")
+      config.build_settings['HEADER_SEARCH_PATHS'] = header_search_paths.uniq
+
+      if target.name.start_with?('React')
+        preprocessor_definitions = config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || ['$(inherited)']
+        preprocessor_definitions = [preprocessor_definitions] if preprocessor_definitions.is_a?(String)
+        preprocessor_definitions << 'FLT_MAX=__FLT_MAX__'
+        preprocessor_definitions << 'FLT_MIN=__FLT_MIN__'
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = preprocessor_definitions.uniq
+      end
+    end
+
+    if target.name == 'Yoga'
+      public_yoga_headers = %w[
+        YGConfig.h
+        YGEnums.h
+        YGMacros.h
+        YGNode.h
+        YGNodeLayout.h
+        YGNodeStyle.h
+        YGPixelGrid.h
+        YGValue.h
+        Yoga.h
+      ]
+
+      target.headers_build_phase.files.each do |build_file|
+        next unless public_yoga_headers.include?(build_file.file_ref&.display_name)
+
+        build_file.settings ||= {}
+        build_file.settings['ATTRIBUTES'] = ['Public']
+      end
+    end
+
+    if target.name == 'ReactCommon'
+      public_react_common_headers = %w[
+        CxxTurboModuleUtils.h
+        RCTTurboModuleWithJSIBindings.h
+        RCTContextContainerHandling.h
+        RCTHermesInstance.h
+        RCTHost.h
+        RCTInstance.h
+        RCTJscInstance.h
+        RuntimeExecutor.h
+        SchedulerPriority.h
+        TurboCxxModule.h
+        TurboModule.h
+        TurboModuleBinding.h
+        TurboModulePerfLogger.h
+        TurboModuleUtils.h
+      ]
+
+      target.headers_build_phase.files.each do |build_file|
+        file_ref = build_file.file_ref
+        next unless public_react_common_headers.include?(file_ref&.display_name)
+        next unless file_ref.path.to_s.include?('ReactCommon/')
+
+        build_file.settings ||= {}
+        build_file.settings['ATTRIBUTES'] = ['Public']
+      end
+
+      target.headers_build_phase.files
+        .select do |build_file|
+          file_ref = build_file.file_ref
+          next false unless file_ref&.display_name == 'Float.h'
+
+          path = file_ref.path.to_s
+          path.include?('react/renderer/graphics/Float.h') && !path.include?('platform/ios')
+        end
+        .each { |build_file| target.headers_build_phase.files.delete(build_file) }
+    end
+  end
+
+  mirror_react_codegen_artifacts!
+end
+
+post_integrate do |installer|
+  app_project_path = File.join(__dir__, 'App.xcodeproj')
+  app_project = Xcodeproj::Project.open(app_project_path)
+  app_target = app_project.targets.find { |target| target.name == 'App' }
+  expo_phase = app_target&.shell_script_build_phases&.find { |phase| phase.name == '[Expo] Configure project' }
+  if expo_phase
+    expo_phase.shell_script = <<~SCRIPT
+      # This script configures Expo modules and generates the modules provider file.
+      export NODE_PATH="#{rn_node_modules}"
+      bash -l -c "./Pods/Target\\ Support\\ Files/Pods-App/expo-configure-project.sh"
+    SCRIPT
+    app_project.save
+  end
 end

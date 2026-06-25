@@ -3,24 +3,10 @@
  * 封装 AI SDK 调用，提供成本监控和错误处理
  */
 
-function isAiEnabled() {
-  return process.env.AI_ENABLED === 'true';
-}
+const { getOpenAiRuntime, isAiEnabled } = require('./aiRuntime');
 
 function getAiRuntime() {
-  const { generateText } = require('ai');
-  const { createOpenAI } = require('@ai-sdk/openai');
-
-  const glm = createOpenAI({
-    baseURL: process.env.AI_BASE_URL,
-    apiKey: process.env.AI_API_KEY,
-    compatibility: 'compatible',
-  });
-
-  return {
-    generateText,
-    model: glm.chat('glm-5'),
-  };
+  return getOpenAiRuntime();
 }
 
 /**
@@ -77,9 +63,9 @@ async function generatePetBio({ name, breed, age, gender, photoUrl }) {
     let result;
     let modelName = 'mock-disabled';
     if (isAiEnabled()) {
-      const { generateText, model } = getAiRuntime();
+      const { generateText, model, modelName: runtimeModelName } = getAiRuntime();
       const { text } = await generateText({ model, prompt });
-      modelName = 'glm-5';
+      modelName = runtimeModelName;
 
       console.log('AI 原始响应:', text);
       let jsonStr = text;
@@ -140,12 +126,12 @@ ${description ? `- 详细信息：${description}` : ''}
 
     const duration = Date.now() - startTime;
     if (isAiEnabled()) {
-      const { generateText, model } = getAiRuntime();
+      const { generateText, model, modelName } = getAiRuntime();
       const { text } = await generateText({ model, prompt });
       return {
         advice: text.trim(),
         duration,
-        model: 'glm-5',
+        model: modelName,
       };
     }
 
@@ -205,9 +191,9 @@ async function generateTopicContent(keywords) {
     let result;
     let modelName = 'mock-disabled';
     if (isAiEnabled()) {
-      const { generateText, model } = getAiRuntime();
+      const { generateText, model, modelName: runtimeModelName } = getAiRuntime();
       const { text } = await generateText({ model, prompt });
-      modelName = 'glm-5';
+      modelName = runtimeModelName;
       console.log('AI 原始响应:', text);
 
       let jsonStr = text;
@@ -294,12 +280,12 @@ ${replyToContent ? `回复对象内容：${replyToContent}` : ''}
 
   try {
     if (isAiEnabled()) {
-      const { generateText, model } = getAiRuntime();
+      const { generateText, model, modelName } = getAiRuntime();
       const { text } = await generateText({ model, prompt });
       return {
         draft: text.trim(),
         duration: Date.now() - startTime,
-        model: 'glm-5',
+        model: modelName,
       };
     }
 
@@ -368,7 +354,7 @@ ${JSON.stringify(documentsPayload, null, 2)}
 
   try {
     if (isAiEnabled()) {
-      const { generateText, model } = getAiRuntime();
+      const { generateText, model, modelName } = getAiRuntime();
       const { text } = await generateText({ model, prompt });
       const parsed = extractJsonObject(text, [
         'keyFindings',
@@ -387,7 +373,7 @@ ${JSON.stringify(documentsPayload, null, 2)}
           disclaimer: parsed.disclaimer || 'AI总结仅供参考，不能替代专业诊断。',
         },
         duration: Date.now() - startTime,
-        model: 'glm-5',
+        model: modelName,
       };
     }
 
@@ -459,7 +445,7 @@ async function generatePetTalkingLine({ name, breed, age, location, seed = 0, pr
 
     const prompt = `你是宠物领养平台的“搞笑玩梗”文案助手。\n请基于真实宠物信息生成JSON，禁止编造健康/价格承诺，禁止低俗和攻击性内容。\n\n宠物信息：\n- 名称：${name || '未命名'}\n- 品种：${breed || '未知'}\n- 年龄：${age || '未知'}\n- 地点：${location || '未知'}\n- 随机种子：${seed || 0}\n- 上一句 hook：${previousHook || '无'}\n\n要求：本次 hook 不能与“上一句 hook”相同。\n\n返回JSON：\n{\n  "hook": "12-24字，短梗开场",\n  "mainLine": "40-90字，玩梗自我介绍",\n  "ctaLine": "12-24字，轻度行动引导"\n}\n只返回JSON。`;
 
-    const { generateText, model } = getAiRuntime();
+    const { generateText, model, modelName } = getAiRuntime();
     const { text } = await generateText({ model, prompt });
     const parsed = extractJsonObject(text, ['hook', 'mainLine', 'ctaLine']);
 
@@ -473,7 +459,7 @@ async function generatePetTalkingLine({ name, breed, age, location, seed = 0, pr
       hook: ensuredHook,
       mainLine,
       ctaLine,
-      model: 'glm-5',
+      model: modelName,
       duration: Date.now() - startTime,
     };
   } catch (error) {

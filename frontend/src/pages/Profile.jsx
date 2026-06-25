@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../config/api';
 import { PERMISSIONS } from '../constants/permissions';
 import { supabase } from '../config/supabase';
 import ApplicationTimeline from '../components/ApplicationTimeline';
+import { openRnBundleScanner, shouldShowRnTab } from '../utils/rnTabNavigation';
 
 const Profile = () => {
     const { user, logout, hasPermission } = useAuth();
@@ -269,7 +270,13 @@ const Profile = () => {
             icon: 'settings',
             label: '设置',
         },
+        shouldShowRnTab() && {
+            icon: 'qr_code_scanner',
+            label: '扫码加载 RN',
+            action: openRnBundleScanner,
+        },
     ].filter(item => {
+        if (!item) return false;
         // 如果菜单项需要权限且用户未登录或无权限，则过滤掉
         if (item.requiresPermission && (!user || !hasPermission(item.requiresPermission))) {
             return false;

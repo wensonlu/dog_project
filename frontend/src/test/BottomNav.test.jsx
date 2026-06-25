@@ -3,23 +3,43 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import BottomNav from '../components/BottomNav';
 
 const mockNavigate = vi.fn();
+const platform = vi.hoisted(() => ({ native: false, name: 'web' }));
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
   useLocation: () => ({ pathname: '/' }),
 }));
 
+vi.mock('@capacitor/core', () => ({
+  Capacitor: {
+    isNativePlatform: () => platform.native,
+    getPlatform: () => platform.name,
+  },
+}));
+
 describe('BottomNav', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    platform.native = false;
+    platform.name = 'web';
   });
 
-  it('renders the current five bottom tabs', () => {
+  it('renders the current five bottom tabs outside native iOS', () => {
     render(<BottomNav />);
 
     ['探索', '论坛', '商城', '故事', '我的'].forEach((label) => {
       expect(screen.getByText(label)).toBeInTheDocument();
     });
+    expect(screen.queryByText('RN')).not.toBeInTheDocument();
+  });
+
+  it('adds the RN tab inside the native iOS app', () => {
+    platform.native = true;
+    platform.name = 'ios';
+
+    render(<BottomNav />);
+
+    expect(screen.getByText('RN')).toBeInTheDocument();
   });
 
   it('keeps the story tab in the H5 application', () => {
