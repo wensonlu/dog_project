@@ -1521,12 +1521,12 @@ DEPENDENCIES:
   - DoubleConversion (from `../../../rn-app/node_modules/react-native/third-party-podspecs/DoubleConversion.podspec`)
   - "EXConstants (from `../../../rn-app/node_modules/.pnpm/expo-constants@17.0.0_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+c_6e547723334bd39752e357e2b12c74e8/node_modules/expo-constants/ios`)"
   - "Expo (from `../../../rn-app/node_modules/.pnpm/expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+core@7.29.7__react-nati_58de2ee92b55fe3b7af4f123f76d571c/node_modules/expo`)"
-  - ExpoAsset (from `../../../rn-app/node_modules/expo-asset/ios`)
-  - ExpoFileSystem (from `../../../rn-app/node_modules/expo-file-system/ios`)
-  - ExpoFont (from `../../../rn-app/node_modules/expo-font/ios`)
-  - ExpoKeepAwake (from `../../../rn-app/node_modules/expo-keep-awake/ios`)
+  - "ExpoAsset (from `../../../rn-app/node_modules/.pnpm/expo-asset@11.0.5_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+core@_8d10103f3614300fa85acb83b260b8a0/node_modules/expo-asset/ios`)"
+  - "ExpoFileSystem (from `../../../rn-app/node_modules/.pnpm/expo-file-system@18.0.12_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babe_004522d0f78bd73642a08cc491c2fc2c/node_modules/expo-file-system/ios`)"
+  - "ExpoFont (from `../../../rn-app/node_modules/.pnpm/expo-font@13.0.4_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+core@7_1e63da5ca25e9a391f4d5438622a5e17/node_modules/expo-font/ios`)"
+  - "ExpoKeepAwake (from `../../../rn-app/node_modules/.pnpm/expo-keep-awake@14.0.3_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+_e1c7f5bcf87b3e8544b83e773021bae1/node_modules/expo-keep-awake/ios`)"
   - "ExpoLinking (from `../../../rn-app/node_modules/.pnpm/expo-linking@7.0.0_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+core_d3c28df0d126daf855d8e57d5ced0faf/node_modules/expo-linking/ios`)"
-  - ExpoModulesCore (from `../../../rn-app/node_modules/expo-modules-core`)
+  - "ExpoModulesCore (from `../../../rn-app/node_modules/.pnpm/expo-modules-core@2.2.3/node_modules/expo-modules-core`)"
   - "ExpoSecureStore (from `../../../rn-app/node_modules/.pnpm/expo-secure-store@14.0.0_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babe_57b121367fc2329646926455f203c4df/node_modules/expo-secure-store/ios`)"
   - FBLazyVector (from `../../../rn-app/node_modules/react-native/Libraries/FBLazyVector`)
   - fmt (from `../../../rn-app/node_modules/react-native/third-party-podspecs/fmt.podspec`)
@@ -1588,11 +1588,8 @@ DEPENDENCIES:
   - React-utils (from `../../../rn-app/node_modules/react-native/ReactCommon/react/utils`)
   - ReactCodegen (from `rn_codegen/generated/ios`)
   - ReactCommon/turbomodule/core (from `../../../rn-app/node_modules/react-native/ReactCommon`)
+  - SocketRocket (from `./LocalPodspecs/SocketRocket.podspec`)
   - Yoga (from `../../../rn-app/node_modules/react-native/ReactCommon/yoga`)
-
-SPEC REPOS:
-  trunk:
-    - SocketRocket
 
 EXTERNAL SOURCES:
   boost:
@@ -1612,17 +1609,17 @@ EXTERNAL SOURCES:
   Expo:
     :path: "../../../rn-app/node_modules/.pnpm/expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+core@7.29.7__react-nati_58de2ee92b55fe3b7af4f123f76d571c/node_modules/expo"
   ExpoAsset:
-    :path: "../../../rn-app/node_modules/expo-asset/ios"
+    :path: "../../../rn-app/node_modules/.pnpm/expo-asset@11.0.5_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+core@_8d10103f3614300fa85acb83b260b8a0/node_modules/expo-asset/ios"
   ExpoFileSystem:
-    :path: "../../../rn-app/node_modules/expo-file-system/ios"
+    :path: "../../../rn-app/node_modules/.pnpm/expo-file-system@18.0.12_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babe_004522d0f78bd73642a08cc491c2fc2c/node_modules/expo-file-system/ios"
   ExpoFont:
-    :path: "../../../rn-app/node_modules/expo-font/ios"
+    :path: "../../../rn-app/node_modules/.pnpm/expo-font@13.0.4_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+core@7_1e63da5ca25e9a391f4d5438622a5e17/node_modules/expo-font/ios"
   ExpoKeepAwake:
-    :path: "../../../rn-app/node_modules/expo-keep-awake/ios"
+    :path: "../../../rn-app/node_modules/.pnpm/expo-keep-awake@14.0.3_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+_e1c7f5bcf87b3e8544b83e773021bae1/node_modules/expo-keep-awake/ios"
   ExpoLinking:
     :path: "../../../rn-app/node_modules/.pnpm/expo-linking@7.0.0_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+core_d3c28df0d126daf855d8e57d5ced0faf/node_modules/expo-linking/ios"
   ExpoModulesCore:
-    :path: "../../../rn-app/node_modules/expo-modules-core"
+    :path: "../../../rn-app/node_modules/.pnpm/expo-modules-core@2.2.3/node_modules/expo-modules-core"
   ExpoSecureStore:
     :path: "../../../rn-app/node_modules/.pnpm/expo-secure-store@14.0.0_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babe_57b121367fc2329646926455f203c4df/node_modules/expo-secure-store/ios"
   FBLazyVector:
@@ -1741,16 +1738,18 @@ EXTERNAL SOURCES:
     :path: rn_codegen/generated/ios
   ReactCommon:
     :path: "../../../rn-app/node_modules/react-native/ReactCommon"
+  SocketRocket:
+    :podspec: "./LocalPodspecs/SocketRocket.podspec"
   Yoga:
     :path: "../../../rn-app/node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
-  boost: 1dca942403ed9342f98334bf4c3621f011aa7946
+  boost: 4293fceb421b38bfe54afd457c188a6cebed7381
   Capacitor: 47b825120c6b8b6d6f9f053e9350a8960d436710
   CapacitorApp: 449ffe26375e96f8aaaee625ac6e01e5c57c8650
   CapacitorBrowser: c987c73d09d8bd3b5ec13f06338b1e14d5d2be69
   CapacitorCordova: e8b76fd95fc1e157775abc484c59cc0de464095d
-  DoubleConversion: f16ae600a246532c4020132d54af21d0ddb2a385
+  DoubleConversion: 5c94d3d855fbe509c77c82d839baeb79cab6d9d2
   EXConstants: 18723a9b01c22d186c00e1d22914b3dbdbf4992a
   Expo: 4bb70893882e6382b41d1e910d7226c6a1b85f0a
   ExpoAsset: 48386d40d53a8c1738929b3ed509bcad595b5516
@@ -1761,9 +1760,9 @@ SPEC CHECKSUMS:
   ExpoModulesCore: 1df1e7cd3f54b69b6ed5ddd6e73a979bcffc6c1d
   ExpoSecureStore: c9fa9d97af1472ddd579bc319762c1eb704afae9
   FBLazyVector: ca8044c9df513671c85167838b4188791b6f37e1
-  fmt: 10c6e61f4be25dc963c36bd73fc7b1705fe975be
-  glog: 08b301085f15bcbb6ff8632a8ebaf239aae04e6a
-  RCT-Folly: 84578c8756030547307e4572ab1947de1685c599
+  fmt: 49d77b8f53110ecd57e6842ac33b56ae9c5e049b
+  glog: 35b0b0b87d750cf0a47f546bf4c467aa8b15488f
+  RCT-Folly: 88d37e6111a737edfe3d50f9bf38178a38e1dcbe
   RCTDeprecation: 7691283dd69fed46f6653d376de6fa83aaad774c
   RCTRequired: eac044a04629288f272ee6706e31f81f3a2b4bfe
   RCTTypeSafety: cfe499e127eda6dd46e5080e12d80d0bfe667228
@@ -1818,9 +1817,9 @@ SPEC CHECKSUMS:
   React-utils: b49f607746aebdac0832592af23c172fa43efa0d
   ReactCodegen: 6923ef9a34202bc13955bdbf6c78fc3ac77a5622
   ReactCommon: 96a73306a57d4fe87af663351c46104c25805a4c
-  SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
+  SocketRocket: cc28dfd58139c0bb8604659cdb1d8ff449fc7637
   Yoga: d213adae4f2c5518e9b19f919afa25a73848ecfb
 
-PODFILE CHECKSUM: e4407a2c348be11a374332a33038d2b7ac46b348
+PODFILE CHECKSUM: ba44616a09e99fd19988f22649c48c18fda8bcc2
 
 COCOAPODS: 1.16.2

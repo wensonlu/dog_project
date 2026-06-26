@@ -266,7 +266,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nexport NODE_PATH=\"/Users/wenson/dog_project/rn-app/node_modules\"\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-App/expo-configure-project.sh\"\n";
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nexport NODE_PATH=\"${SRCROOT}/../../../rn-app/node_modules\"\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-App/expo-configure-project.sh\"\n";
 		};
 		B1F829665F942AC3EC2134AC /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;

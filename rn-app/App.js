@@ -36,7 +36,9 @@ export default function App(props) {
     setPreviousStoryRoute(from?.type === 'stories' ? { type: 'stories' } : { type: 'content' });
     setRoute({ type: 'story', id: String(storyId) });
   };
-  const applyRoutePayload = useCallback((url, payload) => {
+  const applyRoutePayload = useCallback((url, payload, options = {}) => {
+    const routeMeta = options.returnTo ? { returnTo: options.returnTo } : {};
+
     setLaunchContext((prev) => ({
       ...prev,
       launchUrl: url || prev.launchUrl,
@@ -46,28 +48,35 @@ export default function App(props) {
     if (payload?.routeType === 'rn-demo') {
       setRoute({ type: 'demo' });
     } else if (payload?.routeType === 'content') {
-      setRoute({ type: 'content' });
+      setRoute({ type: 'content', ...routeMeta });
     } else if (payload?.routeType === 'stories') {
-      setRoute({ type: 'stories' });
+      setRoute({ type: 'stories', ...routeMeta });
     } else if (payload?.storyId) {
-      setPreviousStoryRoute({ type: 'stories' });
-      setRoute({ type: 'story', id: payload.storyId });
+      setPreviousStoryRoute(options.returnTo === 'demo' ? { type: 'demo' } : { type: 'stories' });
+      setRoute({ type: 'story', id: payload.storyId, ...routeMeta });
     } else if (payload?.topicId) {
       console.log('[RN Route] switch -> forum', payload.topicId);
-      setRoute({ type: 'forum', id: payload.topicId });
+      setRoute({ type: 'forum', id: payload.topicId, ...routeMeta });
     } else if (payload?.petId) {
       console.log('[RN Route] switch -> pet', payload.petId);
-      setRoute({ type: 'pet', id: payload.petId });
+      setRoute({ type: 'pet', id: payload.petId, ...routeMeta });
     } else {
       console.log('[RN Route] no topicId/petId, keep default route');
     }
   }, [props?.debugParams]);
-  const openRnRoute = useCallback((url) => {
+  const openRnRoute = useCallback((url, options) => {
     const payload = parseLaunchPayload(url);
     console.log('[RN Route] launchUrl:', url || '');
     console.log('[RN Route] payload:', payload);
-    applyRoutePayload(url, payload);
+    applyRoutePayload(url, payload, options);
   }, [applyRoutePayload]);
+  const backFromPreviewOrClose = () => {
+    if (route.returnTo === 'demo') {
+      setRoute({ type: 'demo' });
+      return;
+    }
+    handleBack();
+  };
 
   useEffect(() => {
     const levels = ['log', 'info', 'warn', 'error'];
@@ -163,7 +172,7 @@ export default function App(props) {
           launchUrl={launchContext.launchUrl}
           bundleSource={launchContext.bundleSource}
           debugParams={launchContext.debugParams}
-          onOpenRoute={openRnRoute}
+          onOpenRoute={(url) => openRnRoute(url, { returnTo: 'demo' })}
         />
       ) : route.type === 'content' ? (
         <ContentHubScreen
@@ -184,11 +193,11 @@ export default function App(props) {
           onOpenWeb={openWeb}
         />
       ) : route.type === 'forum' ? (
-        <ForumDetailScreen topicId={route.id} onBack={handleBack} />
+        <ForumDetailScreen topicId={route.id} onBack={backFromPreviewOrClose} />
       ) : (
         <PetDetailsScreen
           petId={route.id}
-          onBack={handleBack}
+          onBack={backFromPreviewOrClose}
           onOpenForumTopic={(topic) => {
             const topicId = topic?.id ? String(topic.id) : null;
             if (!topicId) return;

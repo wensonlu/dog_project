@@ -44,6 +44,7 @@ end
 
 target 'App' do
   capacitor_pods
+  pod 'SocketRocket', :podspec => './LocalPodspecs/SocketRocket.podspec'
   use_expo_modules!({
     :searchPaths => [rn_node_modules],
   })
@@ -177,7 +178,7 @@ post_integrate do |installer|
   if expo_phase
     expo_phase.shell_script = <<~SCRIPT
       # This script configures Expo modules and generates the modules provider file.
-      export NODE_PATH="#{rn_node_modules}"
+      export NODE_PATH="${SRCROOT}/../../../rn-app/node_modules"
       bash -l -c "./Pods/Target\\ Support\\ Files/Pods-App/expo-configure-project.sh"
     SCRIPT
     app_project.save

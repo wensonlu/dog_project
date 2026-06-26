@@ -40,6 +40,26 @@ describe('BottomNav', () => {
     render(<BottomNav />);
 
     expect(screen.getByText('RN')).toBeInTheDocument();
+    expect(screen.getByLabelText('打开 RN 预览入口')).toBeInTheDocument();
+  });
+
+  it('opens RN preview entries from the native iOS RN tab', () => {
+    platform.native = true;
+    platform.name = 'ios';
+    const originalLocation = window.location;
+    delete window.location;
+    window.location = { href: '' };
+
+    try {
+      render(<BottomNav />);
+
+      fireEvent.click(screen.getByLabelText('打开 RN 预览入口'));
+      fireEvent.click(screen.getByText('内容中心'));
+
+      expect(window.location.href).toBe('dogproject://content');
+    } finally {
+      window.location = originalLocation;
+    }
   });
 
   it('keeps the story tab in the H5 application', () => {
