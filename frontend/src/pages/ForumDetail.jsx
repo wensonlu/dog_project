@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTask } from '../context/TaskContext';
 import { API_BASE_URL, FORUM_API } from '../config/api';
 import { addForumBrowseHistory } from '../utils/forumHistory';
+import { buildForumUserHeaders } from '../utils/forumApiHeaders';
 
 const ForumDetail = () => {
   const { id } = useParams();
@@ -199,7 +200,7 @@ const ForumDetail = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/forum/${id}/like`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildForumUserHeaders(user),
         body: JSON.stringify({ userId: user.id })
       });
 
@@ -228,7 +229,7 @@ const ForumDetail = () => {
 
     fetch(`${API_BASE_URL}/forum/${id}/follow`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildForumUserHeaders(user),
       body: JSON.stringify({ userId: user.id })
     })
       .then(async (response) => {
@@ -261,7 +262,7 @@ const ForumDetail = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/forum/comments/${commentId}/like`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildForumUserHeaders(user),
         body: JSON.stringify({ userId: user.id })
       });
 
@@ -289,7 +290,7 @@ const ForumDetail = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/forum/replies/${replyId}/like`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildForumUserHeaders(user),
         body: JSON.stringify({ userId: user.id })
       });
 
@@ -334,7 +335,7 @@ const ForumDetail = () => {
     try {
       const precheckResponse = await fetch(FORUM_API.PRECHECK_REPLY, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildForumUserHeaders(user),
         body: JSON.stringify({
           topicId: id,
           content: commentText.trim(),
@@ -348,7 +349,7 @@ const ForumDetail = () => {
         const precheckData = await precheckResponse.json();
         const confirmResponse = await fetch(FORUM_API.CONFIRM_REPLY, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: buildForumUserHeaders(user),
           body: JSON.stringify({
             confirmToken: precheckData.confirmToken,
             userId: user.id
@@ -372,7 +373,7 @@ const ForumDetail = () => {
       }
     } catch (error) {
       console.error('Error submitting comment:', error);
-      setTipMessage('网络错误，请重试');
+      setTipMessage(error.message || '网络错误，请重试');
       setTipOpen(true);
     } finally {
       setSubmitting(false);
@@ -391,7 +392,7 @@ const ForumDetail = () => {
       setDraftingReply(true);
       const response = await fetch(FORUM_API.DRAFT_REPLY, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildForumUserHeaders(user),
         body: JSON.stringify({
           topicId: topic.id,
           replyToId: replyingTo?.commentId ?? replyingTo?.id ?? null,
@@ -499,7 +500,10 @@ const ForumDetail = () => {
       const url = deleteCommentReplyTarget.type === 'comment'
         ? `${API_BASE_URL}/forum/comments/${deleteCommentReplyTarget.id}?userId=${encodeURIComponent(user.id)}`
         : `${API_BASE_URL}/forum/replies/${deleteCommentReplyTarget.id}?userId=${encodeURIComponent(user.id)}`;
-      const response = await fetch(url, { method: 'DELETE' });
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: buildForumUserHeaders(user)
+      });
       if (response.ok) {
         setDeleteCommentReplyTarget(null);
         const params = new URLSearchParams();
@@ -520,7 +524,7 @@ const ForumDetail = () => {
       }
     } catch (err) {
       console.error('Error deleting comment/reply:', err);
-      setTipMessage('网络错误，请重试');
+      setTipMessage(err.message || '网络错误，请重试');
       setTipOpen(true);
     } finally {
       setDeleteCommentReplyLoading(false);
@@ -534,7 +538,8 @@ const ForumDetail = () => {
     setDeleteLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/forum/${id}?userId=${encodeURIComponent(user.id)}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: buildForumUserHeaders(user)
       });
       if (response.ok) {
         setDeleteConfirmOpen(false);
@@ -548,7 +553,7 @@ const ForumDetail = () => {
     } catch (err) {
       console.error('Error deleting topic:', err);
       setDeleteConfirmOpen(false);
-      setTipMessage('网络错误，请重试');
+      setTipMessage(err.message || '网络错误，请重试');
       setTipOpen(true);
     } finally {
       setDeleteLoading(false);
