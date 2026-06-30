@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import rnDemoEntries from '../navigation/rnDemoEntries.json';
 
 function KeyValueRow({ label, value }) {
   return (
@@ -9,10 +10,22 @@ function KeyValueRow({ label, value }) {
   );
 }
 
-export default function RnDemoScreen({ launchUrl, bundleSource, debugParams }) {
+export default function RnDemoScreen({ launchUrl, bundleSource, debugParams, onOpenRoute }) {
   const debugText = debugParams && Object.keys(debugParams).length > 0
     ? JSON.stringify(debugParams, null, 2)
     : 'No debug params injected';
+
+  const handleOpenEntry = async (entry) => {
+    try {
+      if (typeof onOpenRoute === 'function') {
+        await onOpenRoute(entry.launchUrl);
+        return;
+      }
+      await Linking.openURL(entry.launchUrl);
+    } catch (err) {
+      Alert.alert('页面打开失败', err?.message || entry.launchUrl);
+    }
+  };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -29,6 +42,34 @@ export default function RnDemoScreen({ launchUrl, bundleSource, debugParams }) {
         <KeyValueRow label="Route" value="dogproject://rn-demo" />
         <KeyValueRow label="Bundle" value={bundleSource} />
         <KeyValueRow label="Launch URL" value={launchUrl} />
+      </View>
+
+      <View style={styles.panel}>
+        <Text style={styles.panelTitle}>RN Pages</Text>
+        <View style={styles.entryList}>
+          {rnDemoEntries.map((entry) => (
+            <Pressable
+              key={entry.key}
+              style={({ pressed }) => [
+                styles.entryCard,
+                launchUrl === entry.launchUrl ? styles.entryCardActive : null,
+                pressed ? styles.entryCardPressed : null,
+              ]}
+              onPress={() => handleOpenEntry(entry)}
+            >
+              <View style={styles.entryContent}>
+                <View style={styles.entryTitleRow}>
+                  <Text style={styles.entryTitle}>{entry.title}</Text>
+                  <Text style={styles.entryRoute}>{entry.routeType}</Text>
+                </View>
+                <Text style={styles.entryScreen}>{entry.screen}</Text>
+                <Text style={styles.entryDescription}>{entry.description}</Text>
+                <Text numberOfLines={1} style={styles.entryUrl}>{entry.launchUrl}</Text>
+              </View>
+              <Text style={styles.entryArrow}>›</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       <View style={styles.panel}>
@@ -91,6 +132,76 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     marginBottom: 12,
+  },
+  entryList: {
+    gap: 10,
+  },
+  entryCard: {
+    minHeight: 94,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d6d3d1',
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  entryCardActive: {
+    borderColor: '#0f766e',
+    backgroundColor: '#ecfdf5',
+  },
+  entryCardPressed: {
+    opacity: 0.82,
+  },
+  entryContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  entryTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  entryTitle: {
+    flex: 1,
+    color: '#18181b',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  entryRoute: {
+    borderRadius: 8,
+    backgroundColor: '#ccfbf1',
+    color: '#115e59',
+    fontSize: 11,
+    fontWeight: '800',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    overflow: 'hidden',
+  },
+  entryScreen: {
+    marginTop: 4,
+    color: '#64748b',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  entryDescription: {
+    marginTop: 6,
+    color: '#44403c',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  entryUrl: {
+    marginTop: 6,
+    color: '#0f766e',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  entryArrow: {
+    marginLeft: 10,
+    color: '#0f766e',
+    fontSize: 28,
+    fontWeight: '400',
   },
   row: {
     borderTopWidth: 1,

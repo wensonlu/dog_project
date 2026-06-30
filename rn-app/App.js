@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Linking, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import PetDetailsScreen from './src/screens/PetDetailsScreen';
 import ForumDetailScreen from './src/screens/ForumDetailScreen';
@@ -36,6 +36,38 @@ export default function App(props) {
     setPreviousStoryRoute(from?.type === 'stories' ? { type: 'stories' } : { type: 'content' });
     setRoute({ type: 'story', id: String(storyId) });
   };
+  const applyRoutePayload = useCallback((url, payload) => {
+    setLaunchContext((prev) => ({
+      ...prev,
+      launchUrl: url || prev.launchUrl,
+      debugParams: payload?.debugParams || props?.debugParams || prev.debugParams || {},
+    }));
+
+    if (payload?.routeType === 'rn-demo') {
+      setRoute({ type: 'demo' });
+    } else if (payload?.routeType === 'content') {
+      setRoute({ type: 'content' });
+    } else if (payload?.routeType === 'stories') {
+      setRoute({ type: 'stories' });
+    } else if (payload?.storyId) {
+      setPreviousStoryRoute({ type: 'stories' });
+      setRoute({ type: 'story', id: payload.storyId });
+    } else if (payload?.topicId) {
+      console.log('[RN Route] switch -> forum', payload.topicId);
+      setRoute({ type: 'forum', id: payload.topicId });
+    } else if (payload?.petId) {
+      console.log('[RN Route] switch -> pet', payload.petId);
+      setRoute({ type: 'pet', id: payload.petId });
+    } else {
+      console.log('[RN Route] no topicId/petId, keep default route');
+    }
+  }, [props?.debugParams]);
+  const openRnRoute = useCallback((url) => {
+    const payload = parseLaunchPayload(url);
+    console.log('[RN Route] launchUrl:', url || '');
+    console.log('[RN Route] payload:', payload);
+    applyRoutePayload(url, payload);
+  }, [applyRoutePayload]);
 
   useEffect(() => {
     const levels = ['log', 'info', 'warn', 'error'];
@@ -73,30 +105,7 @@ export default function App(props) {
       console.log('[RN Route] launchUrl:', url || '');
       console.log('[RN Route] payload:', payload);
       if (mounted) {
-        setLaunchContext((prev) => ({
-          ...prev,
-          launchUrl: url || prev.launchUrl,
-          debugParams: payload?.debugParams || props?.debugParams || prev.debugParams || {},
-        }));
-      }
-
-      if (payload?.routeType === 'rn-demo' && mounted) {
-        setRoute({ type: 'demo' });
-      } else if (payload?.routeType === 'content' && mounted) {
-        setRoute({ type: 'content' });
-      } else if (payload?.routeType === 'stories' && mounted) {
-        setRoute({ type: 'stories' });
-      } else if (payload?.storyId && mounted) {
-        setPreviousStoryRoute({ type: 'stories' });
-        setRoute({ type: 'story', id: payload.storyId });
-      } else if (payload?.topicId && mounted) {
-        console.log('[RN Route] switch -> forum', payload.topicId);
-        setRoute({ type: 'forum', id: payload.topicId });
-      } else if (payload?.petId && mounted) {
-        console.log('[RN Route] switch -> pet', payload.petId);
-        setRoute({ type: 'pet', id: payload.petId });
-      } else {
-        console.log('[RN Route] no topicId/petId, keep default route');
+        applyRoutePayload(url, payload);
       }
 
       if (payload?.token || payload?.userId) {
@@ -131,7 +140,7 @@ export default function App(props) {
       mounted = false;
       sub.remove();
     };
-  }, []);
+  }, [applyRoutePayload, props?.launchUrl, props?.debugParams]);
 
   const tipText = useMemo(() => {
     if (route.type === 'forum') {
@@ -154,6 +163,7 @@ export default function App(props) {
           launchUrl={launchContext.launchUrl}
           bundleSource={launchContext.bundleSource}
           debugParams={launchContext.debugParams}
+          onOpenRoute={openRnRoute}
         />
       ) : route.type === 'content' ? (
         <ContentHubScreen

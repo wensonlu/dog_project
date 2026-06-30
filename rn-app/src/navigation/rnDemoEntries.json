@@ -1,0 +1,50 @@
+[
+  {
+    "key": "rn-demo",
+    "title": "RN Demo Tab",
+    "routeType": "demo",
+    "screen": "RnDemoScreen",
+    "description": "RN 容器首页，展示宿主信息、调试参数和页面入口。",
+    "launchUrl": "dogproject://rn-demo"
+  },
+  {
+    "key": "pet-details",
+    "title": "宠物详情",
+    "routeType": "pet",
+    "screen": "PetDetailsScreen",
+    "description": "查看宠物资料、关联帖子、收藏和领养操作入口。",
+    "launchUrl": "dogproject://pet/1"
+  },
+  {
+    "key": "forum-detail",
+    "title": "帖子详情",
+    "routeType": "forum",
+    "screen": "ForumDetailScreen",
+    "description": "查看论坛帖子正文、图片、点赞和评论列表。",
+    "launchUrl": "dogproject://forum/17"
+  },
+  {
+    "key": "content-hub",
+    "title": "内容中心",
+    "routeType": "content",
+    "screen": "ContentHubScreen",
+    "description": "聚合百科精选和幸福故事，是内容类 RN 页面的入口。",
+    "launchUrl": "dogproject://content"
+  },
+  {
+    "key": "stories",
+    "title": "幸福故事",
+    "routeType": "stories",
+    "screen": "StoriesScreen",
+    "description": "以列表方式浏览领养后的幸福故事。",
+    "launchUrl": "dogproject://stories"
+  },
+  {
+    "key": "story-detail",
+    "title": "故事详情",
+    "routeType": "story",
+    "screen": "StoryDetailScreen",
+    "description": "查看单条故事、成长记录、点赞和评论。",
+    "launchUrl": "dogproject://story/1"
+  }
+]
