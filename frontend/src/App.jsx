@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { DogProvider } from './context/DogContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ForumListProvider } from './context/ForumListContext';
@@ -39,6 +41,7 @@ import Shop from './pages/Shop';
 import ShopDetail from './pages/ShopDetail';
 import ShopOrder from './pages/ShopOrder';
 import ChallengeCheckin from './pages/ChallengeCheckin';
+import { handleDogProjectWebNavigationUrl } from './utils/appUrlNavigation';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -146,6 +149,28 @@ function AppContent() {
       window.removeEventListener('touchend', onTouchEnd);
     };
   }, [location.pathname, navigate]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return undefined;
+
+    const handleUrl = (url) => {
+      handleDogProjectWebNavigationUrl(url, navigate);
+    };
+
+    CapacitorApp.getLaunchUrl()
+      .then((result) => handleUrl(result?.url))
+      .catch(() => {});
+
+    const listenerPromise = CapacitorApp.addListener('appUrlOpen', (event) => {
+      handleUrl(event?.url);
+    });
+
+    return () => {
+      Promise.resolve(listenerPromise)
+        .then((listener) => listener.remove())
+        .catch(() => {});
+    };
+  }, [navigate]);
 
   return (
     <DogProvider>

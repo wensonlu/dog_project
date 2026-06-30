@@ -1,14 +1,28 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { RN_PREVIEW_ENTRIES, openRnPreviewEntry, shouldShowRnTab } from '../utils/rnTabNavigation';
+import { useDogs } from '../context/DogContext';
+import { RN_PET_DETAIL_DEEP_LINK, RN_PREVIEW_ENTRIES, buildPetDetailDeepLink, openRnPreviewEntry, shouldShowRnTab } from '../utils/rnTabNavigation';
 
 const BottomNav = ({ hidden = false }) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { DOGS = [] } = useDogs() || {};
     const [showRnPreview, setShowRnPreview] = useState(false);
 
     if (hidden) return null;
+
+    const firstPetId = DOGS.find((dog) => dog?.id !== undefined && dog?.id !== null)?.id;
+    const rnPreviewEntries = RN_PREVIEW_ENTRIES.map((entry) => (
+        entry.url === RN_PET_DETAIL_DEEP_LINK
+            ? {
+                ...entry,
+                description: firstPetId ? `宠物 ID ${firstPetId}` : '宠物数据加载中',
+                disabled: !firstPetId,
+                url: firstPetId ? buildPetDetailDeepLink(firstPetId) : '',
+            }
+            : entry
+    ));
 
     const navItems = [
         { label: '探索', icon: 'style', path: '/' },
@@ -24,15 +38,20 @@ const BottomNav = ({ hidden = false }) => {
             {showRnPreview && (
                 <div className="absolute left-4 right-4 bottom-full mb-3 rounded-2xl border border-rose-100 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 shadow-2xl shadow-rose-200/30 dark:shadow-black/30 backdrop-blur-xl overflow-hidden">
                     <div className="grid grid-cols-2 gap-2 p-3">
-                        {RN_PREVIEW_ENTRIES.map((entry) => (
+                        {rnPreviewEntries.map((entry) => (
                             <button
-                                key={entry.url}
+                                key={`${entry.label}:${entry.url || 'disabled'}`}
                                 type="button"
-                                onClick={() => {
+                                disabled={entry.disabled}
+                                onClick={async () => {
+                                    if (entry.disabled) return;
                                     setShowRnPreview(false);
-                                    openRnPreviewEntry(entry);
+                                    await openRnPreviewEntry(entry);
                                 }}
-                                className="flex items-center gap-2 rounded-xl bg-rose-50/70 dark:bg-zinc-800 px-3 py-2 text-left"
+                                className={clsx(
+                                    "flex items-center gap-2 rounded-xl bg-rose-50/70 dark:bg-zinc-800 px-3 py-2 text-left",
+                                    entry.disabled && "cursor-not-allowed opacity-50"
+                                )}
                             >
                                 <span className="material-symbols-outlined text-[20px] text-rose-500">
                                     {entry.icon}

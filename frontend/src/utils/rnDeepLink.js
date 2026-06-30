@@ -82,3 +82,27 @@ export async function buildRnPilotDeepLinkWithTicket(routeType, entityId) {
   query.set('ticket', ticket);
   return `dogproject://${normalizedRoute}/${id}?${query.toString()}`;
 }
+
+export async function buildAuthenticatedRnDeepLink(url) {
+  const rawUrl = String(url || '').trim();
+  if (!rawUrl) return rawUrl;
+
+  const { token, userId } = getSessionFromLocalStorage();
+  if (!token && !userId) return rawUrl;
+
+  if (token) {
+    const ticket = await createMobileTicket(token).catch(() => null);
+    if (ticket) {
+      const separator = rawUrl.includes('?') ? '&' : '?';
+      return `${rawUrl}${separator}ticket=${encodeURIComponent(ticket)}`;
+    }
+  }
+
+  const sessionQuery = new URLSearchParams();
+  if (token) sessionQuery.set('token', token);
+  if (userId) sessionQuery.set('userId', userId);
+  if (!sessionQuery.toString()) return rawUrl;
+
+  const separator = rawUrl.includes('?') ? '&' : '?';
+  return `${rawUrl}${separator}params=${encodeURIComponent(sessionQuery.toString())}`;
+}

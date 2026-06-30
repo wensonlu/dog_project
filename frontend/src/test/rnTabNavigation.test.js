@@ -14,6 +14,7 @@ import {
   RN_BUNDLE_SCANNER_DEEP_LINK,
   RN_DEMO_DEEP_LINK,
   RN_FORUM_DETAIL_DEEP_LINK,
+  RN_FORUM_LIST_DEEP_LINK,
   RN_PET_DETAIL_DEEP_LINK,
   RN_PREVIEW_ENTRIES,
   RN_STORY_DETAIL_DEEP_LINK,
@@ -57,16 +58,33 @@ describe('rnTabNavigation', () => {
       expect.objectContaining({ label: '幸福故事', url: RN_STORIES_DEEP_LINK }),
       expect.objectContaining({ label: '故事详情', url: RN_STORY_DETAIL_DEEP_LINK }),
       expect.objectContaining({ label: '宠物详情', url: RN_PET_DETAIL_DEEP_LINK }),
+      expect.objectContaining({ label: '论坛列表', url: RN_FORUM_LIST_DEEP_LINK }),
       expect.objectContaining({ label: '论坛详情', url: RN_FORUM_DETAIL_DEEP_LINK }),
     ]));
   });
 
-  it('opens a selected RN preview entry through its deep link', () => {
+  it('opens a selected RN preview entry through its deep link', async () => {
     const openUrl = vi.fn();
 
-    openRnPreviewEntry(RN_PREVIEW_ENTRIES[1], { openUrl });
+    await openRnPreviewEntry(RN_PREVIEW_ENTRIES[1], {
+      openUrl,
+      buildDeepLink: (url) => url,
+    });
 
     expect(openUrl).toHaveBeenCalledWith(RN_CONTENT_HUB_DEEP_LINK);
+  });
+
+  it('wraps selected RN preview entries with authenticated launch params', async () => {
+    const openUrl = vi.fn();
+    const buildDeepLink = vi.fn(async (url) => `${url}?ticket=ticket-123`);
+
+    await openRnPreviewEntry(
+      { label: '论坛详情', url: RN_FORUM_DETAIL_DEEP_LINK },
+      { openUrl, buildDeepLink }
+    );
+
+    expect(buildDeepLink).toHaveBeenCalledWith(RN_FORUM_DETAIL_DEEP_LINK);
+    expect(openUrl).toHaveBeenCalledWith('dogproject://forum/16?ticket=ticket-123');
   });
 
   it('opens the native QR scanner through the host app deep link', () => {
