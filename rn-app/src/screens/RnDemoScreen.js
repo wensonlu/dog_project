@@ -1,5 +1,7 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import rnDemoEntries from '../navigation/rnDemoEntries.json';
+import { fetchDogs } from '../services/api';
 
 function KeyValueRow({ label, value }) {
   return (
@@ -11,11 +13,45 @@ function KeyValueRow({ label, value }) {
 }
 
 export default function RnDemoScreen({ launchUrl, bundleSource, debugParams, onOpenRoute }) {
+  const [firstPetId, setFirstPetId] = useState(null);
   const debugText = debugParams && Object.keys(debugParams).length > 0
     ? JSON.stringify(debugParams, null, 2)
     : 'No debug params injected';
 
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchDogs()
+      .then((dogs) => {
+        if (cancelled || !Array.isArray(dogs)) return;
+        const firstDog = dogs.find((dog) => dog?.id !== undefined && dog?.id !== null);
+        if (firstDog) {
+          setFirstPetId(String(firstDog.id));
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const pageEntries = useMemo(() => (
+    rnDemoEntries.map((entry) => (
+      entry.key === 'pet-details'
+        ? {
+            ...entry,
+            description: firstPetId ? `使用当前宠物数据 ID ${firstPetId}` : '宠物数据加载中',
+            disabled: !firstPetId,
+            launchUrl: firstPetId ? `dogproject://pet/${firstPetId}` : '',
+          }
+        : entry
+    ))
+  ), [firstPetId]);
+
   const handleOpenEntry = async (entry) => {
+    if (entry.disabled) return;
+
     try {
       if (typeof onOpenRoute === 'function') {
         await onOpenRoute(entry.launchUrl);
@@ -47,13 +83,15 @@ export default function RnDemoScreen({ launchUrl, bundleSource, debugParams, onO
       <View style={styles.panel}>
         <Text style={styles.panelTitle}>RN Pages</Text>
         <View style={styles.entryList}>
-          {rnDemoEntries.map((entry) => (
+          {pageEntries.map((entry) => (
             <Pressable
               key={entry.key}
+              disabled={entry.disabled}
               style={({ pressed }) => [
                 styles.entryCard,
                 launchUrl === entry.launchUrl ? styles.entryCardActive : null,
                 pressed ? styles.entryCardPressed : null,
+                entry.disabled ? styles.entryCardDisabled : null,
               ]}
               onPress={() => handleOpenEntry(entry)}
             >
@@ -153,6 +191,9 @@ const styles = StyleSheet.create({
   },
   entryCardPressed: {
     opacity: 0.82,
+  },
+  entryCardDisabled: {
+    opacity: 0.55,
   },
   entryContent: {
     flex: 1,

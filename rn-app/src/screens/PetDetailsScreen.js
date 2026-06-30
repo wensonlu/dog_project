@@ -34,7 +34,6 @@ function topicPreview(topic) {
 
 export default function PetDetailsScreen({
   petId,
-  onBack,
   onOpenForumTopic,
   onOpenForumList,
   onOpenApply,
@@ -194,9 +193,7 @@ export default function PetDetailsScreen({
           />
           <View style={styles.heroMask} />
           <View style={styles.topActions}>
-            <Pressable onPress={onBack} style={styles.topBtn}>
-              <Text style={styles.topBtnText}>‹</Text>
-            </Pressable>
+            <View style={styles.topActionsSpacer} />
             <Pressable onPress={handleFavorite} style={styles.topBtn} disabled={favoriting}>
               <Text style={styles.topBtnText}>{favoriting ? '...' : '♥'}</Text>
             </Pressable>
@@ -352,6 +349,10 @@ const styles = StyleSheet.create({
     top: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  topActionsSpacer: {
+    width: 40,
+    height: 40,
   },
   topBtn: {
     width: 40,

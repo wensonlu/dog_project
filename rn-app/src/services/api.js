@@ -8,6 +8,18 @@ function resolveApiBaseUrl() {
 const API_BASE_URL = resolveApiBaseUrl();
 const REQUEST_TIMEOUT_MS = 12000;
 
+function authHeaders(token, json = false) {
+  return {
+    ...(json ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+function appendParam(params, key, value) {
+  if (value === undefined || value === null || value === '') return;
+  params.append(key, String(value));
+}
+
 function buildError(payload, status) {
   if (status === 401) {
     const err = new Error('UNAUTHORIZED');
@@ -66,6 +78,10 @@ export async function fetchPetDetails(petId, token) {
   return request(`/dogs/${petId}`, { headers });
 }
 
+export async function fetchDogs() {
+  return request('/dogs');
+}
+
 export async function fetchRelatedTopics(petId, token) {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   return request(`/forum/related/${petId}`, { headers });
@@ -83,10 +99,167 @@ export async function fetchReviewEligibility(petId, token) {
 }
 
 export async function fetchForumTopicById(topicId, { token, userId } = {}) {
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const headers = authHeaders(token);
   const query = userId ? `?userId=${encodeURIComponent(String(userId))}` : '';
   const path = `/forum/${encodeURIComponent(String(topicId))}${query}`;
   return request(path, { headers });
+}
+
+export async function fetchForumTopics({
+  category = 'all',
+  sort = 'latest',
+  query = '',
+  cursor = 0,
+  limit = 30,
+  userId,
+  token,
+} = {}) {
+  const params = new URLSearchParams();
+  if (category && category !== 'all') appendParam(params, 'category', category);
+  appendParam(params, 'sort', sort);
+  appendParam(params, 'query', query);
+  appendParam(params, 'format', 'mcp');
+  appendParam(params, 'limit', limit);
+  appendParam(params, 'cursor', cursor);
+  appendParam(params, 'userId', userId);
+  return request(`/forum?${params.toString()}`, { headers: authHeaders(token) });
+}
+
+export async function fetchForumContext({
+  sort = 'latest',
+  category = 'all',
+  query = '',
+  userId,
+  token,
+} = {}) {
+  const params = new URLSearchParams({
+    pageType: 'topic_list',
+    route: '/forum',
+    sort,
+    category,
+    query,
+  });
+  appendParam(params, 'userId', userId);
+  return request(`/forum/context?${params.toString()}`, { headers: authHeaders(token) });
+}
+
+export async function fetchForumSearchSummary(query, { token, refresh = false } = {}) {
+  const params = new URLSearchParams({
+    q: String(query || ''),
+    timeRange: '180d',
+  });
+  if (refresh) params.append('_refresh', String(Date.now()));
+  return request(`/forum/search/ai-summary?${params.toString()}`, { headers: authHeaders(token) });
+}
+
+export async function toggleForumTopicLike(topicId, { token, userId }) {
+  return request(`/forum/${encodeURIComponent(String(topicId))}/like`, {
+    method: 'POST',
+    headers: authHeaders(token, true),
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function toggleForumAuthorFollow(topicId, { token, userId }) {
+  return request(`/forum/${encodeURIComponent(String(topicId))}/follow`, {
+    method: 'POST',
+    headers: authHeaders(token, true),
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function fetchForumTopicAiKit(topicId, { token } = {}) {
+  return request(`/forum/${encodeURIComponent(String(topicId))}/ai-kit`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function precheckForumReply({
+  topicId,
+  content,
+  userId,
+  replyToCommentId = null,
+  replyToUserName,
+  token,
+}) {
+  return request('/forum/precheck/reply', {
+    method: 'POST',
+    headers: authHeaders(token, true),
+    body: JSON.stringify({
+      topicId,
+      content,
+      userId,
+      replyToCommentId,
+      replyToUserName,
+    }),
+  });
+}
+
+export async function confirmForumReply({ confirmToken, userId, token }) {
+  return request('/forum/confirm/reply', {
+    method: 'POST',
+    headers: authHeaders(token, true),
+    body: JSON.stringify({ confirmToken, userId }),
+  });
+}
+
+export async function draftForumReply({
+  topicId,
+  replyToId = null,
+  userIntent = '补充经验并给建议',
+  tone = 'friendly',
+  length = 'medium',
+  userId,
+  token,
+}) {
+  return request('/forum/draft-reply', {
+    method: 'POST',
+    headers: authHeaders(token, true),
+    body: JSON.stringify({ topicId, replyToId, userIntent, tone, length, userId }),
+  });
+}
+
+export async function toggleForumCommentLike(commentId, { token, userId }) {
+  return request(`/forum/comments/${encodeURIComponent(String(commentId))}/like`, {
+    method: 'POST',
+    headers: authHeaders(token, true),
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function toggleForumReplyLike(replyId, { token, userId }) {
+  return request(`/forum/replies/${encodeURIComponent(String(replyId))}/like`, {
+    method: 'POST',
+    headers: authHeaders(token, true),
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function deleteForumTopic(topicId, { token, userId }) {
+  const params = new URLSearchParams();
+  appendParam(params, 'userId', userId);
+  return request(`/forum/${encodeURIComponent(String(topicId))}?${params.toString()}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+}
+
+export async function deleteForumComment(commentId, { token, userId }) {
+  const params = new URLSearchParams();
+  appendParam(params, 'userId', userId);
+  return request(`/forum/comments/${encodeURIComponent(String(commentId))}?${params.toString()}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+}
+
+export async function deleteForumReply(replyId, { token, userId }) {
+  const params = new URLSearchParams();
+  appendParam(params, 'userId', userId);
+  return request(`/forum/replies/${encodeURIComponent(String(replyId))}?${params.toString()}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
 }
 
 export async function fetchWikiArticles(limit = 4) {

@@ -18,7 +18,7 @@ import { getAuthToken } from '../services/auth';
 
 const fallbackImage = 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=900';
 
-export default function StoryDetailScreen({ storyId, onBack, onOpenWeb }) {
+export default function StoryDetailScreen({ storyId, onOpenWeb }) {
   const [story, setStory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -104,11 +104,6 @@ export default function StoryDetailScreen({ storyId, onBack, onOpenWeb }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.header}>
-        <Pressable onPress={onBack} style={styles.backBtn}><Text style={styles.backText}>‹</Text></Pressable>
-        <Text style={styles.headerTitle}>故事详情</Text>
-        <View style={styles.headerSpacer} />
-      </View>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -189,11 +184,6 @@ const styles = StyleSheet.create({
   error: { color: '#b91c1c', textAlign: 'center', paddingHorizontal: 20 },
   retry: { marginTop: 14, borderRadius: 10, backgroundColor: '#e56d63', paddingHorizontal: 16, paddingVertical: 10 },
   retryText: { color: '#fff', fontWeight: '800' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 },
-  backBtn: { width: 42, height: 38, alignItems: 'center', justifyContent: 'center' },
-  backText: { color: '#3b2a22', fontSize: 30 },
-  headerTitle: { flex: 1, color: '#241914', fontSize: 18, fontWeight: '800', textAlign: 'center' },
-  headerSpacer: { width: 42 },
   content: { paddingHorizontal: 14, paddingBottom: 40 },
   cover: { width: '100%', height: 220, borderRadius: 18, backgroundColor: '#eadfd2' },
   title: { color: '#241914', fontSize: 23, lineHeight: 30, fontWeight: '900', marginTop: 16 },

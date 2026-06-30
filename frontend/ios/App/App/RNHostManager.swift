@@ -24,6 +24,10 @@ final class RNHostManager: NSObject, RCTBridgeDelegate {
             presentingViewController?.dismiss(animated: true)
             presentingViewController = nil
             return true
+        case "web":
+            presentingViewController?.dismiss(animated: true)
+            presentingViewController = nil
+            return false
         case "rn-scan-bundle":
             presentScanner(from: rootViewController)
             return true
@@ -38,7 +42,7 @@ final class RNHostManager: NSObject, RCTBridgeDelegate {
         }
     }
 
-    func sourceURL(for bridge: RCTBridge!) -> URL! {
+    func sourceURL(for bridge: RCTBridge) -> URL? {
         guard let url = store.activeBundleURL() else {
             fatalError("RN bundle not found. Generate frontend/ios/App/App/rn_bundle/main.jsbundle first.")
         }
@@ -99,12 +103,21 @@ final class RNHostManager: NSObject, RCTBridgeDelegate {
         bundleSource: String,
         debugParams: [String: String] = [:]
     ) {
-        let bridge = self.bridge ?? RCTBridge(delegate: self, launchOptions: nil)
-        self.bridge = bridge
+        let bridge: RCTBridge
+        if let existingBridge = self.bridge {
+            bridge = existingBridge
+        } else {
+            guard let newBridge = RCTBridge(delegate: self, launchOptions: nil) else {
+                showAlert(title: "RN 启动失败", message: "无法初始化 RN Bridge", from: rootViewController)
+                return
+            }
+            bridge = newBridge
+            self.bridge = newBridge
+        }
 
         let rootView = RCTRootView(
             bridge: bridge,
-            moduleName: "DogProjectRN",
+            moduleName: "main",
             initialProperties: [
                 "launchUrl": url,
                 "bundleSource": bundleSource,

@@ -9,13 +9,12 @@ import {
   Text,
   View,
 } from 'react-native';
-import HybridBottomNav from '../components/HybridBottomNav';
 import { fetchStories } from '../services/api';
 
 const PAGE_SIZE = 10;
 const fallbackImage = 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600';
 
-export default function StoriesScreen({ onBack, onOpenStory, onOpenWeb }) {
+export default function StoriesScreen({ onOpenStory, onOpenWeb }) {
   const [stories, setStories] = useState([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -48,7 +47,6 @@ export default function StoriesScreen({ onBack, onOpenStory, onOpenWeb }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={onBack} style={styles.backBtn}><Text style={styles.backText}>‹</Text></Pressable>
         <View style={styles.headerText}>
           <Text style={styles.title}>幸福故事</Text>
           <Text style={styles.subtitle}>每一个领养都是爱的延续</Text>
@@ -93,7 +91,6 @@ export default function StoriesScreen({ onBack, onOpenStory, onOpenWeb }) {
           )}
         />
       )}
-      <HybridBottomNav onOpenWeb={onOpenWeb} />
     </View>
   );
 }
@@ -101,8 +98,6 @@ export default function StoriesScreen({ onBack, onOpenStory, onOpenWeb }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f0' },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12 },
-  backBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
-  backText: { color: '#3b2a22', fontSize: 30 },
   headerText: { flex: 1 },
   title: { color: '#241914', fontSize: 22, fontWeight: '900' },
   subtitle: { color: '#8c7969', fontSize: 11, marginTop: 3 },

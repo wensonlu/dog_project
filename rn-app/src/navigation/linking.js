@@ -121,6 +121,11 @@ export function buildForumUrl(topicId) {
   return `${appScheme}://forum/${topicId}`;
 }
 
+export function buildForumListUrl() {
+  // dogproject://forum opens the RN forum list; dogproject://forum/:id opens detail.
+  return `${appScheme}://forum`;
+}
+
 export function buildContentUrl() {
   return `${appScheme}://content`;
 }

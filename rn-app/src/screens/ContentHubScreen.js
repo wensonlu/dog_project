@@ -9,7 +9,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import HybridBottomNav from '../components/HybridBottomNav';
 import { fetchStories, fetchWikiArticles } from '../services/api';
 
 const fallbackImage = 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600';
@@ -124,7 +123,6 @@ export default function ContentHubScreen({ onOpenStories, onOpenStory, onOpenWeb
           </>
         )}
       </ScrollView>
-      <HybridBottomNav onOpenWeb={onOpenWeb} />
     </View>
   );
 }

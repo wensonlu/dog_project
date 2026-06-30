@@ -16,12 +16,20 @@
     "launchUrl": "dogproject://pet/1"
   },
   {
+    "key": "forum-list",
+    "title": "论坛列表",
+    "routeType": "forum-list",
+    "screen": "ForumListScreen",
+    "description": "浏览社区帖子，支持搜索、分类、排序和发帖入口。",
+    "launchUrl": "dogproject://forum"
+  },
+  {
     "key": "forum-detail",
     "title": "帖子详情",
     "routeType": "forum",
     "screen": "ForumDetailScreen",
     "description": "查看论坛帖子正文、图片、点赞和评论列表。",
-    "launchUrl": "dogproject://forum/17"
+    "launchUrl": "dogproject://forum/16"
   },
   {
     "key": "content-hub",

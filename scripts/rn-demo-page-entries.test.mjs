@@ -34,11 +34,18 @@ describe('rn demo page entries', () => {
         launchUrl: 'dogproject://pet/1',
       },
       {
+        key: 'forum-list',
+        title: '论坛列表',
+        routeType: 'forum-list',
+        screen: 'ForumListScreen',
+        launchUrl: 'dogproject://forum',
+      },
+      {
         key: 'forum-detail',
         title: '帖子详情',
         routeType: 'forum',
         screen: 'ForumDetailScreen',
-        launchUrl: 'dogproject://forum/17',
+        launchUrl: 'dogproject://forum/16',
       },
       {
         key: 'content-hub',
@@ -78,7 +85,7 @@ describe('rn demo page entries', () => {
   it('keeps entry ids and launch URLs unique', () => {
     const entries = loadEntries();
 
-    assert.equal(entries.length, 6);
+    assert.equal(entries.length, 7);
     assert.equal(new Set(entries.map((entry) => entry.key)).size, entries.length);
     assert.equal(new Set(entries.map((entry) => entry.routeType)).size, entries.length);
     assert.equal(new Set(entries.map((entry) => entry.launchUrl)).size, entries.length);
